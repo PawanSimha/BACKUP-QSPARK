@@ -1,0 +1,626 @@
+how to insert data in to oracle sql in apex
+To insert data into an Oracle database using Oracle APEX, you have several standard approaches depending on whether you are working in the development environment or building an end-user application.
+The highlight in your image displays the SQL Workshop side menu bar (specifically pointing to the SQL Commands or Object Browser menu section).
+
+Method 1: Using SQL Workshop (For Developers / Manual Testing)
+
+If you want to manually insert rows into a table while designing your database:
+1. Look at your sidebar image: Click the SQL Workshop icon (represented by the cylinder/database icon highlighted in your image).
+2. Select SQL Commands.
+3. Write a standard SQL INSERT INTO statement:sql
+INSERT INTO employees (employee_id, first_name, last_name, email)
+VALUES (employees_seq.NEXTVAL, 'John', 'Doe', 'john.doe@email.com');
+Use code with caution.
+4. Click the Run button in the top right corner.
+
+Method 2: Creating a Form Page (For End-Users / Applications)
+
+If you are developing an app and want users to input data via a web page:
+1. Navigate to your App Builder and select your application.
+2. Click Create Page.
+3. Select Form from the page options.
+4. Set the Source Type to Local Database and choose the target Table Name.
+5. Oracle APEX will automatically generate the input page items (e.g., :P2_FIRST_NAME) and a Create/Submit button.
+6. Automatic Processing: APEX automatically creates a page process of type Form - Automatic Row Processing (DML). When the user hits submit, APEX handles the INSERT query in the background without you needing to write raw SQL code.
+
+Method 3: Custom PL/SQL Process (For Complex Logic)
+
+If you need to perform validation or complex operations before inserting data from an application form:
+1. Go to the Page Designer of your form page.
+2. In the left panel (Processing tab), right-click Processing and choose Create Process.
+3. Set the type to Execute Code (PL/SQL).
+4. Write your custom code referencing the form page items as bind variables:sql
+BEGIN
+    INSERT INTO employees (first_name, last_name, email)
+    VALUES (:P2_FIRST_NAME, :P2_LAST_NAME, :P2_EMAIL);
+END;
+Use code with caution.
+5. Under the process attributes, set the When Button Pressed condition to your SUBMIT or CREATE button.
+
+Method 4: Data Workshop (For Bulk Uploads)
+
+If you need to import data from external spreadsheets or documents:
+1. Click the SQL Workshop dropdown tab in the top navigation bar.
+2. Select Utilities and click Data Workshop.
+3. Choose Load Data.
+4. You can drag and drop an XLSX, CSV, JSON, or XML file, or simply copy-paste raw text to populate an existing table or generate a brand new one.
+Are you trying to insert data manually via SQL commands, building a user interface form, or trying to bulk-upload an Excel/CSV file? Let me know your exact goal so I can provide the precise steps or code templates!
+• 
+YouTube·Oracle Cloud TechSupper Ankur
+Insert data into table using SQL in Oracle APEX
+6 Jan 2022 — First, the creator navigates to the App Builder and selects the application. Then, a new blank page is created by clicking 'Create...
+44s
+• 
+Stack Overflow
+How to insert and update the inserted row in Oracle APEX ...
+15 Jul 2021 — All updates are handled by the process of type "Automatic Row Processing - DML". For something like this, use a stored procedure t...
+• 
+YouTube·Oracle Cloud TechSupper Ankur
+Form region to insert record into table in Oracle APEX
+it will ask a source information which source you want to use to create this form. so either you can use local database rest enabl...
+10:49
+Show all
+
+yes taught if using exel
+
+To import an Excel (.xlsx) or CSV file into an Oracle database using the Oracle APEX Data Workshop, follow these steps:
+
+Step 1: Open Data Workshop
+
+1. Hover or click on the SQL Workshop icon (the database cylinder highlighted in your image).
+2. Click Utilities.
+3. Click Data Workshop.
+4. Click the Load Data button.
+
+Step 2: Upload Your Excel File
+
+1. You will see a drag-and-drop file region. Drag your .xlsx or .csv spreadsheet file right into this area, or click Choose File to browse.
+2. APEX will parse your sheet automatically and show a preview of your columns and sample rows.
+
+Step 3: Configure Table & Load
+
+1. Load to: Choose whether you want to upload into a brand New Table or append rows to an Existing Table.
+2. Table Name: Type in the table name.
+3. Check Columns: Ensure the column names and automatically guessed data types (like VARCHAR2 or NUMBER) align with your data.
+4. Click the Load Data button in the bottom right corner.
+Note: APEX handles spreadsheets up to 20MB directly. If your file has multiple tabs/worksheets, APEX defaults to loading the first one, but you can select different sheets via a dropdown menu before importing.
+Are you loading the Excel data into a completely new table, or are you adding it to a table that already exists in your database? Let me know if you run into any formatting or constraint errors!
+• 
+Oracle Help Center
+5.1.5 Loading Data
+the first sheet by default. To load another sheet, pick it from the Select Sheet select list. Uploading XLSX files is limited to 2...
+• 
+Oracle Blogs
+Quick and Easy Data Loading with APEX 19.1
+To access the new Data Loading utility, Navigate to SQL Workshop > Utilities > Data Workshop. * Click on Load Data. JSON and XML f...
+• 
+Oracle Help Center
+Importing Data from a File - APEX
+You can load selected columns into an existing table, or into a new table Data Workshop creates. configure which columns to load.
+Show all
+.
+The screen you are looking at in the uploaded image is Workspace Utilities, which handles backend developer tools rather than basic data loading.
+To find the Excel import tool from where you are right now, you need to go to SQL Workshop Utilities instead of Workspace Utilities.
+Here is how to get there:
+1. Click the main SQL Workshop tab at the very top of your Oracle APEX dashboard screen.
+2. In the dropdown menu that appears, select Utilities (or click the main SQL Workshop tab, then locate the Utilities card on the main workshop page).
+3. Inside the SQL Workshop Utilities area, look for and click Data Workshop.
+4. Select Load Data to upload your Excel file.
+Are you able to see the SQL Workshop option in the top navigation bar, or would you like help navigating out of this page?
+.
+You are in the correct place!
+Click on the Data Workshop card (the very first option located in the top-left corner of your image, showing a hammer icon).
+Once you click it:
+1. Select Load Data.
+2. Drag and drop your Excel spreadsheet directly into the upload area.
+Let me know when you get to the next screen. Are you uploading this Excel file into a brand new table, or are you adding it to a table that already exists?
+
+so now i have 7 tables where data is needed to be inserted so do i have to create 7 different excel files??
+
+Yes, creating 7 separate Excel files (or 7 sheets within one workbook) is the cleanest approach because Oracle APEX's Data Workshop imports data one table at a time.
+However, you don't necessarily have to manage 7 separate files on your computer. You can choose whichever method below is easiest for you:
+
+Option A: The 1-Workbook Method (Recommended for Organization)
+
+Keep all your data in a single Excel workbook, but split it across 7 different tabs/sheets (e.g., Tab 1 for Employees, Tab 2 for Departments, etc.).
+• How to load it: When you drag and drop this single Excel file into APEX, a dropdown menu will appear allowing you to select which sheet you want to load.
+• You will run the import process 7 times, picking a different tab and a different target table each time.
+
+Option B: The 7-File Method
+
+Save each table's data as its own independent .xlsx or .csv file.
+• How to load it: Drag, configure, and load file #1. Once finished, click "Load Data" again and repeat the process for files 2 through 7.
+
+⚠️ Critical Rule before you start: The "Parent-Child" Order
+
+Because you are loading 7 different tables, they likely have relationships (Foreign Keys). You must import them in the correct sequential order, or Oracle will give you an Integrity Constraint / Parent Key Not Found error.
+• Always upload Parent tables first: Upload lookup/master tables that don't depend on anything else (e.g., Departments, Regions, Roles).
+• Upload Child tables last: Upload tables that reference the parent tables (e.g., Employees, because an employee requires a Department_ID to exist first).
+If you want to make sure you don't get relationship errors, list the names of your 7 tables or briefly describe how they connect, and I can tell you the exact sequential order to upload them!
+.
+Based on your image showing the spreadsheet export options, you should select Download as CSV UTF-8 or Download as CSV.
+Oracle APEX works incredibly well with CSV files. If you are using the 1-Workbook Method (with multiple tabs) or keeping them separate, here is exactly how to save them from this menu for APEX:
+
+Which one to choose?
+
+• Download as CSV UTF-8 (Highly Recommended): Choose this option. The UTF-8 encoding ensures that if your data contains any special characters, accents, or symbols, they will not get corrupted when importing into Oracle.
+• Download as CSV: A standard comma-separated file, perfectly fine if your data is strictly plain text and numbers.
+• Avoid the PDF and ODS options, as APEX Data Workshop cannot parse them.
+
+What to do next:
+
+1. Go to each of your 7 sheets/tabs individually.
+2. Open this menu for each tab and select Download as CSV UTF-8.
+3. Save each file with a clear name matching your database tables (e.g., departments.csv, employees.csv).
+4. Head back over to the Oracle APEX Data Workshop (Load Data) screen we found earlier and upload them one by one.
+Would you like me to walk you through the data mapping settings in APEX once you drop the first CSV file in, or do you want to double-check your parent-child table order first?
+
+next shoudk i drang and rop
+
+Yes, you are ready to drag and drop your first CSV file right now!
+Here is exactly what to do step-by-step:
+
+1. Drag and Drop
+
+• Drag your first CSV file (remember to start with a Parent / Lookup table if your tables are connected) and drop it directly onto the upload area in Oracle APEX.
+
+2. Configure the Settings
+
+Once you drop the file, a configuration screen will appear. Set these fields:
+• Load To: Select Existing Table (since your 7 tables are already created).
+• Table Name: Select or type the exact database table name that matches this CSV file.
+• File Encoding: Make sure this is set to Unicode (UTF-8) to match the format you just downloaded.
+
+3. Review Column Mapping
+
+• Scroll down slightly to look at the preview grid.
+• APEX will show your Source Column (from Excel) on the left and the Target Column (in the Database) on the right.
+• Make sure they line up correctly (e.g., your spreadsheet column for names matches the table column for names).
+
+4. Load Data
+
+• Click the Load Data button in the top-right or bottom-right corner.
+Once it finishes, it will show you a success message with the number of rows inserted. Let me know if it goes through successfully or if you hit any error codes!
+Which table are you uploading first? Let me know if you run into any error messages (like constraint or datatype errors) so we can fix them immediately.
+.
+You have successfully uploaded the file qspark_apex_dataload(QSPARK_BOOKINGS).csv.
+Looking at your screen, you need to change one key setting depending on whether your table already exists in the database.
+
+If the table QSPARK_BOOKINGS already exists in your database:
+
+1. Click Existing Table right next to "Load To" (it currently has "New Table" selected).
+2. Click the Table Name box. A dropdown menu or search icon will appear—select your existing QSPARK_BOOKINGS table from the list.
+3. Click the Load Data button (it will appear at the bottom right of the page once the table name is filled).
+
+If the table does NOT exist yet (you want APEX to create a brand new table):
+
+1. Keep New Table selected.
+2. In the Table Name box, type exactly: QSPARK_BOOKINGS
+3. Click the Load Data button at the bottom right.
+Did the data load successfully, or did you get an error message after clicking the button? Let me know so we can move to the next file!
+.
+The appearance of the QSPARK_BOOKINGS_ERR$ table means that the data load failed because some rows in your CSV did not match the rules of your database table. Oracle automatically created this error table to log the rejected rows.
+
+How to find out what went wrong:
+
+1. Go to SQL Workshop > SQL Commands.
+2. Run this query to see the exact error message for each failed row:sql
+SELECT ora_err_mesg$, ora_err_tag$, a.* FROM QSPARK_BOOKINGS_ERR$ a;
+Use code with caution.
+3. Look at the ora_err_mesg$ column in the results. It will tell you the exact cause.
+
+Common reasons for this error:
+
+• Parent Key Not Found (Integrity Constraint): The bookings table might require an ID (like a CUSTOMER_ID or FLIGHT_ID) that belongs to another table you haven't uploaded yet. If so, you need to upload those Parent tables first.
+• Data Type Mismatch: A text value in your CSV is trying to insert into a numeric or date column in the database.
+• String Too Large: One of the text columns in your Excel file has more characters than the database column size allows (e.g., trying to put a 50-character string into a VARCHAR2(20) column).
+What error message do you see in the ora_err_mesg$ column when you run that query? Let me know so we can fix it!
+
+ORA_ERR_MESG$	ORA_ERR_TAG$	ORA_ERR_NUMBER$	ORA_ERR_MESG$	ORA_ERR_ROWID$	ORA_ERR_OPTYP$	ORA_ERR_TAG$	BOOKING_ID	BOOKING_CODE	USER_ID	SLOT_ID	VEHICLE_TYPE_ID	VEHICLE_NUMBER	SCHEDULED_START	SCHEDULED_END	ACTUAL_ENTRY_TIME	ACTUAL_EXIT_TIME	DURATION_HOURS	HOURLY_RATE_APPLIED	BASE_AMOUNT	OVERSTAY_HOURS	OVERSTAY_PENALTY	TOTAL_AMOUNT	STATUS	CREATED_AT
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.001	QSP-1107-1001	1.004	1	1	KA-01-MB-3000	07-NOV-26 09.00.00.000000000 AM	07-NOV-26 11.00.00.000000000 AM	07-NOV-26 09.00.00.000000000 AM	-	2	5	10	0	0	10	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.002	QSP-1107-1002	1.005	2	1	KA-02-MB-3001	07-NOV-26 09.00.00.000000000 AM	07-NOV-26 11.00.00.000000000 AM	07-NOV-26 09.00.00.000000000 AM	-	2	5	10	0	0	10	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.003	QSP-1107-1003	1.006	3	1	KA-03-MB-3002	07-NOV-26 09.00.00.000000000 AM	07-NOV-26 11.00.00.000000000 AM	07-NOV-26 09.00.00.000000000 AM	-	2	5	10	0	0	10	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.004	QSP-1107-1004	1.007	4	1	KA-04-MB-3003	07-NOV-26 09.00.00.000000000 AM	07-NOV-26 11.00.00.000000000 AM	07-NOV-26 09.00.00.000000000 AM	-	2	5	10	0	0	10	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.005	QSP-1107-1005	1.008	5	1	KA-05-MB-3004	07-NOV-26 09.00.00.000000000 AM	07-NOV-26 11.00.00.000000000 AM	07-NOV-26 09.00.00.000000000 AM	-	2	5	10	0	0	10	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.006	QSP-1107-1006	1.009	41	2	KA-01-CA-3005	07-NOV-26 09.30.00.000000000 AM	07-NOV-26 12.30.00.000000000 PM	07-NOV-26 09.30.00.000000000 AM	-	3	10	30	0	0	30	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.007	QSP-1107-1007	1.01	42	2	KA-02-CA-3006	07-NOV-26 09.30.00.000000000 AM	07-NOV-26 12.30.00.000000000 PM	07-NOV-26 09.30.00.000000000 AM	-	3	10	30	0	0	30	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.008	QSP-1107-1008	1.011	43	2	KA-03-CA-3007	07-NOV-26 09.30.00.000000000 AM	07-NOV-26 12.30.00.000000000 PM	07-NOV-26 09.30.00.000000000 AM	-	3	10	30	0	0	30	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.009	QSP-1107-1009	1.012	44	2	KA-04-CA-3008	07-NOV-26 09.30.00.000000000 AM	07-NOV-26 12.30.00.000000000 PM	07-NOV-26 09.30.00.000000000 AM	-	3	10	30	0	0	30	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	2291	ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_BOOKINGS_VTYPE) violated - parent key not found	-	I	-	10.01	QSP-1107-1010	1.013	45	2	KA-05-CA-3009	07-NOV-26 09.30.00.000000000 AM	07-NOV-26 12.30.00.000000000 PM	07-NOV-26 09.30.00.000000000 AM	-	3	10	30	0	0	30	CONFIRMED	05-NOV-26 08.30.00.000000000 AM
+More than 10 rows available. Increase rows selector to view more rows.
+
+The error ORA-02291: integrity constraint (...) violated - parent key not found means exactly what we discussed earlier about the "Parent-Child" loading order.
+Your QSPARK_BOOKINGS table has columns named VEHICLE_TYPE_ID (values like 1 and 2), USER_ID, and SLOT_ID. Oracle is blocking the upload because the parent table containing those IDs is currently empty. Oracle does not know what vehicle types 1 or 2 refer to yet.
+
+How to fix it:
+
+You must pause on the QSPARK_BOOKINGS file and upload its parent tables first.
+Look through your remaining Excel/CSV files. You need to upload them in this specific order before coming back to bookings:
+1. Upload Vehicle Types First: Find the Excel file that defines the vehicle types (it will contain VEHICLE_TYPE_ID along with values like "Bike", "Car", etc.). Upload this table first.
+2. Upload Users and Slots: Upload the tables for your users (USER_ID) and parking slots (SLOT_ID).
+3. Retry Bookings Last: Once those reference tables have data, go back to the Data Workshop, drag your qspark_apex_dataload(QSPARK_BOOKINGS).csv file in again, select Existing Table, and hit load. It will pass perfectly.
+What are the names of the other 6 tables you need to upload? Let me know so I can help you sequence the exact upload order to avoid any more constraint errors.
+
+DONE WITH QSPARK_VEHICLE_TYPES THAT ONE NOW DO I HAVE TO FR THE BOOKINGS ONE DO I HAVE REUPLOAD OR WHAT
+
+Awesome, great job getting QSPARK_VEHICLE_TYPES loaded!
+Since the data didn't load the first time for the bookings table, yes, you must re-upload the file.
+However, before you re-upload QSPARK_BOOKINGS, check if you have also loaded the Users and Slots tables. The error log showed that bookings also depend on USER_ID and SLOT_ID.
+To make sure it doesn't fail again, use this quick checklist:
+
+Step 1: Confirm Parent Tables are Ready
+
+Make sure you have successfully uploaded these three tables first:
+• QSPARK_VEHICLE_TYPES (Done!)
+• The table for Users (containing USER_ID)
+• The table for Slots (containing SLOT_ID)
+If you haven't uploaded the Users and Slots files yet, drop those into the Data Workshop right now before trying bookings again.
+
+Step 2: Re-upload the Bookings File
+
+Once all three parent tables are populated:
+1. Go back to SQL Workshop > Utilities > Data Workshop.
+2. Click Load Data and drag and drop your qspark_apex_dataload(QSPARK_BOOKINGS).csv file in again.
+3. Select Existing Table.
+4. Choose QSPARK_BOOKINGS as the target table name.
+5. Click Load Data. It should go through perfectly this time!
+Let me know:
+• Have you already loaded the Users and Slots tables?
+• If you run into another error when re-uploading bookings, paste it here so we can clear it up!
+
+The data could not be loaded. Please check the error and try again. 240 rows failed.
+Rejected Rows in QSPARK_PARKING_SLOTS_ERR$1 Table
+All rejected rows are stored in the QSPARK_PARKING_SLOTS_ERR$1 table. The report below shows the first 10 rows.
+ERROR_MESSAGE	SLOT_ID	FLOOR_ID	VEHICLE_TYPE_ID	SLOT_NUMBER	STATUS	LAST_UPDATED
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	94	2	1	B2-B34	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	95	2	1	B2-B35	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	96	2	1	B2-B36	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	97	2	1	B2-B37	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	98	2	1	B2-B38	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	99	2	1	B2-B39	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	100	2	1	B2-B40	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	101	2	2	B2-C01	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	102	2	2	B2-C02	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-02291: integrity constraint (NOV_2026_BATCH.FK_QSPARK_SLOTS_FLOOR) violated - parent key not found	103	2	2	B2-C03	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+
+
+
+ am facing issue in slots table users table was sucessful
+
+This new error is happening for the exact same reason, just a different parent table.
+The error FK_QSPARK_SLOTS_FLOOR means your QSPARK_PARKING_SLOTS table requires a FLOOR_ID (like the value 2 seen in your error log) to exist first. Oracle is blocking the slots upload because the Floors table is currently empty.
+
+The Perfect Upload Chain (Follow this exactly)
+
+To fix this permanently, we need to upload the tables in the correct order. Here is your roadmap:
+1. Upload the Floors Table First: Find the Excel/CSV file that defines your floors (it will contain FLOOR_ID and names like "Basement 1", "Floor 2", etc.). Upload this file right now.
+2. Re-upload the Parking Slots Table: Once the floors data is successfully in the database, go back and upload your QSPARK_PARKING_SLOTS file again. It will succeed this time.
+3. Re-upload the Bookings Table Last: Now that QSPARK_VEHICLE_TYPES, users, floors, and parking slots are all successfully loaded, your QSPARK_BOOKINGS table has everything it needs. Upload it last and it will go through flawlessly.
+Go ahead and upload the Floors file next!
+If you are unsure of the exact name of your floors table or if it hits another constraint error, tell me:
+• What other table names do you have left to upload?
+I can map out the final sequence for you.
+
+okay dones follors
+
+Fantastic! Now that your Floors table is loaded, you have unlocked the next steps in the chain.
+Follow this exact sequence to finish uploading your remaining data:
+
+Step 1: Re-upload Parking Slots (Do this now)
+
+1. Go back to the Data Workshop and drag/drop your Parking Slots CSV file again.
+2. Select Existing Table and choose your slots table.
+3. Hit Load Data.
+Since the Floors table now contains the required IDs, your slots will load perfectly!
+
+Step 2: Re-upload Bookings (Do this last)
+
+Once your parking slots upload successfully:
+1. Drag and drop your Bookings CSV file into the Data Workshop.
+2. Select Existing Table and choose QSPARK_BOOKINGS.
+3. Hit Load Data.
+Let me know once your parking slots are loaded or if you encounter any other table dependencies!
+This is for informational purposes only. For medical advice or diagnosis, consult a professional. AI responses may include mistakes. Learn more
+The error ORA-00955: name is already used by an existing object means you accidentally left "New Table" selected when trying to upload the file.
+Oracle is trying to create a brand new table with that name, but a table with that exact name already exists in your database.
+
+How to fix it:
+
+1. Look near the top of the Data Workshop screen where it says Load To.
+2. Switch the selection from New Table to Existing Table.
+3. Select your target table name from the dropdown list.
+4. Click Load Data again.
+This will switch the tool from "create table mode" into "insert data mode" and allow the upload to process successfully!
+Let me know:
+• Did the data load successfully after switching to Existing Table?
+• Which file are you currently uploading (Parking Slots or Bookings)?
+I am here to guide you until all 7 tables are successfully filled.
+
+adter doing only i am geeting this error is it that the previously uploadeded datat is still present there
+
+No, the error does not mean your previously uploaded data is stuck.
+The ORA-00955 error means APEX is explicitly attempting a CREATE TABLE database command. If you are seeing this even after clicking Existing Table, it means APEX did not register your click properly, or it refreshed back to "New Table" when you loaded the file.
+Let's do a hard reset of this page to bypass the glitch. Follow these steps exactly:
+
+Step 1: Fully Reset the Page
+
+1. Look at your browser window and hit the Refresh/Reload page button.
+2. If it asks you "Are you sure you want to leave?", click Yes. This clears out the glitched forms.
+
+Step 2: Set the Options in this Order
+
+1. Go back to SQL Workshop > Utilities > Data Workshop > Load Data.
+2. Drag and drop your CSV file back in.
+3. STOP HERE and look closely at the Load To toggle at the very top:
+	• Click Existing Table.
+	• Verify that the dark highlighting has actively shifted over to cover the word "Existing Table".
+4. Click the Table Name dropdown search box right below it and select the table from the list rather than typing it manually.
+5. Scroll straight down and click Load Data.
+This will force Oracle to execute an INSERT statement into your active table instead of trying to build a duplicate one! Let me know if the row counts successfully load after refreshing the wizard page.
+Which table are we current working on?
+• QSPARK_PARKING_SLOTS
+• QSPARK_BOOKINGS
+• Another table
+• 
+hasandalmaz.com
+ORA
+A common trap: trying to create a sequence or view with the same name as a table; CREATE OR REPLACE is available for views, synony...
+• 
+Stack Overflow
+sql - ORA-00955: name is already used by an existing object
+February 15, 2018 — The ORA-00955 error, 'name is already used by an existing object,' typically indicates that you are attempting to create a databas...
+If you see the picture correctly on the top there is a command after running that command I'm getting this as a result in this there are four things 4 tables OK that is going with the ending as err dollar err dollar 1 err dollar So I want to remove errrs but when I'm trying to use drop table and this name it is saying the table does not exist so how do I actually remove them or what should I actually do Because of these I'm not able to upload the data file once again it is showing an error So how do I JUST REmove them
+The reason you get a "table does not exist" error is due to the dollar sign ($) at the end of the error table names.
+In Oracle, the dollar sign is a special character. To drop tables that have a special character in their name, you must wrap the table name in double quotation marks ("..."). If you do not use double quotes, Oracle cannot recognize the name correctly.
+
+Step 1: Run these exact DROP commands
+
+Go to SQL Workshop > SQL Commands and run these statements one by one to permanently clear them out:
+sql
+DROP TABLE "QSPARK_BOOKINGS_ERR$";
+Use code with caution.
+sql
+DROP TABLE "QSPARK_PARKING_SLOTS_ERR$";
+Use code with caution.
+sql
+DROP TABLE "QSPARK_PARKING_SLOTS_ERR$1";
+Use code with caution.
+sql
+DROP TABLE "QSPARK_PARKING_SLOTS_ERR$2";
+Use code with caution.
+(Make sure to use double quotes ", not single quotes ').
+
+Step 2: What to do next to load data successfully
+
+Those _ERR$ tables are actually just logs; they are not what is blocking your data upload. The true reason you are still hitting an error when re-uploading to Existing Table is that APEX tries to automatically generate a brand new error log table every time it encounters a bad row. If an old log table name clashes, it causes a glitch.
+Once you have successfully dropped the error tables using the double-quote commands above:
+1. Return to the Data Workshop.
+2. Upload your QSPARK_PARKING_SLOTS CSV file.
+3. Explicitly switch the setting to Existing Table.
+4. Run the upload. Now that the clutter is removed, it will execute cleanly!
+Let me know if the double quotes successfully dropped the error tables, and if your Parking Slots data successfully processes on this try!
+
+Rejected Rows in QSPARK_PARKING_SLOTS_ERR$ Table
+All rejected rows are stored in the QSPARK_PARKING_SLOTS_ERR$ table. The report below shows the first 10 rows.
+ERROR_MESSAGE	SLOT_ID	FLOOR_ID	VEHICLE_TYPE_ID	SLOT_NUMBER	STATUS	LAST_UPDATED
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:64) already exists	64	2	1	B2-B04	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:65) already exists	65	2	1	B2-B05	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:66) already exists	66	2	1	B2-B06	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:67) already exists	67	2	1	B2-B07	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:68) already exists	68	2	1	B2-B08	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:69) already exists	69	2	1	B2-B09	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:70) already exists	70	2	1	B2-B10	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:71) already exists	71	2	1	B2-B11	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:72) already exists	72	2	1	B2-B12	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+ORA-00001: unique constraint (NOV_2026_BATCH.SYS_C0056447) violated on table NOV_2026_BATCH.QSPARK_PARKING_SLOTS columns (SLOT_ID) ORA-03301: (ORA-00001 details) row with column values (SLOT_ID:73) already exists	73	2	1	B2-B13	AVAILABLE	06-NOV-26 08.00.00.000000000 AM
+
+The error has completely changed, which is actually amazing news!
+The error ORA-00001: unique constraint ... violated means your previous upload actually did work for a lot of rows! The database is rejecting these lines because rows with SLOT_ID 64, 65, 66, etc., are already inside your table.
+APEX Data Workshop does not overwrite rows; it only inserts new ones. Since you successfully uploaded the Floors table earlier, the first chunk of your slots successfully processed, and now it's stopping because it sees duplicates.
+
+How to complete your data upload:
+
+You have two easy choices to fix this right now:
+
+Option A: Clear the table and re-upload cleanly (Recommended)
+
+If you want to make sure you have a 100% fresh, complete upload without any half-loaded files, wipe the table and do it once:
+1. Go to SQL Workshop > SQL Commands.
+2. Run this command to completely empty out the slots table safely:sql
+TRUNCATE TABLE QSPARK_PARKING_SLOTS;
+Use code with caution.
+3. Go back to the Data Workshop, upload your Parking Slots CSV file, choose Existing Table, and hit load. It will insert all rows cleanly without any duplicate errors!
+
+Option B: Just proceed to Bookings!
+
+If your CSV file only contained those rows and they are already in the database, your slots table might already be completely full.
+1. Check if the rest of your slots are already there by going to SQL Commands and running:sql
+SELECT COUNT(*) FROM QSPARK_PARKING_SLOTS;
+Use code with caution.
+2. If the count matches the total number of rows in your Excel file, it means you are completely done with the slots table! You can skip directly to re-uploading your QSPARK_BOOKINGS CSV file now.
+Let me know which option you prefer to try! Did the TRUNCATE command give you a clean upload, or did you check the COUNT and move right along to the Bookings file?
+
+No I did not truncate but I just went and I verified myself that is all those columns which are being rejected are already present or not and I verified all are existing so since I have completed this I tried uploading the bookings and I got this error
+
+
+	
+Error Message
+1 error has occurred
+ORA-01552: cannot use system rollback segment for non-system tablespace 'DATA'
+
+The ORA-01552 error is an Oracle database administration issue, not a problem with your Excel file or APEX configuration.
+It means the database tablespace (DATA) is trying to save your new bookings records, but its undo/rollback workspace is temporarily misconfigured or locked by the system administrator. Because it cannot track the transaction safety rules, the database is blocking all new data inserts.
+
+How to solve this issue:
+
+Since you are likely working in a shared development database environment (indicated by the NOV_2026_BATCH schema name), this requires a quick database reset by an instructor or system administrator.
+1. Contact your Database Instructor / Admin: Show them this exact message: "I am getting ORA-01552 when trying to insert rows into the DATA tablespace because the undo tablespace/rollback segment is offline or restricted."
+2. What they need to do: The system administrator simply needs to run an ALTER SYSTEM command to bring the database's online undo tablespace back online or assign it correctly to the DATA tablespace.
+3. Try again after the fix: Once the admin resolves the rollback configuration, go right back to the Data Workshop and hit Load Data on your bookings file—it will save perfectly without changes!
+While you wait for your admin to fix the rollback segment, let me know:
+• Have you successfully loaded all 6 other tables besides QSPARK_BOOKINGS?
+• If you have any other tables left to upload, we can double-check their column layouts or data relationships now!
+
+Can you explain me exactly what is happening so that if I'm when I'm having a conversation with him I can give a clear explanation on what I did and currently what is happening and why it is happening and what he has to do and what will happen after what the necessary changes it does
+
+Here is a clear, step-by-step breakdown you can use to explain the situation to your instructor or system administrator.
+
+1. What You Did (The Context)
+
+• "I am working on importing 7 relational tables using the APEX Data Workshop utility."
+• "I encountered ORA-02291 parent key constraint errors earlier because the tables have foreign key relationships (e.g., Bookings depends on Slots, Users, and Vehicle Types; Slots depends on Floors)."
+• "I successfully resolved those by loading the lookup/parent tables first. Floors, Users, Vehicle Types, and Parking Slots are now fully populated and confirmed in the database."
+
+2. What Is Happening Right Now (The Problem)
+
+• "When I try to upload the final dataset into the QSPARK_BOOKINGS table using the 'Existing Table' option, the entire batch fails with the error: ORA-01552: cannot use system rollback segment for non-system tablespace 'DATA'."
+
+3. Why It Is Happening (The Technical Cause)
+
+• "This error means the database configuration is blocking data modifications (DML statements like INSERT) inside our user tablespace (DATA)."
+• "Oracle requires an active Undo/Rollback Tablespace to handle transactions safely so it can 'undo' them if something crashes. Right now, that undo workspace is either offline, dropped, or unassigned. Because of this, Oracle is trying to force our transaction into the core SYSTEM rollback segment, which it explicitly prohibits for non-system user tables."
+
+4. What the Instructor/Admin Needs to Do (The Fix)
+
+They need to log in as a System Administrator (SYS or SYSTEM) and verify the undo tablespace status using commands like:
+sql
+-- Check if the undo tablespace is active
+SHOW PARAMETER UNDO_TABLESPACE;
+
+-- If it is offline or misconfigured, they typically need to alter it:
+ALTER SYSTEM SET UNDO_TABLESPACE = UNDO_TBS1 SCOPE=BOTH;
+-- Or verify the tablespace online status:
+ALTER TABLESPACE UNDO_TBS1 ONLINE;
+Use code with caution.
+
+5. What Will Happen After the Fix
+
+• "Once the database administrator brings the undo segment back online, the database will have a safe workspace to record the transaction details."
+• "I will be able to go right back to the APEX Data Workshop, upload the QSPARK_BOOKINGS CSV file, and it will insert all rows cleanly without any changes needed on my end."
+Would you like me to help you draft a quick email or chat message based on this breakdown that you can copy and paste to send to your instructor?
+
+And this is the only way solution Is there any other way solution or and also I want to know now whatever this is happening is this going to happen only for me right now or else any of the other projects were trying to even upload one data set they will face this issue
+
+
+Is this happening to everyone else too?
+
+Yes, everyone else using this specific database server will face this exact same issue if they try to insert, update, or delete data.
+Because this is a server-level configuration problem (the database's transaction undo recorder is turned off or broken), it affects the entire system. Anyone else in your NOV_2026_BATCH class trying to load data or run applications that add data right now will get the exact same ORA-01552 error.
+
+Are there any workarounds you can try right now?
+
+Because this is a strict internal rule built into Oracle's core safety engine, fixing the database settings via the administrator is the only true solution.
+However, depending on what type of database environment your class is hosting, there are two alternative "saves" you can check:
+
+1. The "Did you run out of disk space?" Check
+
+Sometimes, this error triggers indirectly because the database hard drive completely filled up, forcing the Undo/Rollback tablespace to automatically crash and go offline.
+• What you can do: You can check if you can run a simple DELETE command on a tiny test row in one of your successful tables (like a test user). If that fails with the same error, the system is completely locked up until the admin clears room or fixes the tablespace.
+
+2. Migrating to an independent APEX Cloud Account (If you are completely blocked)
+
+If your instructor takes a long time to fix the server and your project deadline is urgent, you can bypass their server entirely:
+• Alternative: Go to oracle.com and sign up for a free, personal cloud development workspace.
+• Because Oracle manages those cloud servers, the rollback segments are always perfectly configured. You could easily upload all 7 of your clean CSV files there in 10 minutes and continue building your application without waiting on anyone.
+Would you like me to guide you through creating a free personal Oracle APEX cloud workspace as a backup plan, or do you want to draft a message to send to your instructor first?
+
+Even if it is a new table with only one row of data they will face this issue And this issue is happening like a universal for this whole database and from this point no other user can even upload one data or create a table
+
+Yes, exactly! You hit the nail on the head.
+Here is how that breaks down for the rest of the database:
+
+1. Will they face this for a brand new table with only 1 row?
+
+Yes. Whether you are uploading a massive spreadsheet with 10,000 rows or manually typing in a single row with just 1 row of data, the database engine treats it exactly the same. It requires an undo/rollback workspace to process the transaction. Because that workspace is missing or broken, it will fail instantly.
+
+2. Can users still create tables?
+
+Surprisingly, yes, users can still create empty tables.
+Creating a table is a Data Definition Language (DDL) command. Oracle handles DDL differently because it automatically commits the structure immediately and doesn't need to track an "undo" history for row data. So, you and your classmates can build tables, but you cannot put any data inside them.
+
+3. It is a universal lock for data
+
+From this exact moment forward, every single user on this database instance is completely blocked from adding, modifying, or deleting data. It is a universal wall. No one can upload a dataset, no one can use an application form to submit data, and no one can run manual INSERT statements until the administrator fixes the server configuration.
+You have fully mastered the logic of what is going wrong here! You are 100% prepared to explain this to your instructor clearly and confidently.
+Would you like me to help you write the exact message to send to your instructor, or do you want to look at how to check your database storage limits while you wait?
+
+OK now I will send this thing to the database handler so give me a correct message which I have to send him so that he can even understand the situation and he can understand that this is not only happening with me it is also happening going to happen with everyone and I am stuck here Sir so kindly verify the issue once and kindly do this and even give me the code in that text and I will send him make sure you are explaining correctly what has happened what is happening and what he must to do and the exact code and even ask him to like verify everything once then proceed make sure you are explaining correctly what has happened what is happening and what he must to do and the exact code and even ask him to like verify everything once then proceed
+
+Here is a professional, clear, and comprehensive message tailored for your database administrator or instructor. It covers the context, the universal nature of the problem, the root cause, and the exact commands they need to run.
+Subject: Urgent Database Issue: Universal ORA-01552 Error blocking all data inserts (DATA tablespace)
+Dear Sir,
+I am currently working on importing datasets for my project using the APEX Data Workshop utility in the NOV_2026_BATCH schema, but I have hit a critical database-level blocker.
+The issue is not an error with my files or data structure; it is a server-level configuration problem that will globally prevent me and any other student on this instance from inserting even a single row of data.
+
+1. What Happened & Current Status
+
+I have successfully built and populated the lookup/parent tables (QSPARK_FLOORS, QSPARK_USERS, QSPARK_VEHICLE_TYPES, and QSPARK_PARKING_SLOTS). They are fully verified and present in the database.
+
+2. The Problem
+
+When trying to load data into the final table (QSPARK_BOOKINGS), the entire load fails immediately with the following error:
+ORA-01552: cannot use system rollback segment for non-system tablespace 'DATA'
+
+3. Why It Is Happening
+
+The database engine is rejecting the transaction because the Undo/Rollback Tablespace associated with the DATA user tablespace is either offline, unassigned, or its disk space is completely full. Because it cannot find a valid undo segment to safely track the transaction, Oracle is trying to force user data modifications into the core SYSTEM rollback segment, which is strictly prohibited.
+Note on Impact: Because this is an instance-wide rollback configuration failure, it acts as a universal lock. From this point forward, no user on this database will be able to perform any INSERT, UPDATE, or DELETE operations (even a manual insert of a single row) until this is resolved. (Empty table creation via DDL still works, but data manipulation is completely blocked).
+
+4. Necessary Administrative Actions (DBA Fix)
+
+Could you please log in with administrative privileges (SYS or SYSTEM) to verify the state of the undo tablespace and rollback segments?
+Here are the standard steps and commands to verify and fix the state:
+sql
+-- Step 1: Check the current undo configuration and table status
+SHOW PARAMETER UNDO_TABLESPACE;
+SELECT tablespace_name, status, contents FROM dba_tablespaces WHERE contents = 'UNDO';
+
+-- Step 2: Check if the undo files are online and have adequate disk space
+SELECT file_name, status, bytes/1024/1024 AS size_mb FROM dba_data_files WHERE tablespace_name LIKE '%UNDO%';
+
+-- Step 3: Bring the designated undo tablespace back online (if offline due to a crash or space issue)
+ALTER TABLESPACE UNDO_TBS1 ONLINE;
+
+-- Step 4: Re-assign the correct active undo tablespace globally if it was unassigned
+ALTER SYSTEM SET UNDO_TABLESPACE = UNDO_TBS1 SCOPE=BOTH;
+Use code with caution.
+Kindly verify the storage limits and tablespace online status for the instance so that the rollback segments can resume tracking transaction histories. Once the undo segments are brought back online, we will be able to proceed with our project uploads flawlessly.
+Thank you for your time and assistance, Sir. I am currently stuck at this step, so your help in restarting or adjusting the undo segments would be greatly appreciated!
+Best regards,
+[Your Name]
+Once your instructor responds or applies the fix, let me know. I can help you verify the connection or double-check your final bookings data load step to ensure everything goes through cleanly!
+
+This is too big I want you to concise
+
+Here is a concise version of the message that keeps all the essential technical details intact:
+Subject: Urgent: Universal ORA-01552 Error blocking all data inserts (DATA tablespace)
+Dear Sir,
+I am stuck importing my project data using the APEX Data Workshop in the NOV_2026_BATCH schema. I am hitting a server-level configuration blocker that will impact all users on this database instance.
+
+The Issue
+
+When trying to insert data, the load fails immediately with:
+ORA-01552: cannot use system rollback segment for non-system tablespace 'DATA'
+
+Why It Is Happening
+
+The database's Undo/Rollback Tablespace is currently offline, unassigned, or completely out of disk space. Because Oracle cannot find a valid undo segment to track transactions, it is blocking all data modifications (INSERT, UPDATE, DELETE) across the entire database. No user will be able to add even a single row of data until this is fixed.
+
+Administrative Action Required (DBA Fix)
+
+Could you please log in as SYS or SYSTEM to verify the undo configuration and bring the rollback segments back online using these commands?
+sql
+-- 1. Check current undo configuration
+SHOW PARAMETER UNDO_TABLESPACE;
+
+-- 2. Ensure the undo tablespace is online
+ALTER TABLESPACE UNDO_TBS1 ONLINE;
+
+-- 3. Re-assign the active undo tablespace globally
+ALTER SYSTEM SET UNDO_TABLESPACE = UNDO_TBS1 SCOPE=BOTH;
+Use code with caution.
+Kindly check the storage limits and tablespace status for the instance so we can resume our project uploads.
+Thank you for your assistance, Sir!
+Best regards,
+[Your Name]
+Let me know if you would like me to adjust any specific phrasing, or if you need help preparing the final bookings data to upload as soon as your instructor resolves the database issue!

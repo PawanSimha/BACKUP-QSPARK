@@ -154,3 +154,7 @@ SELECT * FROM QSPARK_AUDIT_LOGS;
 SELECT table_name FROM user_tables WHERE table_name LIKE 'QSPARK_%' ORDER BY table_name;
 
 --  ============================================================================
+
+DROP TABLE "TABLE_NAME_ERR$";
+
+--  ============================================================================
