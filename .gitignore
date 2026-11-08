@@ -1,0 +1,34 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment & secret files
+.env
+.env.local
+*.pem
+*.key
+wallet/
+
+# Python cache & build files
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Local fallback databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Personal manual tracker
+MY_TRACK.md
+
+# Private folder
+no_entry/
+
+# IDE & OS files I want you to recheck properly because
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
