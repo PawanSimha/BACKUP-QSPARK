@@ -172,3 +172,50 @@
 - **Respect boundary:** `README.md` untouched. `mytrack.md` never read, edited, or overwritten.
 - **Next step:** Phase 3 — customer portal templates/grid, or await instruction.
 
+---
+
+## Setup Entry 011 — Excel-Driven Seeding & Complete Frontend
+
+- **Date:** 2026-11-09
+- **Phase:** Implementation — Phase 3 & 4 (master dataset + UI)
+- **Dataset inspected:** `qspark_apex_dataload.xlsx` has exactly 7 sheets. Counts: 50 users (3 ADMIN ₹1000, 47 USER ₹500; admins hash = `admin123`, users = `user123`), 4 floors, 2 vehicle types, 240 slots (10 RESERVED: `B1-B01`–`B1-B05` and `B1-C01`–`B1-C05`; 230 AVAILABLE), 50 bookings (10 CONFIRMED on slots 1–5/41–45, 40 COMPLETED), 50 `BOOKING_DEBIT` wallet rows, 50 audit rows.
+- **Seeding rewritten:** `src/services/ords_client.py` now loads all 7 tables directly from the workbook with `openpyxl` (`SEED_SHEETS` order respects FKs), path `DEFAULT_DATA_FILE` (project root) overridable via `QSPARK_DATA_FILE`; removed the generated placeholder users and programmatic slot loops. `_cell()` normalises datetime cells. Missing workbook now raises a clear `FileNotFoundError`.
+- **Tests updated:** seeded reservations shifted car slots, so the insufficient-funds and cancellation tests now use slots 46–52; `pytest -q` → **12 passed**.
+- **Frontend created:**
+  - `src/templates/index.html` — Bootstrap 5.3 + FontAwesome 6 + Chart.js CDNs; navbar with mode pill, wallet chip, role badge, portal/admin/bookings/logout; login card with quick-login for Pawan/Harshitha; B1–B4 tabs; bike/car bay grids; sticky fare card; payment, digital pass (QR canvas + print), exit simulator modals; bookings offcanvas; admin KPIs, heatmap, charts, override table, audit log.
+  - `src/static/css/app.css` — status colour tokens (#10b981/#f59e0b/#ef4444/#64748b), sticky card, heat bars, print-only pass stylesheet.
+  - `src/static/js/app.js` — session storage token, wallet refresh on every debit/refund, live fare math, atomic booking + pass generation, cancel with refund, exit simulator, admin rendering (`Chart.js` doughnut/bar), overrides and audit.
+  - `src/main.py` — `GET /` renders `index.html` with live mode label; `src/api/analytics.py` — added `GET /api/analytics/audit`; `src/services/ords_client.py` — added `list_audit_logs()`.
+- **Demo bug fixed:** seeded CONFIRMED bookings have windows in the past, so "On-Time Exit" would have charged ~48 h of overstay. Simulator now targets `scheduled_end + delay` (negative offset allowed), verified in-browser: past booking exits with ₹0 penalty, 1.5 h late charges exactly ₹15 on a bike.
+- **Browser verification (real uvicorn on :8000):** admin quick-login → 60 bays/50 available/₹1000; booking `B1-B06` → pass `QSP-1109-0051`, QR painted, wallet ₹995, bay RESERVED; 1.5 h late checkout → ₹15 penalty, wallet ₹980, COMPLETED; user quick-login → book `B1-B07` (₹495) then cancel → wallet back to ₹500, bay AVAILABLE; admin center → 240 slots, 4 heat bars, both charts, 240 override rows, 51 audit rows. No console errors.
+- **Cleanup:** removed temporary inspection scripts and reset `src/services/parking_local.db` so the next run reseeds fresh from Excel. Stopped the demo server.
+- **How to run:** `.\\.venv\\Scripts\\python.exe -m uvicorn src.main:app --reload` then open `http://127.0.0.1:8000/`.
+- **Todo updates:** ticked Excel verification, all 9 frontend items, all 6 admin items, and zero-config local run.
+- **Respect boundary:** `README.md` untouched. `mytrack.md` never read, edited, or overwritten.
+- **Next step:** final polish / Oracle APEX live cutover, or await instruction.
+
+
+
+---
+
+## Setup Entry 012 - Phase 5 Final Delivery, Documentation Audit & Sign-off
+
+- **Date:** 2026-11-09
+- **Phase:** Phase 5 - Final delivery and documentation sign-off
+- **Context file created:** `markdown/context.md` - project identity, CEO mandates, facility topology, pricing/overstay engine, 50-account seed directory, technical reality (dual-mode broker), run commands and the living-document maintenance rule.
+- **Documentation audited and synced:**
+  - `agents.md` - new Section 4 "Living Documentation & Context Sync": context.md is the single source of truth, tracker is the audit trail, todo reflects reality, code wins, sign off only when all are consistent.
+  - `architecture.md` - Section 6 FastAPI internal endpoint to ORDS handler mapping (all 10 routes, local-only routes marked); Section 7 dual-mode broker and Excel auto-seeder internals (`SEED_SHEETS` FK order, single-transaction seeding, live-mode 501 limitation).
+  - `database_and_ords.md` - added the 10 indexes matching `database/schema.sql`; recorded the BIKE Rs.10/hr vs CAR Rs.20/hr overstay math on the checkout contract.
+  - `frontend_and_flows.md` - Section 9 implemented file map (`index.html`, `app.css`, `app.js`) with key element IDs and layout behaviour; Section 10 `scheduled_end + delay` exit-simulator math with the selectors (on-time / 30 min / 1.5 h) and penalty table.
+  - `prd.md` - replaced the abbreviated user list with the verified full 50-row roster (3 ADMIN Rs.1,000 / 47 USER Rs.500) loaded from `qspark_apex_dataload.xlsx`.
+  - `roadmap.md` - Phases 1-4 marked COMPLETED with verified outcomes; Phase 5 marked ACTIVE (only physical APEX cutover remains).
+  - `todo.md` - ticked README finalization and context creation; only "Test live Oracle APEX ORDS connectivity" remains open.
+- **Root files:**
+  - `requirements.txt` - clean deduplicated list (fastapi, uvicorn, jinja2, openpyxl, python-dotenv, requests, pydantic, pytest, httpx).
+  - `.gitignore` - added lowercase `mytrack.md` alongside `MY_TRACK.md`; tidied the IDE section comment.
+  - `README.md` - rewritten as UTF-8 (was UTF-16LE developer note) with overview, mandates met, facility/pricing table, architecture + directory tree, quickstart, credentials table, API table, 4-step APEX cutover checklist, 5-minute CEO demo script and documentation index.
+- **Test result:** `pytest -q` -> **12 passed, 1 warning in 10.19 s** (6 unit + 6 integration). Warning is the upstream Starlette/httpx deprecation notice, not a project issue.
+- **Cleanup:** removed temporary inspection artifacts (`probe_readme.py`, `readme_probe.txt`, `dump_users.py`, `users_table.md`).
+- **Respect boundary:** `mytrack.md` was never read, edited, or overwritten.
+- **Next step:** physical Oracle APEX deployment - run `database/schema.sql`, load the 7 Excel sheets, publish `database/ords_setup.sql`, set `ORDS_SIMULATION_MODE=false`.

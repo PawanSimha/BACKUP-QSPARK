@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI  # noqa: E402
-from fastapi.responses import JSONResponse  # noqa: E402
+from fastapi import FastAPI, Request  # noqa: E402
+from fastapi.responses import HTMLResponse, JSONResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 from fastapi.templating import Jinja2Templates  # noqa: E402
 
@@ -47,6 +47,20 @@ _STATUS_BY_ERROR = (
 async def ords_error_handler(_, exc: OrdsError):
     status = next((code for cls, code in _STATUS_BY_ERROR if isinstance(exc, cls)), 500)
     return JSONResponse({"error": str(exc)}, status_code=status)
+
+
+@app.get("/", response_class=HTMLResponse)
+def index(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {
+            "simulation_mode": ords.simulation_mode,
+            "mode_label": "ORDS Local Emulator (Active)"
+            if ords.simulation_mode
+            else "Oracle APEX ORDS (Live)",
+        },
+    )
 
 
 @app.get("/api/health")

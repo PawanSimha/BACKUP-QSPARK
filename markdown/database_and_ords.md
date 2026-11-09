@@ -167,6 +167,24 @@ CONSTRAINT chk_qspark_audit_event CHECK (event_type IN ('SLOT_STATUS_CHANGE', 'B
 );
 ```
 
+### Indexes (10, matching `database/schema.sql`)
+```sql
+CREATE INDEX idx_qspark_users_role ON QSPARK_USERS (role, is_active);
+
+CREATE INDEX idx_qspark_slots_floor_status ON QSPARK_PARKING_SLOTS (floor_id, status);
+CREATE INDEX idx_qspark_slots_vtype ON QSPARK_PARKING_SLOTS (vehicle_type_id);
+
+CREATE INDEX idx_qspark_bookings_user ON QSPARK_BOOKINGS (user_id, status);
+CREATE INDEX idx_qspark_bookings_slot ON QSPARK_BOOKINGS (slot_id);
+CREATE INDEX idx_qspark_bookings_status ON QSPARK_BOOKINGS (status);
+
+CREATE INDEX idx_qspark_wallet_user ON QSPARK_WALLET_TRANSACTIONS (user_id, processed_at);
+CREATE INDEX idx_qspark_wallet_booking ON QSPARK_WALLET_TRANSACTIONS (booking_id);
+
+CREATE INDEX idx_qspark_audit_slot ON QSPARK_AUDIT_LOGS (slot_id, logged_at);
+CREATE INDEX idx_qspark_audit_booking ON QSPARK_AUDIT_LOGS (booking_id);
+```
+
 ## 2. ORDS REST API Contract (Published via Oracle APEX)
 All REST services are exposed under the base path:
 `http://<apex-host>:<port>/ords/<workspace>/smartparking/v2/`
@@ -239,6 +257,7 @@ All REST services are exposed under the base path:
       "status": "COMPLETED"
     }
     ```
+  - **Penalty math:** a 10-minute grace period after `scheduled_end` is free. Past grace, `penalty = overstay_hours × rate`, where **BIKE = ₹10.00/hr** and **CAR = ₹20.00/hr**. The example above is a bike slot (`B1-B14`): 1.5 late hours × ₹10 = **₹15.00**; the same delay on a car would be ₹30.00.
 
 ### API 4: Reservation Cancellation & Instant Wallet Refund
 - `PUT /bookings/:id/cancel`

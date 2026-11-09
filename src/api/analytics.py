@@ -10,3 +10,8 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 @router.get("/kpi")
 def kpi():
     return ords.get_analytics_kpi()
+
+
+@router.get("/audit")
+def audit():
+    return {"items": ords.list_audit_logs()}

@@ -77,10 +77,10 @@ def test_insufficient_wallet_is_rejected(client):
         "vehicle_number": "KA-05-CD-5678",
         "duration_hours": 8,
     }
-    for slot_id in range(41, 47):  # 6 x car 8h = 480 of the 500 balance
+    for slot_id in range(46, 52):  # 6 x car 8h = 480 of the 500 balance
         assert client.post("/api/bookings", json={**payload, "slot_id": slot_id}).status_code == 201
 
-    rejected = client.post("/api/bookings", json={**payload, "slot_id": 47})
+    rejected = client.post("/api/bookings", json={**payload, "slot_id": 52})
     assert rejected.status_code == 402
     assert "Insufficient" in rejected.json()["error"]
 
@@ -114,7 +114,7 @@ def test_cancellation_refunds_wallet(client):
         "/api/bookings",
         json={
             "user_id": USER_ID,
-            "slot_id": 41,
+            "slot_id": 46,
             "vehicle_number": "KA-02-EF-9012",
             "duration_hours": 3,
         },

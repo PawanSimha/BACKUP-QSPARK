@@ -95,3 +95,37 @@
   - Searchable table of all 240 bays with a dropdown to force state to `MAINTENANCE` (sensor calibration), `OCCUPIED` (walk-in vehicle), or `AVAILABLE`.
 - **Master Audit Log View:**
   - Chronological table of `QSPARK_AUDIT_LOGS` recording user IDs, slot IDs, old status, new status, and timestamps.
+
+## 9. Implemented File Map & Component Layout (as built)
+The UI ships as three files served by FastAPI (`GET /`); Bootstrap 5.3, FontAwesome 6 and Chart.js 4 load from CDNs.
+
+| File | Responsibility | Key UI element IDs |
+| :--- | :--- | :--- |
+| `src/templates/index.html` | Full page shell: navbar, login, portal, admin, 3 modals, bookings offcanvas, print area | `loginView`, `portalView`, `adminView`, `floorTabs`, `bikeSection`, `carSection`, `bookingCard`, `paymentModal`, `passModal`, `exitModal`, `bookingsDrawer`, `printArea` |
+| `src/static/css/app.css` | Design tokens and bay colours (#10b981 / #f59e0b / #ef4444 / #64748b), sticky booking card, heat bars, print stylesheet | `.bay`, `.bay.available`, `.bay.reserved`, `.bay.occupied`, `.bay.maintenance`, `.bay.selected`, `.wallet-chip` |
+| `src/static/js/app.js` | Session/token handling, slot rendering, fare calculator, wallet refresh, booking + QR pass, cancel, exit simulator, admin KPIs/charts/overrides/audit | `state`, `api()`, `renderSlots()`, `confirmPayment()`, `drawQr()`, `processExit()`, `showAdmin()` |
+
+Layout behaviour:
+- Navbar shows `mode_label` from the server (`ORDS Local Emulator (Active)` or `Oracle APEX ORDS (Live)`), wallet chip, role badge and role-gated admin button.
+- Portal is an 8/4 Bootstrap grid: floor tabs + bike/car grids on the left, sticky fare card on the right.
+- Admin uses four KPI cards, a 5/4/3 chart row, then a 6/6 row for slot overrides and the audit log.
+- Authentication state and token persist in `sessionStorage` (`qspark_token`); every debit/refund calls `/api/auth/me` to refresh the wallet chip.
+
+## 10. Exit Simulator Math (`scheduled_end + delay`)
+The seeded bookings intentionally have past windows, so the simulator cannot simply add the delay to "now". It computes the target exit explicitly:
+
+```
+target_exit     = scheduled_end + delay
+simulated_late  = (scheduled_end - now) / 1 hour + delay   // may be negative
+payload         = { "simulated_late_hours": simulated_late }
+```
+
+The backend then evaluates `exit = now + simulated_late_hours`, which equals `target_exit`.
+
+| Selector | Delay | Bike penalty (₹10/hr) | Car penalty (₹20/hr) |
+| :--- | :---: | :---: | :---: |
+| On-Time Exit | 0 h | ₹0.00 (within grace) | ₹0.00 |
+| 30 Mins Late | 0.5 h | ₹5.00 | ₹10.00 |
+| 1.5 Hours Late | 1.5 h | ₹15.00 | ₹30.00 |
+
+Lateness inside the 10-minute grace window is always ₹0.00. Penalties are debited as `OVERSTAY_DEBIT`; a booking whose wallet cannot cover the fine is rejected with HTTP 402.

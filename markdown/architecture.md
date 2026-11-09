@@ -76,3 +76,28 @@ The client tier is structured into modular layers to allow clean incremental vis
 - **Password Security:** Client submits plain passwords over HTTPS; backend computes `hashlib.sha256(password.encode()).hexdigest()` and verifies against `QSPARK_USERS.password_hash`. Plaintext passwords are never written to disk or logged.
 - **Role Enforcement Middleware:** FastAPI dependencies inspect user roles before granting access to `/api/admin/*` routes.
 - **No External Outbound Calls:** Zero network requests are made to external payment processors, SMS providers, or third-party cloud services.
+
+## 6. FastAPI Internal API ↔ ORDS Mapping (as built)
+The browser only ever talks to FastAPI. The broker decides whether each call stays local or becomes an ORDS HTTP request.
+
+| Internal endpoint (`src/api/`) | Broker method | ORDS handler (`database/ords_setup.sql`) |
+| :--- | :--- | :--- |
+| `POST /api/auth/login` | `authenticate_user()` | *local only* |
+| `GET /api/auth/me` | `get_user()` | *local only* |
+| `GET /api/slots?floor_id=` | `get_slots()` | `GET slots/` |
+| `PUT /api/slots/{slot_id}/status` | `update_slot_status()` | `PUT slots/:id/status` |
+| `POST /api/bookings` | `create_booking()` | `POST bookings/` |
+| `GET /api/bookings?user_id=` | `list_bookings()` | *local only* |
+| `PUT /api/bookings/{id}/checkout` | `checkout_booking()` | `PUT bookings/:id/checkout` |
+| `PUT /api/bookings/{id}/cancel` | `cancel_booking()` | `PUT bookings/:id/cancel` |
+| `GET /api/analytics/kpi` | `get_analytics_kpi()` | `GET analytics/kpi` |
+| `GET /api/analytics/audit` | `list_audit_logs()` | *local only* |
+
+Supporting endpoints: `GET /api/health` (liveness), `GET /api/status` (mode label), `GET /` (Jinja2 `index.html`).
+Errors are raised as typed broker exceptions and mapped centrally in `src/main.py`: 400 invalid input, 402 insufficient funds, 404 not found, 409 state conflict (slot taken / not cancellable), 501 unsupported in live mode.
+
+## 7. Dual-Mode Broker & Excel Auto-Seeder (verified)
+- `src/services/ords_client.py` exposes the singleton `ords`. Configuration: `ORDS_SIMULATION_MODE`, `ORDS_BASE_URL`, `ORDS_TIMEOUT`, optional `QSPARK_DB_PATH` and `QSPARK_DATA_FILE`.
+- **Simulation mode:** creates `src/services/parking_local.db`, applies the 7-table SQLite schema, and on an empty database seeds every table straight from `qspark_apex_dataload.xlsx` with `openpyxl`. Sheet order is `QSPARK_USERS → QSPARK_FLOORS → QSPARK_VEHICLE_TYPES → QSPARK_PARKING_SLOTS → QSPARK_BOOKINGS → QSPARK_WALLET_TRANSACTIONS → QSPARK_AUDIT_LOGS` so foreign keys hold. Seeding runs in one transaction (~0.6 s); `reset_database()` drops and re-seeds for demos and tests.
+- **Live mode:** the same methods issue `requests.Session` calls to the published ORDS paths. Auth, booking-list and audit reads have no ORDS handler yet and return 501.
+- Write methods (`create_booking`, `checkout_booking`, `cancel_booking`, `update_slot_status`) use `BEGIN IMMEDIATE` transactions with rollback in simulation, mirroring the PL/SQL handlers.

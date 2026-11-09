@@ -1,0 +1,104 @@
+/* QSPARK frontend theme */
+:root {
+  --qs-navbar: #0f172a;
+  --qs-canvas: #f8fafc;
+  --qs-available: #10b981;
+  --qs-available-bg: #ecfdf5;
+  --qs-reserved: #f59e0b;
+  --qs-reserved-bg: #fffbeb;
+  --qs-occupied: #ef4444;
+  --qs-occupied-bg: #fef2f2;
+  --qs-maintenance: #64748b;
+  --qs-maintenance-bg: #f1f5f9;
+  --qs-accent: #2563eb;
+}
+
+body {
+  background: var(--qs-canvas);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.qs-navbar {
+  background: var(--qs-navbar);
+}
+
+.wallet-chip {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #a7f3d0;
+  border-radius: 999px;
+  padding: .35rem .8rem;
+  font-weight: 600;
+  font-size: .9rem;
+}
+
+.user-chip {
+  color: #e2e8f0;
+  font-size: .9rem;
+}
+
+.card {
+  border: 1px solid #e2e8f0;
+  border-radius: .75rem;
+}
+
+.qs-card-title {
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+/* Basement grid */
+.bay-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: .45rem;
+}
+
+.bay {
+  border: 1.5px solid transparent;
+  border-radius: .5rem;
+  padding: .5rem .25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .15rem;
+  font-size: .72rem;
+  font-weight: 700;
+  cursor: default;
+  transition: transform .1s ease;
+}
+
+.bay i { font-size: 1rem; }
+.bay.available { background: var(--qs-available-bg); border-color: var(--qs-available); color: #047857; cursor: pointer; }
+.bay.reserved { background: var(--qs-reserved-bg); border-color: var(--qs-reserved); color: #b45309; }
+.bay.occupied { background: var(--qs-occupied-bg); border-color: var(--qs-occupied); color: #b91c1c; }
+.bay.maintenance { background: var(--qs-maintenance-bg); border-color: var(--qs-maintenance); color: #475569; }
+.bay.available:hover { transform: translateY(-2px); }
+.bay.selected { outline: 3px solid var(--qs-accent); outline-offset: 1px; }
+
+.legend-dot {
+  width: .8rem; height: .8rem; border-radius: 50%; display: inline-block; margin-right: .25rem;
+}
+
+/* Sticky booking card */
+.booking-card { position: sticky; top: 1rem; }
+
+.fare-big { font-size: 2rem; font-weight: 800; color: var(--qs-accent); }
+
+/* Admin */
+.kpi-value { font-size: 1.9rem; font-weight: 800; }
+.heat-bar { height: 1.1rem; }
+.status-legend .badge { font-size: .75rem; }
+.table-sm td, .table-sm th { font-size: .82rem; vertical-align: middle; }
+.audit-table { max-height: 420px; overflow-y: auto; }
+
+#printArea { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea { display: block; position: absolute; inset: 0; padding: 2rem; }
+}

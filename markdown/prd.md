@@ -34,9 +34,62 @@ The system is pre-populated with 50 specific user profiles loaded via `qspark_ap
   2. `Lalaji Gajera` (`lalaji.gajera@qspark.com`, username: `lalaji.gajera`, password: `admin123`, wallet: `₹1,000.00`)
   3. `Pawan Simha R` (`pawan.simha@qspark.com`, username: `pawan.simha`, password: `admin123`, wallet: `₹1,000.00`)
 - **Remaining 47 Accounts are `USER` (`USER_ID` 1004 to 1050):**
-  - Harshitha M N (`harshitha@qspark.com`), Abhijna (`abhijna@qspark.com`), Nikhil Suresh Naik (`nikhil.naik@qspark.com`), etc.
   - Default password for all regular users: `user123` (stored as SHA-256 hash).
   - Default initial Metro Card wallet balance: `₹500.00` each.
+  - Verified roster loaded from `qspark_apex_dataload.xlsx`:
+
+| User ID | Full Name | Username | Email | Role | Wallet |
+| :---: | :--- | :--- | :--- | :---: | :---: |
+| 1001 | Karan Tulsani | `karan.tulsani` | karan.tulsani@qspark.com | ADMIN | ₹1,000.00 |
+| 1002 | Lalaji Gajera | `lalaji.gajera` | lalaji.gajera@qspark.com | ADMIN | ₹1,000.00 |
+| 1003 | Pawan Simha R | `pawan.simha` | pawan.simha@qspark.com | ADMIN | ₹1,000.00 |
+| 1004 | Harshitha M N | `harshitha` | harshitha@qspark.com | USER | ₹500.00 |
+| 1005 | Abhijna | `abhijna` | abhijna@qspark.com | USER | ₹500.00 |
+| 1006 | Manprit | `manprit` | manprit@qspark.com | USER | ₹500.00 |
+| 1007 | Mythili N | `mythili` | mythili@qspark.com | USER | ₹500.00 |
+| 1008 | Meghana Gopal | `meghana.gopal` | meghana.gopal@qspark.com | USER | ₹500.00 |
+| 1009 | Yoshitha T | `yoshitha` | yoshitha@qspark.com | USER | ₹500.00 |
+| 1010 | Yuvraj Umang M | `yuvraj.umang` | yuvraj.umang@qspark.com | USER | ₹500.00 |
+| 1011 | Girish D R | `girish` | girish@qspark.com | USER | ₹500.00 |
+| 1012 | Jaswanth S | `jaswanth` | jaswanth@qspark.com | USER | ₹500.00 |
+| 1013 | Rohith R | `rohith` | rohith@qspark.com | USER | ₹500.00 |
+| 1014 | Lipika Devarahatti | `lipika.devarahatti` | lipika.devarahatti@qspark.com | USER | ₹500.00 |
+| 1015 | Harshita Hegde | `harshita.hegde` | harshita.hegde@qspark.com | USER | ₹500.00 |
+| 1016 | Bharati Kumari | `bharati.kumari` | bharati.kumari@qspark.com | USER | ₹500.00 |
+| 1017 | Kamutala Abhinav | `kamutala.abhinav` | kamutala.abhinav@qspark.com | USER | ₹500.00 |
+| 1018 | Nikunj Gupta | `nikunj.gupta` | nikunj.gupta@qspark.com | USER | ₹500.00 |
+| 1019 | Videsh Kumar | `videsh.kumar` | videsh.kumar@qspark.com | USER | ₹500.00 |
+| 1020 | Arangan Shankar | `arangan.shankar` | arangan.shankar@qspark.com | USER | ₹500.00 |
+| 1021 | Chinnaswamy Palani | `chinnaswamy.palani` | chinnaswamy.palani@qspark.com | USER | ₹500.00 |
+| 1022 | Nikhil Suresh Naik | `nikhil.naik` | nikhil.naik@qspark.com | USER | ₹500.00 |
+| 1023 | Aditya U | `aditya` | aditya@qspark.com | USER | ₹500.00 |
+| 1024 | Vivek | `vivek` | vivek@qspark.com | USER | ₹500.00 |
+| 1025 | Atman Mishra | `atman.mishra` | atman.mishra@qspark.com | USER | ₹500.00 |
+| 1026 | Kousal Reddy | `kousal.reddy` | kousal.reddy@qspark.com | USER | ₹500.00 |
+| 1027 | Likitha K | `likitha` | likitha@qspark.com | USER | ₹500.00 |
+| 1028 | Abhishek Paul P | `abhishek.paul` | abhishek.paul@qspark.com | USER | ₹500.00 |
+| 1029 | Janiya Mariya Tomy | `janiya.tomy` | janiya.tomy@qspark.com | USER | ₹500.00 |
+| 1030 | Gaurav Ahuja | `gaurav.ahuja` | gaurav.ahuja@qspark.com | USER | ₹500.00 |
+| 1031 | Pramila Baburao More | `pramila.more` | pramila.more@qspark.com | USER | ₹500.00 |
+| 1032 | Vandana D Patel | `vandana.patel` | vandana.patel@qspark.com | USER | ₹500.00 |
+| 1033 | Joel Rajive | `joel.rajive` | joel.rajive@qspark.com | USER | ₹500.00 |
+| 1034 | Jagadeesh Jairam Jaisinghani | `jagadeesh.jaisinghani` | jagadeesh.jaisinghani@qspark.com | USER | ₹500.00 |
+| 1035 | Vancy Arokiya | `vancy.arokiya` | vancy.arokiya@qspark.com | USER | ₹500.00 |
+| 1036 | Prerna | `prerna` | prerna@qspark.com | USER | ₹500.00 |
+| 1037 | Roshan Baig M | `roshan.baig` | roshan.baig@qspark.com | USER | ₹500.00 |
+| 1038 | Bishal Debnath | `bishal.debnath` | bishal.debnath@qspark.com | USER | ₹500.00 |
+| 1039 | Haylee Dhiresh Desai | `haylee.desai` | haylee.desai@qspark.com | USER | ₹500.00 |
+| 1040 | Minni Parnami | `minni.parnami` | minni.parnami@qspark.com | USER | ₹500.00 |
+| 1041 | Munmun Gupta | `munmun.gupta` | munmun.gupta@qspark.com | USER | ₹500.00 |
+| 1042 | Piyush Patel | `piyush.patel` | piyush.patel@qspark.com | USER | ₹500.00 |
+| 1043 | Tilak Bahadur Shah | `tilak.shah` | tilak.shah@qspark.com | USER | ₹500.00 |
+| 1044 | Sharan S | `sharan` | sharan@qspark.com | USER | ₹500.00 |
+| 1045 | Dhruvil Pandya | `dhruvil.pandya` | dhruvil.pandya@qspark.com | USER | ₹500.00 |
+| 1046 | Diksha Patel | `diksha.patel` | diksha.patel@qspark.com | USER | ₹500.00 |
+| 1047 | Suma Paralada | `suma.paralada` | suma.paralada@qspark.com | USER | ₹500.00 |
+| 1048 | Bhagyashree Shrikant Wagh | `bhagyashree.wagh` | bhagyashree.wagh@qspark.com | USER | ₹500.00 |
+| 1049 | Gopal Mahendra Reddy | `gopal.reddy` | gopal.reddy@qspark.com | USER | ₹500.00 |
+| 1050 | Janardhana M T | `janardhana` | janardhana@qspark.com | USER | ₹500.00 |
 - **New User Registration Flow:**
   - New users sign up with Full Name, Username, Email, and Plain Password.
   - Backend computes `hashlib.sha256(password.encode()).hexdigest()` and assigns starting balance `₹500.00`.

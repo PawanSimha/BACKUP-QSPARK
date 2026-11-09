@@ -23,11 +23,12 @@ __pycache__/
 
 # Personal manual tracker
 MY_TRACK.md
+mytrack.md
 
 # Private folder
 no_entry/
 
-# IDE & OS files I want you to recheck properly because
+# IDE & OS files
 .vscode/
 .idea/
 .DS_Store

@@ -6,6 +6,7 @@ ORDS_SIMULATION_MODE=false -> live Oracle APEX ORDS REST endpoints
 
 from __future__ import annotations
 
+import openpyxl
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -13,25 +14,23 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from src.core.pricing_engine import calculate_booking_fare, calculate_overstay_penalty
-from src.core.security import hash_password, verify_password
+from src.core.security import verify_password
 
 DEFAULT_DB_PATH = Path(__file__).with_name("parking_local.db")
+DEFAULT_DATA_FILE = Path(__file__).resolve().parents[2] / "qspark_apex_dataload.xlsx"
 
 SLOT_STATUSES = ("AVAILABLE", "RESERVED", "OCCUPIED", "MAINTENANCE")
-USER_TARIFFS = ("BIKE", "CAR")
 
-# Seeded accounts. PRD names for 1001-1006; remaining users are generated
-# because qspark_apex_dataload.xlsx is not present in the repository yet.
-ADMIN_SEED = [
-    (1001, "karan.tulsani", "karan.tulsani@qspark.com", "Karan Tulsani"),
-    (1002, "lalaji.gajera", "lalaji.gajera@qspark.com", "Lalaji Gajera"),
-    (1003, "pawan.simha", "pawan.simha@qspark.com", "Pawan Simha R"),
-]
-NAMED_USER_SEED = [
-    (1004, "harshitha", "harshitha@qspark.com", "Harshitha M N"),
-    (1005, "abhijna", "abhijna@qspark.com", "Abhijna"),
-    (1006, "nikhil.naik", "nikhil.naik@qspark.com", "Nikhil Suresh Naik"),
-]
+# Sheet order matters: parent tables before children.
+SEED_SHEETS = (
+    ("QSPARK_USERS", "QSPARK_USERS"),
+    ("QSPARK_FLOORS", "QSPARK_FLOORS"),
+    ("QSPARK_VEHICLE_TYPES", "QSPARK_VEHICLE_TYPES"),
+    ("QSPARK_PARKING_SLOTS", "QSPARK_PARKING_SLOTS"),
+    ("QSPARK_BOOKINGS", "QSPARK_BOOKINGS"),
+    ("QSPARK_WALLET_TRANSACTIONS", "QSPARK_WALLET_TRANSACTIONS"),
+    ("QSPARK_AUDIT_LOGS", "QSPARK_AUDIT_LOGS"),
+)
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS QSPARK_USERS (
@@ -152,6 +151,13 @@ def _now() -> str:
     return datetime.now().replace(microsecond=0).isoformat(sep=" ")
 
 
+def _cell(value):
+    """Normalise Excel cell values for SQLite (datetimes -> ISO text)."""
+    if isinstance(value, datetime):
+        return value.isoformat(sep=" ")
+    return value
+
+
 class OrdsClient:
     def __init__(
         self,
@@ -261,66 +267,28 @@ class OrdsClient:
         self._init_db()
 
     def _seed(self, conn: sqlite3.Connection) -> None:
-        now = _now()
-        users = [(uid, un, em, full, "ADMIN", 1000.0) for uid, un, em, full in ADMIN_SEED]
-        users += [
-            (uid, un, em, full, "USER", 500.0) for uid, un, em, full in NAMED_USER_SEED
-        ]
-        users += [
-            (uid, f"user{uid}", f"user{uid}@qspark.com", f"QSPARK User {uid}", "USER", 500.0)
-            for uid in range(1007, 1051)
-        ]
-        for uid, username, email, full_name, role, balance in users:
-            password = "admin123" if role == "ADMIN" else "user123"
-            conn.execute(
-                """INSERT INTO QSPARK_USERS
-                   (user_id, username, email, password_hash, full_name, role,
-                    wallet_balance, is_active, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 'Y', ?)""",
-                (uid, username, email, hash_password(password), full_name, role, balance, now),
-            )
+        """Load all 7 tables from the master Excel workbook (exact dataset)."""
+        data_file = Path(os.getenv("QSPARK_DATA_FILE", DEFAULT_DATA_FILE))
+        if not data_file.exists():
+            raise FileNotFoundError(f"Master dataset not found: {data_file}")
 
-        for floor_id, code in enumerate(("B1", "B2", "B3", "B4"), start=1):
-            conn.execute(
-                """INSERT INTO QSPARK_FLOORS
-                   (floor_id, floor_code, floor_name, bike_capacity, car_capacity,
-                    total_capacity, status)
-                   VALUES (?, ?, ?, 40, 20, 60, 'OPEN')""",
-                (floor_id, code, f"Basement Level {floor_id}"),
-            )
-
-        conn.execute(
-            """INSERT INTO QSPARK_VEHICLE_TYPES
-               (vehicle_type_id, type_code, display_name, hourly_rate,
-                overstay_penalty_hour, total_slots_per_floor)
-               VALUES (1, 'BIKE', 'Two-Wheeler', 5.00, 10.00, 40)"""
-        )
-        conn.execute(
-            """INSERT INTO QSPARK_VEHICLE_TYPES
-               (vehicle_type_id, type_code, display_name, hourly_rate,
-                overstay_penalty_hour, total_slots_per_floor)
-               VALUES (2, 'CAR', 'Four-Wheeler', 10.00, 20.00, 20)"""
-        )
-
-        slot_id = 1
-        for floor_id, code in enumerate(("B1", "B2", "B3", "B4"), start=1):
-            for n in range(1, 41):
-                status = "RESERVED" if floor_id == 1 and n <= 5 else "AVAILABLE"
-                conn.execute(
-                    """INSERT INTO QSPARK_PARKING_SLOTS
-                       (slot_id, floor_id, vehicle_type_id, slot_number, status, last_updated)
-                       VALUES (?, ?, 1, ?, ?, ?)""",
-                    (slot_id, floor_id, f"{code}-B{n:02d}", status, now),
+        workbook = openpyxl.load_workbook(data_file, data_only=True, read_only=True)
+        try:
+            for sheet_name, table in SEED_SHEETS:
+                rows = workbook[sheet_name].iter_rows(values_only=True)
+                headers = [str(header).strip().upper() for header in next(rows)]
+                columns = ", ".join(headers)
+                placeholders = ", ".join("?" for _ in headers)
+                values = [
+                    tuple(_cell(v) for v in row[: len(headers)])
+                    for row in rows
+                    if row and any(v is not None for v in row)
+                ]
+                conn.executemany(
+                    f"INSERT INTO {table} ({columns}) VALUES ({placeholders})", values
                 )
-                slot_id += 1
-            for n in range(1, 21):
-                conn.execute(
-                    """INSERT INTO QSPARK_PARKING_SLOTS
-                       (slot_id, floor_id, vehicle_type_id, slot_number, status, last_updated)
-                       VALUES (?, ?, 2, ?, 'AVAILABLE', ?)""",
-                    (slot_id, floor_id, f"{code}-C{n:02d}", now),
-                )
-                slot_id += 1
+        finally:
+            workbook.close()
 
     # --------------------------------------------------------------- read side
     def get_user(self, user_id: int) -> dict | None:
@@ -358,6 +326,20 @@ class OrdsClient:
             sql += " WHERE b.user_id = ?"
             params = (user_id,)
         return self._rows(sql + " ORDER BY b.booking_id DESC", params)
+
+    def list_audit_logs(self, limit: int = 200) -> list[dict]:
+        self._require_simulation("list_audit_logs")
+        return self._rows(
+            """SELECT a.log_id, a.event_type, a.old_state, a.new_state, a.log_details,
+                      a.logged_at, a.changed_by_user_id, u.full_name,
+                      a.slot_id, s.slot_number, a.booking_id
+                 FROM QSPARK_AUDIT_LOGS a
+                 LEFT JOIN QSPARK_USERS u ON u.user_id = a.changed_by_user_id
+                 LEFT JOIN QSPARK_PARKING_SLOTS s ON s.slot_id = a.slot_id
+                ORDER BY a.log_id DESC
+                LIMIT ?""",
+            (limit,),
+        )
 
     def authenticate_user(self, login_id: str, plain_password: str) -> dict | None:
         self._require_simulation("authenticate_user")

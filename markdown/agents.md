@@ -20,3 +20,10 @@
    - Keep HTML templates and CSS classes clean and well-structured so upgrading the styling with Tailwind CSS and interactive JS enhancements is plug-and-play without rewriting backend routes.
 3. **Mandatory Progress Tracking:**
    - Every time you complete a task, create/edit a file, or check off an item in `markdown/todo.md`, you MUST append a timestamped log entry in `markdown/agent_tracker.md` explaining what was done and what is next.
+
+## 4. Living Documentation & Context Sync
+1. **`markdown/context.md` is the single source of truth.** You MUST maintain and update it whenever architectural decisions, business rules, seed data, endpoints, or deployment states evolve. Update it in the same change that alters the code or configuration.
+2. **`markdown/agent_tracker.md` is the audit trail.** Append a timestamped entry for every task, file creation/editing, todo check-off, test run, or deployment step — including what was done and what comes next.
+3. **`markdown/todo.md` reflects reality.** Tick completed items immediately and add newly discovered work; never leave a completed task unticked.
+4. **Code wins.** If documentation and the working codebase disagree, fix the documentation first, then the code — never leave both stale.
+5. **Sync on every sign-off.** Before reporting completion of a phase, verify `context.md`, `agent_tracker.md`, `todo.md`, and the affected specification files are consistent with the code and tests.
