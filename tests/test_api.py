@@ -128,3 +128,52 @@ def test_cancellation_refunds_wallet(client):
     assert body["restored_wallet_balance"] == 500.0
     assert body["slot_status"] == "AVAILABLE"
     assert body["status"] == "CANCELLED"
+
+
+def test_audit_track_inserts_without_audit_log(client):
+    before = client.get("/api/analytics/audit").json()["items"]
+    payload = {
+        "admin_name": "pawan.simha",
+        "modified_table": "QSPARK_USERS",
+        "modified_column": "wallet_balance",
+        "why_modified": "manual correction",
+    }
+    first = client.post("/api/admin/audit-track", json=payload)
+    assert first.status_code == 201
+    second = client.post("/api/admin/audit-track", json=payload)
+    assert second.status_code == 201
+    assert second.json()["track_id"] == first.json()["track_id"] + 1
+    assert first.json()["status"] == "SAVED"
+
+    after = client.get("/api/analytics/audit").json()["items"]
+    assert len(after) == len(before)
+
+
+def test_root_health_alias(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "mode": "simulation"}
+
+
+def test_live_auth_falls_back_to_local_replica(tmp_path):
+    from src.services.ords_client import OrdsClient
+
+    live = OrdsClient(simulation_mode=False, db_path=tmp_path / "live.db")
+    user = live.authenticate_user("harshitha@qspark.com", "user123")
+    assert user["user_id"] == USER_ID
+    assert live.get_user(USER_ID)["username"] == "harshitha"
+    assert live.authenticate_user("harshitha@qspark.com", "wrong") is None
+
+    def unreachable(*args, **kwargs):
+        raise ConnectionError("ORDS offline")
+
+    live._request = unreachable
+    assert isinstance(live.list_bookings(USER_ID), list)
+
+
+def test_live_list_bookings_normalizes_decimal_user_id(tmp_path):
+    from src.services.ords_client import OrdsClient
+
+    live = OrdsClient(simulation_mode=False, db_path=tmp_path / "bookings.db")
+    live._request = lambda *args, **kwargs: {"items": [{"booking_id": 1, "user_id": 1.004}]}
+    assert live.list_bookings(USER_ID)[0]["user_id"] == USER_ID

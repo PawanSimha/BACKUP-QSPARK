@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, JSONResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 from fastapi.templating import Jinja2Templates  # noqa: E402
 
-from src.api import analytics, auth, bookings, slots  # noqa: E402
+from src.api import admin, analytics, auth, bookings, slots  # noqa: E402
 from src.services.ords_client import (  # noqa: E402
     InsufficientFunds,
     InvalidRequest,
@@ -33,6 +33,7 @@ app.include_router(auth.router)
 app.include_router(slots.router)
 app.include_router(bookings.router)
 app.include_router(analytics.router)
+app.include_router(admin.router)
 
 _STATUS_BY_ERROR = (
     (NotFound, 404),
@@ -66,6 +67,11 @@ def index(request: Request):
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/health")
+def root_health():
+    return {"status": "ok", "mode": "live" if not ords.simulation_mode else "simulation"}
 
 
 @app.get("/api/status")

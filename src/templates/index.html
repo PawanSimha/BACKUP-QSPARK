@@ -195,6 +195,41 @@
           </div></div>
         </div>
       </div>
+
+      <div class="row g-3 mt-1">
+        <div class="col-lg-6">
+          <div class="card h-100"><div class="card-body">
+            <h6 class="qs-card-title mb-2">Audit Compliance Log Register</h6>
+            <form id="auditTrackForm">
+              <div class="mb-2">
+                <label class="form-label small mb-1" for="trackAdminName">Admin name</label>
+                <input id="trackAdminName" class="form-control form-control-sm" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small mb-1" for="trackTable">Modified table</label>
+                <select id="trackTable" class="form-select form-select-sm" required>
+                  <option value="QSPARK_PARKING_SLOTS">QSPARK_PARKING_SLOTS</option>
+                  <option value="QSPARK_BOOKINGS">QSPARK_BOOKINGS</option>
+                  <option value="QSPARK_USERS">QSPARK_USERS</option>
+                  <option value="QSPARK_FLOORS">QSPARK_FLOORS</option>
+                  <option value="QSPARK_VEHICLE_TYPES">QSPARK_VEHICLE_TYPES</option>
+                  <option value="QSPARK_WALLET_TRANSACTIONS">QSPARK_WALLET_TRANSACTIONS</option>
+                  <option value="QSPARK_AUDIT_LOGS">QSPARK_AUDIT_LOGS</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small mb-1" for="trackColumn">Modified column</label>
+                <input id="trackColumn" class="form-control form-control-sm" placeholder="status, wallet_balance, hourly_rate" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small mb-1" for="trackReason">Why modified</label>
+                <textarea id="trackReason" class="form-control form-control-sm" rows="3" placeholder="Justification for the manual change" required></textarea>
+              </div>
+              <button type="submit" class="btn btn-dark btn-sm">Log Compliance Record</button>
+            </form>
+          </div></div>
+        </div>
+      </div>
     </section>
   </main>
 

@@ -390,6 +390,7 @@ async function processExit() {
 async function showAdmin() {
   if (!state.user || state.user.role !== "ADMIN") return;
   showOnly("adminView");
+  if (!$("trackAdminName").value) $("trackAdminName").value = state.user.username;
   try {
     const [kpi, slots, bookings, audit] = await Promise.all([
       api("/api/analytics/kpi"),
@@ -574,6 +575,25 @@ function bindEvents() {
   $("btnPrintPass").addEventListener("click", printPass);
   $("btnProcessExit").addEventListener("click", processExit);
   $("btnRefreshAdmin").addEventListener("click", () => showAdmin());
+  $("auditTrackForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const payload = {
+      admin_name: $("trackAdminName").value.trim(),
+      modified_table: $("trackTable").value,
+      modified_column: $("trackColumn").value.trim(),
+      why_modified: $("trackReason").value.trim(),
+    };
+    try {
+      const result = await api("/api/admin/audit-track", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      notify(`Compliance record #${result.track_id} logged`);
+      $("trackReason").value = "";
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  });
   $("overrideSearch").addEventListener("input", (event) => renderOverrideTable(state.slots, event.target.value));
 
   $("bookingsBody").addEventListener("click", (event) => {

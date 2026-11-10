@@ -219,3 +219,134 @@
 - **Cleanup:** removed temporary inspection artifacts (`probe_readme.py`, `readme_probe.txt`, `dump_users.py`, `users_table.md`).
 - **Respect boundary:** `mytrack.md` was never read, edited, or overwritten.
 - **Next step:** physical Oracle APEX deployment - run `database/schema.sql`, load the 7 Excel sheets, publish `database/ords_setup.sql`, set `ORDS_SIMULATION_MODE=false`.
+
+---
+
+## Setup Entry 013 - 8-Table Schema, Reserved Columns & Manual Admin Audit Register
+
+- **Date:** 2026-11-09 22:40
+- **Phase:** Database schema revision (documentation sync)
+- **Schema change:** the Oracle DDL in `no_entry/APEX SQL Doc/QSPARK - DDL Cmds.txt` now defines **8** tables:
+  1. `QSPARK_USERS`
+  2. `QSPARK_FLOORS`
+  3. `QSPARK_VEHICLE_TYPES`
+  4. `QSPARK_PARKING_SLOTS`
+  5. `QSPARK_BOOKINGS`
+  6. `QSPARK_WALLET_TRANSACTIONS`
+  7. `QSPARK_AUDIT_LOGS` (system-generated state events)
+  8. `QSPARK_AUDIT_TRACK` (manual admin register: `track_id`, `admin_name`, `time_date`, `modified_table`, `modified_column`, `why_modified`, `reserved_col_1`)
+- **Reserved columns:** every table carries `reserved_col_1` and `reserved_col_2` (`VARCHAR2(255)`, nullable, unused); `QSPARK_AUDIT_TRACK` has only `reserved_col_1`.
+- **Manual audit rule:** `QSPARK_AUDIT_TRACK` is written only by an admin from the UI. No triggers, no backend hooks, no automatic capture.
+- **Excel:** `qspark_apex_dataload.xlsx` rebuilt to 8 tabs matching the schema; seven tabs keep their data and gain the two reserved columns, `QSPARK_AUDIT_TRACK` is header-only.
+- **Docs updated:**
+  - `database_and_ords.md` - heading now 8 tables, reserved columns added to all seven DDL blocks, new Table 8 + relationship/ERD summary + planned `POST /admin/audit-track` contract.
+  - `architecture.md` - database layer diagram, seeding notes and sheet order now reflect 8 tables / 8 tabs (audit track not mirrored in SQLite).
+  - `context.md` - CEO rule 7 (minimum 8 tables) and rule 8 (reserved columns), seed directory and database-assets counts.
+  - `prd.md` - Admin Command Center gains the manual Admin Audit Register feature.
+  - `frontend_and_flows.md` - new Admin Audit Register form spec (table/column dropdowns + reason).
+  - `roadmap.md` - Phase 1/2 counts and Phase 5 load step updated; audit-register form marked planned.
+  - `todo.md` - added schema/Excel items, left the UI form open.
+  - `agents.md` - SQLite replica wording no longer pins "7".
+- **Respect boundary:** `README.md` and `MY_TRACK.md` untouched.
+- **Next step:** build the Admin Audit Register form and add its ORDS handler; regenerate `database/schema.sql` for the 8-table schema.
+
+---
+
+## Setup Entry 014 - SQLite Replica Aligned With the 8-Table Schema
+
+- **Date:** 2026-11-09
+- **Phase:** Database parity fix (local emulator)
+- **Finding:** `src/services/parking_local.db` did not exist yet (created on first run). The replica schema in `src/services/ords_client.py` defined only the 7 transactional tables, without `reserved_col_1/2` and without `QSPARK_AUDIT_TRACK`, so it did not match `no_entry/APEX SQL Doc/QSPARK - DDL Cmds.txt` or the 8-tab workbook.
+- **Fix:** `_SCHEMA_SQL` now creates all 8 tables with the exact workbook columns, including `reserved_col_1/2` on the seven transactional tables and `reserved_col_1` only on `QSPARK_AUDIT_TRACK`; `reset_database()` now drops the audit-track table too. The seven data tabs still seed from Excel; the audit-track tab stays empty (manual admin register).
+- **Verification:** recreated `src/services/parking_local.db` and compared every table's SQLite columns against the Excel headers — all 8 MATCH. Row counts: 50 users, 4 floors, 2 vehicle types, 240 slots, 50 bookings, 50 wallet rows, 50 audit rows, 0 audit-track rows.
+- **Tests:** `pytest -q` -> **12 passed, 1 warning in 3.42 s**.
+- **Docs synced:** `context.md` (simulation mode description), `architecture.md` (broker/seeder section), `todo.md` (new ticked parity item).
+- **Respect boundary:** `README.md` and `MY_TRACK.md` untouched.
+- **Next step:** same as before — build the Admin Audit Register form + ORDS handler; regenerate `database/schema.sql` for 8 tables.
+
+---
+
+## Setup Entry 015 — Live Oracle APEX ORDS Endpoints Manually Configured & Verified
+
+- **Date:** 2026-11-10
+- **Phase:** Phase 5 — live Oracle APEX ORDS verification
+- **Live module:** `qsparking.api.v2`
+- **Base URL:** `https://ga97be9115f23e9-moviestreamworkshop.adb.ap-mumbai-1.oraclecloudapps.com/ords/nov_2026_batch/qsparking/api/v2/`
+- **Endpoints manually created and verified in Postman against live Oracle tables:**
+  1. `GET slots/` — real-time bay inventory across B1–B4.
+  2. `PUT slots/:id/status` — admin override; `AVAILABLE`/`RESERVED`/`OCCUPIED`/`MAINTENANCE` validated; modified slot 1 and reverted it; wrote `QSPARK_AUDIT_LOGS`.
+  3. `POST bookings/` — atomic slot lock (`FOR UPDATE`), wallet lock, fare debit ₹500.00 → ₹490.00 on user `1.004` (Harshitha), slot 6 (`B1-B06`) set `RESERVED`, booking `10001` (`QSP-1110-2086`) created with ledger and audit rows.
+  4. `PUT bookings/:id/checkout` — booking `10001` with `{"simulated_late_hours": 1.5}`; 10-minute grace applied, bike penalty 1.5 × ₹10 = ₹15.00, wallet ₹490.00 → ₹475.00, booking `COMPLETED`, bay freed, `OVERSTAY_DEBIT` recorded.
+  5. `PUT bookings/:id/cancel` — freshly created booking `10021` (slot 6, ₹5.00 base); `CONFIRMED` check passed, wallet ₹470.00 → ₹475.00, slot freed, booking `CANCELLED`, `CANCEL_REFUND` recorded.
+  6. `GET analytics/kpi` — 240 total slots (230 available, 10 reserved, 0 occupied, 0 maintenance), 4.17% occupancy, revenue ₹1,105.00, floor heatmaps B1 16.67% / B2–B4 0%.
+  7. `GET audit/logs` — paginated join of `QSPARK_AUDIT_LOGS` with users and slots, ordered `log_id DESC`; standard ORDS pagination (`limit` default 50, `offset` default 0, `items`/`hasMore`/`limit`/`offset`/`count`).
+  8. `POST admin/audit-track` — inserts one manual `QSPARK_AUDIT_TRACK` row from `admin_name`, `modified_table`, `modified_column`, `why_modified`; returns HTTP 201 with `track_id`, `admin_name`, `modified_table`, `status: "SAVED"`.
+- **Input-handling resolution:** `PUT slots/:id/status` initially received an empty `:body_text`; fixed by configuring raw JSON in Postman and parsing with `APEX_JSON.PARSE(:body_text)`. All JSON handlers now use that convention and set explicit HTTP status via `:status_code`.
+- **Discovery — `USER_ID` decimals:** the APEX Excel import stored `USER_ID` as `1.001`–`1.050` instead of `1001`–`1050`; booking creation was verified with user `1.004`. FastAPI, the Excel workbook and the frontend still use integer IDs, so live data needs normalization (or mapping) before the FastAPI cutover.
+- **Docs synced:** `context.md` (§1 state, §6.1 live ORDS, known limitation/remaining cutover), `database_and_ords.md` (live base path, 8 endpoint contracts, `APEX_JSON.PARSE(:body_text)` + `:status_code` conventions), `architecture.md` (live module paths, mapping table, live-mode status), `roadmap.md` (Phase 4 audit-track backend done; Phase 5 honest remaining work), `todo.md` (live ORDS items ticked; normalization, broker wiring and FastAPI live test added).
+- **Remaining live cutover:** (a) normalize live Oracle `USER_ID` decimals to integers `1001`–`1050`; (b) point `.env` / `ords_client.py` at `/qsparking/api/v2/` and wire `list_audit_logs()` + `insert_audit_track()`; (c) add ORDS handlers for login/get_user/list_bookings or keep those routes on SQLite fallback; then run FastAPI with `ORDS_SIMULATION_MODE=false`.
+- **Respect boundary:** `README.md`, `MY_TRACK.md`, and `no_entry/` untouched.
+- **Next step:** update `.env` and `src/services/ords_client.py` for live client consumption, then fix the `USER_ID` data.
+
+## Setup Entry 016 — Live ORDS Broker Wiring, Audit-Track Route & Test
+
+- **Date:** 2026-11-10 12:38
+- **Phase:** Phase 5 — live client wiring
+- **Code:**
+  - `src/services/ords_client.py` — added `DEFAULT_LIVE_BASE_URL`; `ORDS_BASE_URL` falls back to `/qsparking/api/v2/`; live `list_audit_logs(limit=50, offset=0)` calls `GET audit/logs` and returns `items`; added `insert_audit_track()` (live `POST admin/audit-track`, simulation insert into `QSPARK_AUDIT_TRACK`); `create_booking` and `update_slot_status` scale outbound IDs ≥ 1000 via `_live_user_id()`; simulation `list_audit_logs` now supports `LIMIT ? OFFSET ?`.
+  - `src/api/admin.py` — new `POST /api/admin/audit-track` accepting `admin_name`, `modified_table`, `modified_column`, `why_modified`; returns HTTP 201.
+  - `src/main.py` — registers `admin.router`.
+  - `.env` / `.env.example` — `ORDS_BASE_URL` now points at the live module.
+  - `src/services/ords_client.py` — `DEFAULT_DATA_FILE` updated to the current workbook `Latest QSPARK.xlsx` (old filename was deleted, which broke seeding).
+- **Tests:** added `test_audit_track_inserts_without_audit_log` (201, incrementing `track_id`, no new `QSPARK_AUDIT_LOGS` row). `pytest -q` → **13 passed**.
+- **Docs synced:** `context.md` (wired-in-code status, 13 tests, revised remaining cutover), `architecture.md` (audit/admin mapping rows, live-mode status, data-file name), `todo.md` (base-path/broker item and admin route ticked), `roadmap.md` (Phase 5 milestone 3 ticked, status refreshed).
+- **Remaining:** normalize live `USER_ID` decimals, publish auth/get_user/list_bookings ORDS handlers (or keep SQLite fallback), then run the suite with `ORDS_SIMULATION_MODE=false`.
+- **Respect boundary:** `README.md`, `MY_TRACK.md`, and `no_entry/` untouched.
+- **Next step:** decide auth/list fallback strategy and run live-mode end-to-end verification.
+
+## Setup Entry 017 — Live Auth Fallback & Root Health Alias
+
+- **Date:** 2026-11-10 12:51
+- **Phase:** Phase 5 — live-mode compatibility fixes
+- **Code:**
+  - `src/services/ords_client.py` — added `_ensure_db()`; `authenticate_user()`, `get_user()` and `list_bookings()` no longer call `_require_simulation()`. In live mode they use the local SQLite replica (50 seeded accounts) instead of raising 501; slots, bookings writes, KPI and audit remain live ORDS.
+  - `src/main.py` — added `GET /health` alias returning `{"status": "ok", "mode": "live"|"simulation"}` alongside `GET /api/health`.
+- **Tests:** added `test_root_health_alias` and `test_live_auth_falls_back_to_local_replica` (live-mode client authenticates, reads profile and bookings from a temp replica). `pytest -q` → **15 passed**.
+- **Docs synced:** `context.md` (fallback status, 15 tests), `architecture.md` (live-mode behaviour), `todo.md` and `roadmap.md` (auth/list fallback item ticked).
+- **Remaining:** normalize live `USER_ID` decimals and run the full workflow with `ORDS_SIMULATION_MODE=false`.
+- **Respect boundary:** `README.md`, `MY_TRACK.md`, and `no_entry/` untouched.
+
+## Setup Entry 018 — Documentation Rewritten in the beinghuman Style
+
+- **Date:** 2026-11-10 13:09
+- **Phase:** Documentation (style pass only, no spec changes)
+- **Scope:** every spec file in `markdown/`: `agents.md`, `prd.md`, `architecture.md`, `database_and_ords.md`, `frontend_and_flows.md`, `roadmap.md`, `todo.md`, `context.md`.
+- **What changed:** prose now follows the global `beinghuman` skill. Removed AI vocabulary (robust, leverage, seamless, comprehensive, visionary phrasing), significance overlays, tailing -ing clauses, canned openers and closers, and title-case headings. Em dashes kept only where they separate real clauses.
+- **What did not change:** every fact, number, price, ID range, status, checklist state, table row, SQL block, JSON payload and ASCII diagram. Fenced code blocks were compared against the previous file contents and match.
+- **Tracker note:** entries 001 to 017 are historical records and keep their original wording; only this entry uses the new style.
+- **Respect boundary:** `README.md` and `MY_TRACK.md` untouched.
+- **Next step:** nothing pending from this pass. Live `USER_ID` normalisation and the FastAPI live-mode test stay open in `todo.md`.
+
+## Setup Entry 019 — Live Bookings Query Handler Connected
+
+- **Date:** 2026-11-10 13:15
+- **Phase:** Phase 5, live bookings-list wiring
+- **Endpoint:** `GET https://ga97be9115f23e9-moviestreamworkshop.adb.ap-mumbai-1.oraclecloudapps.com/ords/nov_2026_batch/qsparking/api/v2/bookings/` with optional `?user_id=`, verified in APEX module `qsparking.api.v2`.
+- **Code:** `src/services/ords_client.py` now has `_sqlite_list_bookings()`. In live mode `list_bookings()` calls `GET bookings/` with `user_id` when supplied, reads `items`, normalises decimal returned IDs (`1.004` becomes `1004`), and falls back to the local replica when the request fails.
+- **Tests:** added a decimal-normalisation test and a network-failure fallback assertion. `pytest -q` gives **16 passed**.
+- **Docs synced:** `context.md` (9 live endpoints, 16 tests), `database_and_ords.md` (`GET /bookings/?user_id=` contract), `architecture.md` (mapping and live-mode status), `todo.md` (bookings-list item ticked), `roadmap.md` (9-endpoint milestone).
+- **Note:** entry 018 was already used by the documentation style pass, so this is 019.
+- **Remaining:** normalise live `USER_ID` decimals and run the full workflow with `ORDS_SIMULATION_MODE=false`.
+- **Respect boundary:** `README.md`, `MY_TRACK.md`, and `no_entry/` untouched.
+
+## Setup Entry 020 — Admin Audit Register Form Wired
+
+- **Date:** 2026-11-10 13:28
+- **Phase:** Phase 4/5, final frontend item
+- **UI:** `src/templates/index.html` now has an **Audit Compliance Log Register** card in the Admin Command Center. Fields: `admin_name` (prefilled from the logged-in admin), `modified_table` dropdown for the seven source tables, `modified_column` text input and `why_modified` textarea, with a **Log Compliance Record** button.
+- **Script:** `src/static/js/app.js` prefills `admin_name` in `showAdmin()`, posts the form to `/api/admin/audit-track`, shows a success toast with the returned `track_id`, and clears the justification field. Errors use the existing danger toast.
+- **Docs synced:** `context.md` (form wired), `frontend_and_flows.md` (actual field behaviour), `todo.md` (UI milestone ticked), `roadmap.md` (Phase 4 completed; Phase 5 UI scope completed, live-cutover items still open).
+- **Tests:** `pytest -q` gives **16 passed**.
+- **Remaining:** normalise live `USER_ID` decimals and run the workflow with `ORDS_SIMULATION_MODE=false`.
+- **Respect boundary:** `README.md`, `MY_TRACK.md`, and `no_entry/` untouched.
+

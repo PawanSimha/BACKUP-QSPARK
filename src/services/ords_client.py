@@ -17,7 +17,11 @@ from src.core.pricing_engine import calculate_booking_fare, calculate_overstay_p
 from src.core.security import verify_password
 
 DEFAULT_DB_PATH = Path(__file__).with_name("parking_local.db")
-DEFAULT_DATA_FILE = Path(__file__).resolve().parents[2] / "qspark_apex_dataload.xlsx"
+DEFAULT_DATA_FILE = Path(__file__).resolve().parents[2] / "Latest QSPARK.xlsx"
+DEFAULT_LIVE_BASE_URL = (
+    "https://ga97be9115f23e9-moviestreamworkshop.adb.ap-mumbai-1.oraclecloudapps.com"
+    "/ords/nov_2026_batch/qsparking/api/v2"
+)
 
 SLOT_STATUSES = ("AVAILABLE", "RESERVED", "OCCUPIED", "MAINTENANCE")
 
@@ -42,7 +46,9 @@ CREATE TABLE IF NOT EXISTS QSPARK_USERS (
     role TEXT NOT NULL DEFAULT 'USER' CHECK (role IN ('ADMIN', 'USER')),
     wallet_balance REAL NOT NULL DEFAULT 500.00 CHECK (wallet_balance >= 0),
     is_active TEXT NOT NULL DEFAULT 'Y' CHECK (is_active IN ('Y', 'N')),
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reserved_col_1 TEXT,
+    reserved_col_2 TEXT
 );
 
 CREATE TABLE IF NOT EXISTS QSPARK_FLOORS (
@@ -52,7 +58,9 @@ CREATE TABLE IF NOT EXISTS QSPARK_FLOORS (
     bike_capacity INTEGER NOT NULL DEFAULT 40 CHECK (bike_capacity = 40),
     car_capacity INTEGER NOT NULL DEFAULT 20 CHECK (car_capacity = 20),
     total_capacity INTEGER NOT NULL DEFAULT 60 CHECK (total_capacity = 60),
-    status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'CLOSED', 'MAINTENANCE'))
+    status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'CLOSED', 'MAINTENANCE')),
+    reserved_col_1 TEXT,
+    reserved_col_2 TEXT
 );
 
 CREATE TABLE IF NOT EXISTS QSPARK_VEHICLE_TYPES (
@@ -61,7 +69,9 @@ CREATE TABLE IF NOT EXISTS QSPARK_VEHICLE_TYPES (
     display_name TEXT NOT NULL,
     hourly_rate REAL NOT NULL CHECK (hourly_rate IN (5.00, 10.00)),
     overstay_penalty_hour REAL NOT NULL DEFAULT 10.00 CHECK (overstay_penalty_hour >= 0),
-    total_slots_per_floor INTEGER NOT NULL CHECK (total_slots_per_floor IN (40, 20))
+    total_slots_per_floor INTEGER NOT NULL CHECK (total_slots_per_floor IN (40, 20)),
+    reserved_col_1 TEXT,
+    reserved_col_2 TEXT
 );
 
 CREATE TABLE IF NOT EXISTS QSPARK_PARKING_SLOTS (
@@ -72,6 +82,8 @@ CREATE TABLE IF NOT EXISTS QSPARK_PARKING_SLOTS (
     status TEXT NOT NULL DEFAULT 'AVAILABLE'
         CHECK (status IN ('AVAILABLE', 'RESERVED', 'OCCUPIED', 'MAINTENANCE')),
     last_updated TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reserved_col_1 TEXT,
+    reserved_col_2 TEXT,
     UNIQUE (floor_id, slot_number)
 );
 
@@ -94,7 +106,9 @@ CREATE TABLE IF NOT EXISTS QSPARK_BOOKINGS (
     total_amount REAL NOT NULL CHECK (total_amount >= 0),
     status TEXT NOT NULL DEFAULT 'CONFIRMED'
         CHECK (status IN ('CONFIRMED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED', 'OVERSTAY')),
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reserved_col_1 TEXT,
+    reserved_col_2 TEXT
 );
 
 CREATE TABLE IF NOT EXISTS QSPARK_WALLET_TRANSACTIONS (
@@ -106,7 +120,9 @@ CREATE TABLE IF NOT EXISTS QSPARK_WALLET_TRANSACTIONS (
     amount REAL NOT NULL CHECK (amount >= 0),
     new_balance REAL NOT NULL CHECK (new_balance >= 0),
     status TEXT NOT NULL DEFAULT 'COMPLETED' CHECK (status IN ('COMPLETED', 'REVERSED')),
-    processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reserved_col_1 TEXT,
+    reserved_col_2 TEXT
 );
 
 CREATE TABLE IF NOT EXISTS QSPARK_AUDIT_LOGS (
@@ -118,7 +134,19 @@ CREATE TABLE IF NOT EXISTS QSPARK_AUDIT_LOGS (
     old_state TEXT,
     new_state TEXT,
     log_details TEXT,
-    logged_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    logged_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reserved_col_1 TEXT,
+    reserved_col_2 TEXT
+);
+
+CREATE TABLE IF NOT EXISTS QSPARK_AUDIT_TRACK (
+    track_id INTEGER PRIMARY KEY,
+    admin_name TEXT NOT NULL,
+    time_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_table TEXT NOT NULL,
+    modified_column TEXT,
+    why_modified TEXT,
+    reserved_col_1 TEXT
 );
 """
 
@@ -175,7 +203,9 @@ class OrdsClient:
             )
 
         self.simulation_mode = simulation_mode
-        self.base_url = (base_url or os.getenv("ORDS_BASE_URL", "")).rstrip("/")
+        self.base_url = (
+            base_url or os.getenv("ORDS_BASE_URL") or DEFAULT_LIVE_BASE_URL
+        ).rstrip("/")
         self.timeout = float(timeout if timeout is not None else os.getenv("ORDS_TIMEOUT", "5"))
         self.db_path = Path(db_path or os.getenv("QSPARK_DB_PATH") or DEFAULT_DB_PATH)
         self._session = None
@@ -228,6 +258,11 @@ class OrdsClient:
             "wallet_balance": round(row["wallet_balance"], 2),
         }
 
+    @staticmethod
+    def _live_user_id(user_id: int) -> float | int:
+        # shortcut: live Excel import stores IDs as 1.001–1.050; drop after normalization
+        return user_id / 1000.0 if user_id >= 1000 else user_id
+
     # ------------------------------------------------------------------ setup
     def _init_db(self) -> None:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -246,6 +281,10 @@ class OrdsClient:
         finally:
             conn.close()
 
+    def _ensure_db(self) -> None:
+        """Live mode has no auth/list ORDS handlers, so keep the local replica ready."""
+        self._init_db()
+
     def reset_database(self) -> None:
         """Drop and recreate the local replica (tests / demo resets)."""
         if not self.simulation_mode:
@@ -253,6 +292,7 @@ class OrdsClient:
         conn = self._connect()
         try:
             for table in (
+                "QSPARK_AUDIT_TRACK",
                 "QSPARK_AUDIT_LOGS",
                 "QSPARK_WALLET_TRANSACTIONS",
                 "QSPARK_BOOKINGS",
@@ -292,7 +332,7 @@ class OrdsClient:
 
     # --------------------------------------------------------------- read side
     def get_user(self, user_id: int) -> dict | None:
-        self._require_simulation("get_user")
+        self._ensure_db()
         rows = self._rows("SELECT * FROM QSPARK_USERS WHERE user_id = ?", (user_id,))
         return self._public_user(rows[0]) if rows else None
 
@@ -312,8 +352,8 @@ class OrdsClient:
             params = (floor_id,)
         return self._rows(sql + " ORDER BY s.slot_number", params)
 
-    def list_bookings(self, user_id: int | None = None) -> list[dict]:
-        self._require_simulation("list_bookings")
+    def _sqlite_list_bookings(self, user_id: int | None = None) -> list[dict]:
+        self._ensure_db()
         sql = """SELECT b.*, s.slot_number, f.floor_code, vt.type_code AS vehicle_type,
                         u.full_name
                    FROM QSPARK_BOOKINGS b
@@ -327,8 +367,28 @@ class OrdsClient:
             params = (user_id,)
         return self._rows(sql + " ORDER BY b.booking_id DESC", params)
 
-    def list_audit_logs(self, limit: int = 200) -> list[dict]:
-        self._require_simulation("list_audit_logs")
+    def list_bookings(self, user_id: int | None = None) -> list[dict]:
+        if not self.simulation_mode:
+            params = {"user_id": user_id} if user_id is not None else None
+            try:
+                payload = self._request("GET", "bookings/", params=params)
+            except Exception:
+                return self._sqlite_list_bookings(user_id)
+            items = payload.get("items", [])
+            for item in items:
+                raw = item.get("user_id")
+                if isinstance(raw, (int, float)) and raw < 100:
+                    item["user_id"] = int(round(raw * 1000))
+            return items
+        return self._sqlite_list_bookings(user_id)
+
+    def list_audit_logs(self, limit: int = 50, offset: int = 0) -> list[dict]:
+        if not self.simulation_mode:
+            payload = self._request(
+                "GET", "audit/logs", params={"limit": limit, "offset": offset}
+            )
+            return payload.get("items", [])
+
         return self._rows(
             """SELECT a.log_id, a.event_type, a.old_state, a.new_state, a.log_details,
                       a.logged_at, a.changed_by_user_id, u.full_name,
@@ -337,12 +397,43 @@ class OrdsClient:
                  LEFT JOIN QSPARK_USERS u ON u.user_id = a.changed_by_user_id
                  LEFT JOIN QSPARK_PARKING_SLOTS s ON s.slot_id = a.slot_id
                 ORDER BY a.log_id DESC
-                LIMIT ?""",
-            (limit,),
+                LIMIT ? OFFSET ?""",
+            (limit, offset),
         )
 
+    def insert_audit_track(
+        self,
+        admin_name: str,
+        modified_table: str,
+        modified_column: str | None = None,
+        why_modified: str | None = None,
+    ) -> dict:
+        payload = {
+            "admin_name": admin_name,
+            "modified_table": modified_table,
+            "modified_column": modified_column,
+            "why_modified": why_modified,
+        }
+        if not self.simulation_mode:
+            return self._request("POST", "admin/audit-track", json=payload)
+
+        with self._tx() as conn:
+            track_id = self._next_id(conn, "QSPARK_AUDIT_TRACK", "track_id", 0)
+            conn.execute(
+                """INSERT INTO QSPARK_AUDIT_TRACK
+                   (track_id, admin_name, modified_table, modified_column, why_modified)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (track_id, admin_name, modified_table, modified_column, why_modified),
+            )
+        return {
+            "track_id": track_id,
+            "admin_name": admin_name,
+            "modified_table": modified_table,
+            "status": "SAVED",
+        }
+
     def authenticate_user(self, login_id: str, plain_password: str) -> dict | None:
-        self._require_simulation("authenticate_user")
+        self._ensure_db()
         rows = self._rows(
             """SELECT * FROM QSPARK_USERS
                WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?))
@@ -361,7 +452,7 @@ class OrdsClient:
             self._request(
                 "PUT",
                 f"slots/{slot_id}/status",
-                json={"status": status, "admin_user_id": admin_user_id},
+                json={"status": status, "admin_user_id": self._live_user_id(admin_user_id)},
             )
             return True
 
@@ -403,7 +494,7 @@ class OrdsClient:
                 "POST",
                 "bookings/",
                 json={
-                    "user_id": user_id,
+                    "user_id": self._live_user_id(user_id),
                     "slot_id": slot_id,
                     "vehicle_number": vehicle_number,
                     "duration_hours": duration_hours,

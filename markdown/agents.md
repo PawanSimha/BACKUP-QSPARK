@@ -1,29 +1,29 @@
-# QSPARK — AI Agent Operating Guidelines (`agents.md`)
+# QSPARK: AI agent operating guidelines (`agents.md`)
 
-## 1. Project Identity
-- **Project Name:** QSPARK (Smart Parking Slot Booking & Management System)
-- **Core Stack:** Oracle APEX (Database) + ORDS (REST APIs created inside APEX) + Python (FastAPI Backend & Business Logic) + Clean HTML/JS Frontend (designed modularly so Tailwind CSS and richer JS components can be layered in easily).
+## 1. Project identity
+- **Project name:** QSPARK (Smart Parking Slot Booking & Management System)
+- **Stack:** Oracle APEX for the database, ORDS for the REST APIs created inside APEX, Python (FastAPI) for the backend and business logic, and plain HTML/JS for the frontend. The frontend is built in modules so Tailwind CSS and richer JS components can be added later.
 
-## 2. Strict File & Security Boundaries
-1. **NEVER Touch Personal Files:** You must NEVER read, modify, or overwrite `mytrack.md` in the root folder. It is strictly reserved for the developer's manual notes.
-2. **Leave `README.md` Untouched:** Do not edit `README.md` until the entire project is completed and verified.
-3. **Environment Isolation:** Always execute Python commands and package installations inside the local `.venv` virtual environment. Never install packages globally on the company laptop.
-4. **No Hardcoded Secrets:** Never hardcode Oracle APEX URLs, workspace credentials, or secret keys inside `.py` or `.html` files. Always load them from `.env` via `python-dotenv`.
-5. **No External Gateways:** Strictly NO real payment gateways (no Razorpay/Stripe/UPI APIs) and NO external SMS/Email gateways. Authentication uses basic username/email + SHA-256 hashed passwords, and payments use the internal Metro Card (`wallet_balance`) column.
+## 2. File and security boundaries
+1. **Never touch personal files.** Never read, modify or overwrite `mytrack.md` in the root folder. It belongs to the developer.
+2. **Leave `README.md` alone.** Do not edit it until the whole project is finished and verified.
+3. **Keep the environment isolated.** Run Python commands and package installs inside the local `.venv`. Never install packages globally on the company laptop.
+4. **No hardcoded secrets.** Never put Oracle APEX URLs, workspace credentials or keys in `.py` or `.html` files. Load them from `.env` with `python-dotenv`.
+5. **No external gateways.** No real payment gateways (Razorpay/Stripe/UPI) and no external SMS or email services. Login uses a username or email plus a SHA-256 hashed password, and payments come out of the internal Metro Card (`wallet_balance` column).
 
-## 3. Architectural & Coding Rules
-1. **Dual-Mode Data Layer (Live ORDS + Local Fallback):**
-   - In production, Python communicates with Oracle APEX solely via ORDS REST APIs (`requests` / `httpx`).
-   - Because Oracle APEX schema permissions may occasionally be pending or offline during development, `src/services/ords_client.py` MUST support `ORDS_SIMULATION_MODE=true` (using a local SQLite replica of the exact 7 `QSPARK_` tables) so the application and frontend can be built, run, and tested live at all times.
-2. **Decoupled Frontend Design:**
-   - Start with clean, semantic HTML5 and modular vanilla JavaScript (`fetch()` calls to FastAPI endpoints) so the core booking, wallet deduction, cancellation, overstay exit, and admin heatmap flows work end-to-end first.
-   - Keep HTML templates and CSS classes clean and well-structured so upgrading the styling with Tailwind CSS and interactive JS enhancements is plug-and-play without rewriting backend routes.
-3. **Mandatory Progress Tracking:**
-   - Every time you complete a task, create/edit a file, or check off an item in `markdown/todo.md`, you MUST append a timestamped log entry in `markdown/agent_tracker.md` explaining what was done and what is next.
+## 3. Architecture and coding rules
+1. **Dual-mode data layer (live ORDS plus local fallback).**
+   - In production, Python talks to Oracle APEX only through ORDS REST APIs (`requests` / `httpx`).
+   - Oracle APEX schema permissions may be pending or offline during development, so `src/services/ords_client.py` must support `ORDS_SIMULATION_MODE=true`, which runs a local SQLite copy of the `QSPARK_` tables. The app and frontend then build, run and test at any time.
+2. **Frontend stays decoupled.**
+   - Start with semantic HTML5 and modular vanilla JavaScript (`fetch()` calls to FastAPI endpoints) and get the core flows working end to end first: booking, wallet deduction, cancellation, overstay exit and the admin heatmap.
+   - Keep templates and CSS classes structured so Tailwind CSS and interactive JS can be layered on without touching backend routes.
+3. **Progress tracking is mandatory.**
+   - Each time you finish a task, create or edit a file, or tick an item in `markdown/todo.md`, append a timestamped entry to `markdown/agent_tracker.md` saying what was done and what comes next.
 
-## 4. Living Documentation & Context Sync
-1. **`markdown/context.md` is the single source of truth.** You MUST maintain and update it whenever architectural decisions, business rules, seed data, endpoints, or deployment states evolve. Update it in the same change that alters the code or configuration.
-2. **`markdown/agent_tracker.md` is the audit trail.** Append a timestamped entry for every task, file creation/editing, todo check-off, test run, or deployment step — including what was done and what comes next.
-3. **`markdown/todo.md` reflects reality.** Tick completed items immediately and add newly discovered work; never leave a completed task unticked.
-4. **Code wins.** If documentation and the working codebase disagree, fix the documentation first, then the code — never leave both stale.
-5. **Sync on every sign-off.** Before reporting completion of a phase, verify `context.md`, `agent_tracker.md`, `todo.md`, and the affected specification files are consistent with the code and tests.
+## 4. Living documentation and context sync
+1. **`markdown/context.md` is the single source of truth.** Update it whenever architecture, business rules, seed data, endpoints or deployment state change, in the same change as the code or config.
+2. **`markdown/agent_tracker.md` is the audit trail.** Append a timestamped entry for every task, file edit, todo tick, test run or deployment step, including what was done and what comes next.
+3. **`markdown/todo.md` reflects reality.** Tick finished items right away and add new work as you find it. Never leave a completed task unticked.
+4. **Code wins.** When docs and the working codebase disagree, fix the docs first, then the code. Never leave both stale.
+5. **Sync at every sign-off.** Before reporting a phase complete, check that `context.md`, `agent_tracker.md`, `todo.md` and the affected spec files match the code and tests.

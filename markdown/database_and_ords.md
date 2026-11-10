@@ -1,12 +1,14 @@
-# QSPARK — Database Schema & ORDS REST API Specification (`database_and_ords.md`)
+# QSPARK: database schema and ORDS REST API (`database_and_ords.md`)
 
-## 1. Relational Schema Architecture (7 `QSPARK_` Tables)
-The database tier consists of 7 normalized relational tables deployed in Oracle APEX / Oracle Database, adhering to strict referential integrity, primary keys (PK), foreign keys (FK), unique constraints, domain check constraints, and performance indexes.
+## 1. Relational schema (8 `QSPARK_` tables)
+The database tier holds 8 normalized tables in Oracle APEX / Oracle Database, with primary keys (PK), foreign keys (FK), unique constraints, domain check constraints and performance indexes.
+
+Every table also carries two unused spare columns, `reserved_col_1` and `reserved_col_2` (`VARCHAR2(255)`, nullable), so a new field can be added later without reshaping the table. `QSPARK_AUDIT_TRACK` keeps only `reserved_col_1`. These columns hold no data and the application never reads them.
 
 ---
 
 ### Table 1: `QSPARK_USERS`
-*Purpose:* Manages credentials for the 50 seeded accounts, basic authentication verification, role privileges (`ADMIN` vs. `USER`), and the internal Metro Card prepaid wallet balance.
+*Purpose:* credentials for the 50 seeded accounts, basic auth verification, role privileges (`ADMIN` vs `USER`) and the internal Metro Card prepaid balance.
 
 ```sql
 CREATE TABLE QSPARK_USERS (
@@ -19,6 +21,8 @@ role VARCHAR2(10) DEFAULT 'USER' NOT NULL,
 wallet_balance NUMBER(10, 2) DEFAULT 500.00 NOT NULL,
 is_active CHAR(1) DEFAULT 'Y' NOT NULL,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+reserved_col_1 VARCHAR2(255),
+reserved_col_2 VARCHAR2(255),
 CONSTRAINT unq_qspark_users_username UNIQUE (username),
 CONSTRAINT unq_qspark_users_email UNIQUE (email),
 CONSTRAINT chk_qspark_users_role CHECK (role IN ('ADMIN', 'USER')),
@@ -28,7 +32,7 @@ CONSTRAINT chk_qspark_users_active CHECK (is_active IN ('Y', 'N'))
 ```
 
 ### Table 2: `QSPARK_FLOORS`
-*Purpose:* Stores the 4 basement parking levels (B1, B2, B3, B4), enforcing exact capacities of 40 Bikes and 20 Cars per floor (60 total per floor, 240 across the facility).
+*Purpose:* the 4 basement levels (B1, B2, B3, B4), with fixed capacities of 40 bikes and 20 cars per floor (60 per floor, 240 overall).
 
 ```sql
 CREATE TABLE QSPARK_FLOORS (
@@ -39,6 +43,8 @@ bike_capacity NUMBER(3) DEFAULT 40 NOT NULL,
 car_capacity NUMBER(3) DEFAULT 20 NOT NULL,
 total_capacity NUMBER(3) DEFAULT 60 NOT NULL,
 status VARCHAR2(15) DEFAULT 'OPEN' NOT NULL,
+reserved_col_1 VARCHAR2(255),
+reserved_col_2 VARCHAR2(255),
 CONSTRAINT unq_qspark_floors_code UNIQUE (floor_code),
 CONSTRAINT chk_qspark_floors_code CHECK (floor_code IN ('B1', 'B2', 'B3', 'B4')),
 CONSTRAINT chk_qspark_floors_bike CHECK (bike_capacity = 40),
@@ -49,7 +55,7 @@ CONSTRAINT chk_qspark_floors_status CHECK (status IN ('OPEN', 'CLOSED', 'MAINTEN
 ```
 
 ### Table 3: `QSPARK_VEHICLE_TYPES`
-*Purpose:* Stores vehicle classifications, fixed hourly tariffs (₹5.00/hr for Bikes, ₹10.00/hr for Cars), and hourly overstay penalty rates.
+*Purpose:* vehicle classes, fixed hourly tariffs (₹5.00/hr bike, ₹10.00/hr car) and hourly overstay penalty rates.
 
 ```sql
 CREATE TABLE QSPARK_VEHICLE_TYPES (
@@ -59,6 +65,8 @@ display_name VARCHAR2(50) NOT NULL,
 hourly_rate NUMBER(6, 2) NOT NULL,
 overstay_penalty_hour NUMBER(6, 2) DEFAULT 10.00 NOT NULL,
 total_slots_per_floor NUMBER(3) NOT NULL,
+reserved_col_1 VARCHAR2(255),
+reserved_col_2 VARCHAR2(255),
 CONSTRAINT unq_qspark_vtypes_code UNIQUE (type_code),
 CONSTRAINT chk_qspark_vtypes_code CHECK (type_code IN ('BIKE', 'CAR')),
 CONSTRAINT chk_qspark_vtypes_rate CHECK (hourly_rate IN (5.00, 10.00)),
@@ -68,7 +76,7 @@ CONSTRAINT chk_qspark_vtypes_slots CHECK (total_slots_per_floor IN (40, 20))
 ```
 
 ### Table 4: `QSPARK_PARKING_SLOTS`
-*Purpose:* Inventory of all 240 individual parking bays across floors B1 to B4, tracking real-time bay availability.
+*Purpose:* inventory of all 240 bays across B1 to B4, with live availability.
 
 ```sql
 CREATE TABLE QSPARK_PARKING_SLOTS (
@@ -78,6 +86,8 @@ vehicle_type_id NUMBER NOT NULL,
 slot_number VARCHAR2(15) NOT NULL,
 status VARCHAR2(20) DEFAULT 'AVAILABLE' NOT NULL,
 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+reserved_col_1 VARCHAR2(255),
+reserved_col_2 VARCHAR2(255),
 CONSTRAINT fk_qspark_slots_floor FOREIGN KEY (floor_id) REFERENCES QSPARK_FLOORS(floor_id) ON DELETE CASCADE,
 CONSTRAINT fk_qspark_slots_vtype FOREIGN KEY (vehicle_type_id) REFERENCES QSPARK_VEHICLE_TYPES(vehicle_type_id),
 CONSTRAINT unq_qspark_slots_num UNIQUE (slot_number),
@@ -87,7 +97,7 @@ CONSTRAINT chk_qspark_slot_status CHECK (status IN ('AVAILABLE', 'RESERVED', 'OC
 ```
 
 ### Table 5: `QSPARK_BOOKINGS`
-*Purpose:* Manages slot reservation lifecycles, scheduled windows, actual barrier entry/exit timestamps, applied tariffs, and overstay fines.
+*Purpose:* reservation lifecycles, scheduled windows, actual barrier entry and exit timestamps, applied tariffs and overstay fines.
 
 ```sql
 CREATE TABLE QSPARK_BOOKINGS (
@@ -109,6 +119,8 @@ overstay_penalty NUMBER(8, 2) DEFAULT 0.00 NOT NULL,
 total_amount NUMBER(8, 2) NOT NULL,
 status VARCHAR2(20) DEFAULT 'CONFIRMED' NOT NULL,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+reserved_col_1 VARCHAR2(255),
+reserved_col_2 VARCHAR2(255),
 CONSTRAINT unq_qspark_booking_code UNIQUE (booking_code),
 CONSTRAINT fk_qspark_bookings_user FOREIGN KEY (user_id) REFERENCES QSPARK_USERS(user_id),
 CONSTRAINT fk_qspark_bookings_slot FOREIGN KEY (slot_id) REFERENCES QSPARK_PARKING_SLOTS(slot_id),
@@ -124,7 +136,7 @@ CONSTRAINT chk_qspark_booking_status CHECK (status IN ('CONFIRMED', 'CHECKED_IN'
 ```
 
 ### Table 6: `QSPARK_WALLET_TRANSACTIONS`
-*Purpose:* Internal Metro Card Passbook ledger recording every balance debit (upfront booking or late-exit fine) and credit (cancellation refund) with before and after balances.
+*Purpose:* the internal Metro Card passbook, recording every debit (upfront fare or late-exit fine) and credit (cancellation refund) with before and after balances.
 
 ```sql
 CREATE TABLE QSPARK_WALLET_TRANSACTIONS (
@@ -137,6 +149,8 @@ amount NUMBER(8, 2) NOT NULL,
 new_balance NUMBER(10, 2) NOT NULL,
 status VARCHAR2(15) DEFAULT 'COMPLETED' NOT NULL,
 processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+reserved_col_1 VARCHAR2(255),
+reserved_col_2 VARCHAR2(255),
 CONSTRAINT fk_qspark_wallet_user FOREIGN KEY (user_id) REFERENCES QSPARK_USERS(user_id),
 CONSTRAINT fk_qspark_wallet_booking FOREIGN KEY (booking_id) REFERENCES QSPARK_BOOKINGS(booking_id) ON DELETE CASCADE,
 CONSTRAINT chk_qspark_wallet_type CHECK (txn_type IN ('BOOKING_DEBIT', 'OVERSTAY_DEBIT', 'CANCEL_REFUND')),
@@ -147,7 +161,7 @@ CONSTRAINT chk_qspark_wallet_status CHECK (status IN ('COMPLETED', 'REVERSED'))
 ```
 
 ### Table 7: `QSPARK_AUDIT_LOGS`
-*Purpose:* System compliance ledger capturing administrative overrides, slot state transitions, and booking events.
+*Purpose:* compliance ledger of admin overrides, slot state changes and booking events.
 
 ```sql
 CREATE TABLE QSPARK_AUDIT_LOGS (
@@ -160,6 +174,8 @@ old_state VARCHAR2(50),
 new_state VARCHAR2(50),
 log_details VARCHAR2(500),
 logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+reserved_col_1 VARCHAR2(255),
+reserved_col_2 VARCHAR2(255),
 CONSTRAINT fk_qspark_audit_user FOREIGN KEY (changed_by_user_id) REFERENCES QSPARK_USERS(user_id),
 CONSTRAINT fk_qspark_audit_slot FOREIGN KEY (slot_id) REFERENCES QSPARK_PARKING_SLOTS(slot_id) ON DELETE CASCADE,
 CONSTRAINT fk_qspark_audit_booking FOREIGN KEY (booking_id) REFERENCES QSPARK_BOOKINGS(booking_id) ON DELETE CASCADE,
@@ -167,7 +183,44 @@ CONSTRAINT chk_qspark_audit_event CHECK (event_type IN ('SLOT_STATUS_CHANGE', 'B
 );
 ```
 
+### Table 8: `QSPARK_AUDIT_TRACK`
+*Purpose:* manual admin audit register. Nothing is written here automatically. An administrator records each change by hand from the Admin command center, naming the table and column that changed and the reason. It captures human decisions the system cannot infer, such as maintenance overrides or manual data edits.
+
+```sql
+CREATE TABLE QSPARK_AUDIT_TRACK (
+track_id NUMBER GENERATED BY DEFAULT AS IDENTITY (START WITH 1) PRIMARY KEY,
+admin_name VARCHAR2(100) NOT NULL,
+time_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+modified_table VARCHAR2(50) NOT NULL,
+modified_column VARCHAR2(50),
+why_modified VARCHAR2(500),
+reserved_col_1 VARCHAR2(255)
+);
+```
+
+- `admin_name` holds the administrator's name rather than a FK to `QSPARK_USERS`, so the entry stays readable if the account is later removed.
+- `modified_table` and `modified_column` are free text because a row may describe any of the eight tables.
+- No foreign keys and no check constraints on `modified_table`, since a CHECK would block future tables.
+- Only `reserved_col_1` is present, a single spare column.
+
+### Table relationships (ERD summary)
+| Parent | Child | FK column | On delete |
+| :--- | :--- | :--- | :--- |
+| `QSPARK_USERS` | `QSPARK_BOOKINGS` | `user_id` | restrict |
+| `QSPARK_USERS` | `QSPARK_WALLET_TRANSACTIONS` | `user_id` | restrict |
+| `QSPARK_USERS` | `QSPARK_AUDIT_LOGS` | `changed_by_user_id` | restrict |
+| `QSPARK_FLOORS` | `QSPARK_PARKING_SLOTS` | `floor_id` | cascade |
+| `QSPARK_VEHICLE_TYPES` | `QSPARK_PARKING_SLOTS` | `vehicle_type_id` | restrict |
+| `QSPARK_VEHICLE_TYPES` | `QSPARK_BOOKINGS` | `vehicle_type_id` | restrict |
+| `QSPARK_PARKING_SLOTS` | `QSPARK_BOOKINGS` | `slot_id` | restrict |
+| `QSPARK_PARKING_SLOTS` | `QSPARK_AUDIT_LOGS` | `slot_id` | cascade |
+| `QSPARK_BOOKINGS` | `QSPARK_WALLET_TRANSACTIONS` | `booking_id` | cascade |
+| `QSPARK_BOOKINGS` | `QSPARK_AUDIT_LOGS` | `booking_id` | cascade |
+| — | `QSPARK_AUDIT_TRACK` | *(none, standalone manual register)* | — |
+
 ### Indexes (10, matching `database/schema.sql`)
+`QSPARK_AUDIT_TRACK` gets no index. It is a low-volume, admin-entered table that is always read in full.
+
 ```sql
 CREATE INDEX idx_qspark_users_role ON QSPARK_USERS (role, is_active);
 
@@ -185,13 +238,15 @@ CREATE INDEX idx_qspark_audit_slot ON QSPARK_AUDIT_LOGS (slot_id, logged_at);
 CREATE INDEX idx_qspark_audit_booking ON QSPARK_AUDIT_LOGS (booking_id);
 ```
 
-## 2. ORDS REST API Contract (Published via Oracle APEX)
-All REST services are exposed under the base path:
-`http://<apex-host>:<port>/ords/<workspace>/smartparking/v2/`
+## 2. ORDS REST API contract (published through Oracle APEX)
+All REST services sit under the live base path:
+`https://<apex-host>/ords/nov_2026_batch/qsparking/api/v2/`
 
-### API 1: Slot Inventory & State Management
+> Verified 2026-11-10 against Oracle APEX module `qsparking.api.v2`. JSON bodies are read from `:body_text` and parsed with `APEX_JSON.PARSE(:body_text)`; handlers set the HTTP status through `:status_code`.
+
+### API 1: slot inventory and state management
 - `GET /slots/?floor_id={id}`
-  - **Description:** Returns real-time bay status across basements B1 to B4.
+  - **Description:** returns live bay status for basements B1 to B4.
   - **Response (200 OK):**
     ```json
     {
@@ -208,13 +263,38 @@ All REST services are exposed under the base path:
     }
     ```
 - `PUT /slots/:id/status`
-  - **Description:** Admin override of bay status (MAINTENANCE, OCCUPIED, AVAILABLE).
+  - **Description:** admin override of a bay status (MAINTENANCE, OCCUPIED, AVAILABLE).
   - **Payload:** `{"status": "MAINTENANCE", "admin_user_id": 1001}`
   - **Response:** 200 OK
 
-### API 2: Atomic Reservation with Metro Card Debit
+### API 1b: booking history
+- `GET /bookings/?user_id={id}`
+  - **Description:** returns bookings joined with slot, floor, vehicle type and user name, ordered `booking_id DESC`. The `user_id` query parameter is optional; omit it to list all bookings. Live Oracle stores imported user IDs as decimals, so callers may pass `1.004`; the FastAPI broker normalizes returned IDs back to `1004`.
+  - **Success Response (200 OK):**
+    ```json
+    {
+      "items": [
+        {
+          "booking_id": 10001,
+          "user_id": 1.004,
+          "slot_id": 6,
+          "slot_number": "B1-B06",
+          "floor_code": "B1",
+          "vehicle_type": "BIKE",
+          "vehicle_number": "KA-01-AB-1234",
+          "duration_hours": 2.0,
+          "base_amount": 10.0,
+          "total_amount": 10.0,
+          "status": "CONFIRMED",
+          "full_name": "Harshitha M N"
+        }
+      ]
+    }
+    ```
+
+### API 2: atomic reservation with Metro Card debit
 - `POST /bookings/`
-  - **Description:** Atomically locks the slot, checks `wallet_balance >= base_amount`, deducts fare, marks slot `RESERVED`, and inserts booking.
+  - **Description:** locks the slot, checks `wallet_balance >= base_amount`, deducts the fare, marks the slot `RESERVED` and inserts the booking, all in one transaction.
   - **Payload:**
     ```json
     {
@@ -239,9 +319,9 @@ All REST services are exposed under the base path:
   - **Error Response (409 Conflict):** `{"error": "Slot is already reserved or occupied"}`
   - **Error Response (402 Payment Required):** `{"error": "Insufficient Metro Card wallet balance"}`
 
-### API 3: Vehicle Checkout & Overstay Penalty Deduction
+### API 3: vehicle checkout and overstay penalty
 - `PUT /bookings/:id/checkout`
-  - **Description:** Evaluates exit timestamp vs. `scheduled_end`. If > 10 mins late, deducts overstay fine from wallet and frees the slot.
+  - **Description:** compares the exit timestamp with `scheduled_end`. If the vehicle is more than 10 minutes late, it deducts the overstay fine from the wallet and frees the slot.
   - **Payload:**
     ```json
     {"simulated_late_hours": 1.5}
@@ -257,11 +337,11 @@ All REST services are exposed under the base path:
       "status": "COMPLETED"
     }
     ```
-  - **Penalty math:** a 10-minute grace period after `scheduled_end` is free. Past grace, `penalty = overstay_hours × rate`, where **BIKE = ₹10.00/hr** and **CAR = ₹20.00/hr**. The example above is a bike slot (`B1-B14`): 1.5 late hours × ₹10 = **₹15.00**; the same delay on a car would be ₹30.00.
+  - **Penalty maths:** the first 10 minutes past `scheduled_end` are free. After that, `penalty = overstay_hours × rate`, with **BIKE = ₹10.00/hr** and **CAR = ₹20.00/hr**. The example is a bike slot (`B1-B14`): 1.5 late hours × ₹10 = **₹15.00**; a car would pay ₹30.00 for the same delay.
 
-### API 4: Reservation Cancellation & Instant Wallet Refund
+### API 4: cancellation and instant wallet refund
 - `PUT /bookings/:id/cancel`
-  - **Description:** Cancels confirmed booking, refunds `base_amount` to `wallet_balance`, logs `CANCEL_REFUND`, and sets slot to `AVAILABLE`.
+  - **Description:** cancels a confirmed booking, refunds `base_amount` to `wallet_balance`, logs `CANCEL_REFUND` and sets the slot to `AVAILABLE`.
   - **Success Response (200 OK):**
     ```json
     {
@@ -273,9 +353,9 @@ All REST services are exposed under the base path:
     }
     ```
 
-### API 5: Real-Time Admin Analytics & Heatmap
+### API 5: real-time admin analytics and heatmap
 - `GET /analytics/kpi`
-  - **Description:** Returns real-time facility metrics, floor occupancy percentages, and revenue totals.
+  - **Description:** returns live facility metrics, floor occupancy percentages and revenue totals.
   - **Success Response (200 OK):**
     ```json
     {
@@ -285,7 +365,7 @@ All REST services are exposed under the base path:
       "occupied_slots": 0,
       "maintenance_slots": 0,
       "occupancy_rate_percent": 4.17,
-      "total_revenue_collected": 150.0,
+      "total_revenue_collected": 1105.0,
       "floor_heatmaps": [
         {"floor_code": "B1", "total": 60, "occupied": 10, "occupancy_percent": 16.67},
         {"floor_code": "B2", "total": 60, "occupied": 0, "occupancy_percent": 0.0},
@@ -294,3 +374,45 @@ All REST services are exposed under the base path:
       ]
     }
     ```
+
+### API 6: paginated master audit log
+- `GET /audit/logs?limit={n}&offset={n}`
+  - **Description:** returns `QSPARK_AUDIT_LOGS` joined with `QSPARK_USERS` and `QSPARK_PARKING_SLOTS`, ordered `log_id DESC`.
+  - **Query parameters:** `limit` (default `50`), `offset` (default `0`).
+  - **Response (200 OK):**
+    ```json
+    {
+      "items": [
+        {
+          "log_id": 1,
+          "logged_at": "2026-11-10T06:45:00Z",
+          "event_type": "BOOKING_CANCELLED",
+          "changed_by_user_id": 1.004,
+          "username": "harshitha",
+          "slot_id": 6,
+          "slot_number": "B1-B06",
+          "booking_id": 10021,
+          "old_state": "RESERVED",
+          "new_state": "AVAILABLE",
+          "log_details": "Booking cancelled by user. Full refund of ₹5.00 credited to wallet."
+        }
+      ],
+      "hasMore": false,
+      "limit": 50,
+      "offset": 0,
+      "count": 1
+    }
+    ```
+
+### API 7: manual admin audit register
+- `POST /admin/audit-track`
+  - **Description:** inserts one manually submitted row into `QSPARK_AUDIT_TRACK`. No other table changes and nothing is captured automatically.
+  - **Payload:** `{"admin_name": "pawan.simha", "modified_table": "QSPARK_PARKING_SLOTS", "modified_column": "status", "why_modified": "Water leak, bay blocked for repair"}`
+  - **Response (201 Created):** `{"track_id": 1, "admin_name": "pawan.simha", "modified_table": "QSPARK_PARKING_SLOTS", "status": "SAVED"}`
+  - `track_id` comes from the identity column and `time_date` from the database default, so the client sends neither.
+
+### Request and response conventions (verified live)
+- **Body parsing:** JSON handlers read the raw `:body_text` bind and call `APEX_JSON.PARSE(:body_text)`. That fixed the empty-body problem on `PUT slots/:id/status`.
+- **Status codes:** every handler sets `:status_code` explicitly (`200`, `201`, `400`, `402`, `404`, `409`, `500`).
+- **Slot status domain:** `PUT slots/:id/status` accepts only `AVAILABLE`, `RESERVED`, `OCCUPIED`, `MAINTENANCE`.
+- **Base path:** the live module is `qsparking.api.v2`. The repo's `database/ords_setup.sql` still describes `parking.api.v2` with 6 handlers and has not been regenerated.
