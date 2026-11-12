@@ -1,5 +1,0 @@
-RESTful Services 
-Modules -> Create Module -> Fill(Module name, Base path)
-	Create template -> Fill(Module Base Path, URI Template, Priority(if needed))
-		Create handler -> URI template, method, Source type, source code -> create handler button
-			mime types
