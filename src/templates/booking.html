@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% block title %}Book a slot{% endblock %}
+{% block breadcrumb %}Book a slot{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Book a parking slot</h1>
+  <p class="page-subtitle">Reserve, review and confirm in a few steps. Bookings run between 05:00 and 23:00.</p>
+</div>
+
+{% if not system_online and user.role == 'CUSTOMER' %}
+<div class="card mb-4" style="border-color:#fde68a;background:#fffbeb">
+  <div class="card-body">
+    <strong>Bookings are paused.</strong> The system is currently offline. Existing bookings stay valid and can still be scanned by staff.
+  </div>
+</div>
+{% endif %}
+
+<ol class="steps" id="stepBar">
+  <li class="step" data-step="1" aria-current="step"><span class="step-index">1</span>Vehicle type</li>
+  <li class="step" data-step="2"><span class="step-index">2</span>Registration</li>
+  <li class="step" data-step="3"><span class="step-index">3</span>Floor &amp; slot</li>
+  <li class="step" data-step="4"><span class="step-index">4</span>Schedule</li>
+  <li class="step" data-step="5"><span class="step-index">5</span>Review</li>
+</ol>
+
+<form id="bookingForm" class="grid grid-2" novalidate>
+  <!-- Step 1 -->
+  <section class="card" data-panel="1">
+    <div class="card-header"><h2 class="card-title">1. Choose vehicle type</h2></div>
+    <div class="card-body">
+      <div id="vehicleTypes" class="grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.75rem">
+        <div class="skeleton" style="height:64px"></div>
+      </div>
+      <p class="hint mt-2">Rates come from the pricing table configured by the Super Admin.</p>
+    </div>
+  </section>
+
+  <!-- Step 2 -->
+  <section class="card hidden" data-panel="2">
+    <div class="card-header"><h2 class="card-title">2. Vehicle registration</h2></div>
+    <div class="card-body grid" style="gap:0.9rem">
+      <div class="field">
+        <label class="label" for="vehicleFormat">Registration format</label>
+        <select class="select" id="vehicleFormat">
+          <option value="std1">Standard — KA 04 A 2256</option>
+          <option value="std2">Compact — KA04A2256</option>
+          <option value="std3">BH series — 22 BH 1234 AA</option>
+          <option value="bhr">Bharat — BH 12 AB 3456</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="label" for="vehicleNumber">Registration number</label>
+        <input class="input" id="vehicleNumber" name="vehicle_number" type="text" autocomplete="off"
+               placeholder="KA 04 A 2256" maxlength="20" required aria-describedby="vehicleHelp vehicleError">
+        <p class="hint" id="vehicleHelp">Letters and digits only, 6 to 20 characters. Spaces are ignored.</p>
+        <p class="field-error" id="vehicleError">Enter a valid registration number.</p>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" class="btn btn-secondary" data-back="1">Back</button>
+        <button type="button" class="btn btn-primary" data-next="3">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 3 -->
+  <section class="card hidden" data-panel="3">
+    <div class="card-header">
+      <h2 class="card-title">3. Pick a floor and slot</h2>
+      <div class="flex gap-2">
+        <label class="sr-only" for="floorSelect">Floor</label>
+        <select class="select" id="floorSelect" style="min-width:150px"></select>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="legend mb-3">
+        <span><i style="background:#ecfdf5;border:1px solid #a7f3d0"></i>Available</span>
+        <span><i style="background:#fffbeb;border:1px solid #fde68a"></i>Reserved</span>
+        <span><i style="background:#fef2f2;border:1px solid #fecaca"></i>Occupied</span>
+        <span><i style="background:#f1f5f9;border:1px solid #e2e8f0"></i>Maintenance / inactive</span>
+      </div>
+      <div class="slot-grid" id="slotGrid" role="group" aria-label="Parking slots"></div>
+      <p class="hint mt-3" id="slotHelp">Select an available slot to continue.</p>
+      <div class="flex gap-2 mt-3">
+        <button type="button" class="btn btn-secondary" data-back="2">Back</button>
+        <button type="button" class="btn btn-primary" data-next="4" id="slotNext" disabled>Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 4 -->
+  <section class="card hidden" data-panel="4">
+    <div class="card-header"><h2 class="card-title">4. When do you need the slot?</h2></div>
+    <div class="card-body grid" style="gap:0.9rem">
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.75rem">
+        <div class="field">
+          <label class="label" for="bookDate">Date</label>
+          <input class="input" id="bookDate" type="date" required aria-describedby="scheduleError">
+        </div>
+        <div class="field">
+          <label class="label" for="startTime">Start time</label>
+          <input class="input" id="startTime" type="time" step="900" required aria-describedby="scheduleError">
+        </div>
+        <div class="field">
+          <label class="label" for="durationHours">Duration</label>
+          <select class="select" id="durationHours" aria-describedby="scheduleError">
+            <option value="1">1 hour</option>
+            <option value="2" selected>2 hours</option>
+            <option value="3">3 hours</option>
+            <option value="4">4 hours</option>
+            <option value="6">6 hours</option>
+            <option value="8">8 hours</option>
+            <option value="12">12 hours</option>
+          </select>
+        </div>
+      </div>
+      <p class="field-error" id="scheduleError">Choose a start time between 05:00 and 23:00 that ends by 23:00.</p>
+      <div class="rounded-lg border p-3 text-sm" style="border-color:var(--border);background:#f8fafc">
+        <div class="flex justify-between"><span class="text-muted">Start</span><span id="previewStart">—</span></div>
+        <div class="flex justify-between"><span class="text-muted">End</span><span id="previewEnd">—</span></div>
+        <div class="flex justify-between font-semibold mt-1"><span>Estimated amount</span><span id="previewFare">—</span></div>
+        <p class="hint mt-1">The server recalculates the final amount when you confirm.</p>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" class="btn btn-secondary" data-back="3">Back</button>
+        <button type="button" class="btn btn-primary" data-next="5">Review</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 5 -->
+  <section class="card hidden" data-panel="5" style="grid-column:1/-1">
+    <div class="card-header"><h2 class="card-title">5. Review and confirm</h2></div>
+    <div class="card-body">
+      <dl class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.75rem" id="reviewList"></dl>
+      <div id="walletNote" class="mt-3 text-sm"></div>
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button type="button" class="btn btn-secondary" data-back="4">Back</button>
+        <button type="submit" class="btn btn-primary" id="confirmBtn">Confirm booking</button>
+        <a class="btn btn-ghost" href="/dashboard">Cancel</a>
+      </div>
+    </div>
+  </section>
+</form>
+
+<section class="card hidden" id="successPanel" style="grid-column:1/-1">
+  <div class="card-header"><h2 class="card-title">Booking confirmed</h2></div>
+  <div class="card-body">
+    <p class="text-sm mb-3" id="successMessage"></p>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;align-items:start">
+      <dl class="text-sm" id="successDetails"></dl>
+      <div class="text-center">
+        <img id="successQr" alt="Booking QR code" style="width:180px;height:180px;border:1px solid var(--border);border-radius:8px;background:#fff">
+        <p class="hint mt-2">Show this QR at the entry gate.</p>
+      </div>
+    </div>
+    <div class="flex gap-2 mt-4">
+      <a class="btn btn-primary" href="/bookings/my">View my bookings</a>
+      <a class="btn btn-secondary" href="/dashboard">Dashboard</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var state = {
+    vehicleTypes: [], floors: [], slots: [],
+    step: 1, vehicleType: null, vehicleNumber: '', vehicleFormat: 'std1',
+    floorId: null, slot: null, date: '', start: '', duration: 2, submitting: false
+  };
+
+  var form = document.getElementById('bookingForm');
+  var offline = {{ 'true' if not system_online and user.role == 'CUSTOMER' else 'false' }};
+
+  function go(step) {
+    var max = state.slot ? 5 : 4;
+    if (step > max) step = max;
+    state.step = step;
+    document.querySelectorAll('[data-panel]').forEach(function (p) {
+      p.classList.toggle('hidden', Number(p.dataset.panel) !== step);
+    });
+    document.querySelectorAll('#stepBar .step').forEach(function (s) {
+      s.setAttribute('aria-current', Number(s.dataset.step) === step ? 'step' : 'false');
+    });
+    var focusTarget = document.querySelector('[data-panel="' + step + '"] input, [data-panel="' + step + '"] select, [data-panel="' + step + '"] button');
+    if (focusTarget) focusTarget.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (step === 5) renderReview();
+  }
+
+  document.querySelectorAll('[data-next]').forEach(function (b) {
+    b.addEventListener('click', function () { if (validateStep(state.step)) go(Number(b.dataset.next)); });
+  });
+  document.querySelectorAll('[data-back]').forEach(function (b) {
+    b.addEventListener('click', function () { go(Number(b.dataset.back)); });
+  });
+
+  function validateStep(step) {
+    if (step === 1 && !state.vehicleType) { U.toast('Choose a vehicle type first.', 'warning'); return false; }
+    if (step === 2) {
+      var input = document.getElementById('vehicleNumber');
+      var value = normalize(input.value);
+      var ok = /^[A-Z0-9]{6,20}$/.test(value);
+      document.getElementById('vehicleError').classList.toggle('is-visible', !ok);
+      input.setAttribute('aria-invalid', ok ? 'false' : 'true');
+      if (!ok) { input.focus(); return false; }
+      state.vehicleNumber = value;
+      state.vehicleFormat = document.getElementById('vehicleFormat').value;
+    }
+    if (step === 3 && !state.slot) { U.toast('Select an available slot.', 'warning'); return false; }
+    if (step === 4) return readSchedule();
+    return true;
+  }
+
+  function normalize(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+  // ---- vehicle types
+  async function loadVehicleTypes() {
+    try {
+      var data = await QS.get('/api/slots/vehicle-types');
+      state.vehicleTypes = data.items || [];
+      var box = document.getElementById('vehicleTypes');
+      if (!state.vehicleTypes.length) {
+        box.innerHTML = '<p class="text-sm text-muted">No vehicle types are configured.</p>';
+        return;
+      }
+      box.innerHTML = state.vehicleTypes.map(function (t) {
+        return '<button type="button" class="card text-left p-3" data-vtype="' + t.vehicle_type_id + '" aria-pressed="false">' +
+          '<div class="font-semibold">' + U.esc(t.type_name) + '</div>' +
+          '<div class="text-xs text-muted">' + U.money(t.hourly_rate) + '/hr · overstay ' + U.money(t.overstay_rate) + '/hr</div>' +
+        '</button>';
+      }).join('');
+      box.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-vtype]');
+        if (!btn) return;
+        box.querySelectorAll('[data-vtype]').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+        btn.setAttribute('aria-pressed', 'true');
+        state.vehicleType = state.vehicleTypes.find(function (t) { return String(t.vehicle_type_id) === btn.dataset.vtype; });
+        state.slot = null;
+        loadSlots();
+        go(2);
+      });
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  // ---- floors & slots
+  async function loadFloors() {
+    try {
+      var data = await QS.get('/api/slots/floors');
+      state.floors = (data.items || []).filter(function (f) { return f.floor_status === 'OPEN'; });
+      var sel = document.getElementById('floorSelect');
+      if (!state.floors.length) {
+        sel.innerHTML = '<option>No open floors</option>';
+        return;
+      }
+      sel.innerHTML = state.floors.map(function (f) {
+        return '<option value="' + f.floor_id + '">' + U.esc(f.floor_code) + ' — ' + f.available_slots + ' free</option>';
+      }).join('');
+      state.floorId = state.floors[0].floor_id;
+      sel.addEventListener('change', function () { state.floorId = Number(sel.value); loadSlots(); });
+      loadSlots();
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  async function loadSlots() {
+    if (!state.vehicleType) return;
+    var grid = document.getElementById('slotGrid');
+    grid.innerHTML = '<div class="skeleton" style="height:44px"></div><div class="skeleton" style="height:44px"></div>';
+    try {
+      var url = '/api/slots/availability?vehicle_type_id=' + state.vehicleType.vehicle_type_id +
+        (state.floorId ? '&floor_id=' + state.floorId : '');
+      var data = await QS.get(url);
+      state.slots = data.items || [];
+      if (!state.slots.length) {
+        grid.innerHTML = '<p class="text-sm text-muted">No slots match this vehicle type on the selected floor.</p>';
+        return;
+      }
+      grid.innerHTML = state.slots.map(function (s) {
+        var disabled = s.status !== 'AVAILABLE';
+        return '<button type="button" class="slot" data-slot="' + s.slot_id + '" data-status="' + U.esc(s.status) + '"' +
+          (disabled ? ' disabled' : '') + ' aria-pressed="false" title="' + U.esc(s.slot_number + ' · ' + s.status) + '">' +
+          U.esc(s.slot_number) + '<small>' + U.esc(s.status.slice(0, 4)) + '</small></button>';
+      }).join('');
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  document.getElementById('slotGrid').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-slot]');
+    if (!btn || btn.disabled) return;
+    document.querySelectorAll('#slotGrid .slot').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+    btn.setAttribute('aria-pressed', 'true');
+    state.slot = state.slots.find(function (s) { return String(s.slot_id) === btn.dataset.slot; });
+    state.floorId = state.slot.floor_id;
+    document.getElementById('slotHelp').textContent = 'Selected slot ' + state.slot.slot_number + ' on floor ' + state.slot.floor_code + '.';
+    document.getElementById('slotNext').disabled = false;
+  });
+
+  // ---- schedule
+  var dateEl = document.getElementById('bookDate');
+  var startEl = document.getElementById('startTime');
+  var durEl = document.getElementById('durationHours');
+
+  function isoLocal(d) {
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00';
+  }
+
+  function currentWindow() {
+    if (!dateEl.value || !startEl.value) return null;
+    var start = new Date(dateEl.value + 'T' + startEl.value + ':00');
+    if (isNaN(start.getTime())) return null;
+    var hours = Number(durEl.value);
+    var end = new Date(start.getTime() + hours * 3600 * 1000);
+    return { start: start, end: end, hours: hours };
+  }
+
+  function readSchedule() {
+    var w = currentWindow();
+    var err = document.getElementById('scheduleError');
+    if (!w) { err.classList.add('is-visible'); return false; }
+    var sameDay = w.end.getDate() === w.start.getDate();
+    var valid = sameDay && w.start.getHours() >= 5 && w.end.getHours() <= 23 &&
+      !(w.end.getHours() === 23 && w.end.getMinutes() > 0) && w.start.getTime() > Date.now() - 60000;
+    err.textContent = sameDay
+      ? 'Choose a start time between 05:00 and 23:00 that ends by 23:00 and is in the future.'
+      : 'A booking must start and end on the same day.';
+    err.classList.toggle('is-visible', !valid);
+    if (!valid) return false;
+    state.date = dateEl.value;
+    state.start = startEl.value;
+    state.duration = w.hours;
+    return true;
+  }
+
+  function updatePreview() {
+    var w = currentWindow();
+    document.getElementById('previewStart').textContent = w ? w.start.toLocaleString() : '—';
+    document.getElementById('previewEnd').textContent = w ? w.end.toLocaleString() : '—';
+    document.getElementById('previewFare').textContent = (w && state.vehicleType)
+      ? U.money(w.hours * Number(state.vehicleType.hourly_rate)) : '—';
+  }
+  [dateEl, startEl, durEl].forEach(function (el) { el.addEventListener('change', updatePreview); el.addEventListener('input', updatePreview); });
+
+  // ---- review
+  function row(label, value) { return '<div><dt class="text-xs uppercase text-muted">' + label + '</dt><dd class="text-sm font-medium">' + value + '</dd></div>'; }
+
+  function renderReview() {
+    var w = currentWindow();
+    var fare = w && state.vehicleType ? w.hours * Number(state.vehicleType.hourly_rate) : 0;
+    document.getElementById('reviewList').innerHTML =
+      row('Vehicle type', U.esc(state.vehicleType.type_name)) +
+      row('Registration', '<span class="mono">' + U.esc(state.vehicleNumber) + '</span>') +
+      row('Floor / slot', U.esc(state.slot.floor_code) + ' · ' + U.esc(state.slot.slot_number)) +
+      row('Start', w ? U.dateTime(isoLocal(w.start)) : '—') +
+      row('End', w ? U.dateTime(isoLocal(w.end)) : '—') +
+      row('Duration', (state.duration || 0) + ' hour(s)') +
+      row('Hourly rate', U.money(state.vehicleType.hourly_rate)) +
+      row('Estimated total', '<span class="font-bold">' + U.money(fare) + '</span>');
+
+    QS.get('/api/auth/me').then(function (me) {
+      var bal = Number(me.wallet_balance || 0);
+      var note = document.getElementById('walletNote');
+      if (bal >= fare) {
+        note.className = 'mt-3 text-sm text-emerald-700';
+        note.textContent = 'Wallet balance ' + U.money(bal) + ' covers this booking. The amount is debited only after you confirm.';
+      } else {
+        note.className = 'mt-3 text-sm text-red-700';
+        note.textContent = 'Wallet balance ' + U.money(bal) + ' is below the estimated ' + U.money(fare) + '. Top up via an administrator before confirming.';
+      }
+    }).catch(function () {});
+  }
+
+  // ---- submit
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (state.submitting) return;
+    if (!validateStep(2) || !validateStep(4)) return;
+    var w = currentWindow();
+    var btn = document.getElementById('confirmBtn');
+    state.submitting = true;
+    U.setBusy(btn, true, 'Confirming…');
+    var payload = {
+      slot_id: state.slot.slot_id,
+      vehicle_number: state.vehicleNumber,
+      vehicle_format: state.vehicleFormat,
+      booked_from: isoLocal(w.start),
+      booked_until: isoLocal(w.end)
+    };
+    {% if user.role in ('ADMIN', 'SUPER_ADMIN') %}
+    var bookFor = new URLSearchParams(location.search).get('user_id');
+    if (bookFor) payload.user_id = Number(bookFor);
+    {% endif %}
+    try {
+      var held = await QS.post('/api/bookings/hold', payload);
+      var confirmed = await QS.post('/api/bookings/' + encodeURIComponent(held.booking_reference) + '/confirm', {});
+      var qr = await QS.post('/api/qr/generate', { booking_reference: held.booking_reference });
+      document.getElementById('bookingForm').classList.add('hidden');
+      document.getElementById('stepBar').classList.add('hidden');
+      var panel = document.getElementById('successPanel');
+      panel.classList.remove('hidden');
+      document.getElementById('successMessage').textContent = 'Your slot is reserved. The amount was debited from your wallet.';
+      document.getElementById('successDetails').innerHTML =
+        '<div class="mb-2"><span class="text-muted text-xs uppercase">Reference</span><div class="mono">' + U.esc(held.booking_reference) + '</div></div>' +
+        '<div class="mb-2"><span class="text-muted text-xs uppercase">Slot</span><div>' + U.esc(held.slot_number) + ' · ' + U.esc(held.vehicle_type) + '</div></div>' +
+        '<div class="mb-2"><span class="text-muted text-xs uppercase">Window</span><div>' + U.dateTime(held.booked_from) + ' → ' + U.dateTime(held.booked_until) + '</div></div>' +
+        '<div class="mb-2"><span class="text-muted text-xs uppercase">Amount paid</span><div class="font-semibold">' + U.money(confirmed.amount_debited) + '</div></div>' +
+        '<div><span class="text-muted text-xs uppercase">Wallet balance</span><div class="font-semibold">' + U.money(confirmed.new_wallet_balance) + '</div></div>';
+      document.getElementById('successQr').src = 'data:image/png;base64,' + qr.qr_base64;
+      var navWallet = document.getElementById('navWallet');
+      if (navWallet) navWallet.textContent = Number(confirmed.new_wallet_balance).toFixed(2);
+      U.toast('Booking confirmed.', 'success');
+    } catch (err) {
+      if (err.status === 402) {
+        U.toast(err.message + ' Wallet: ' + U.money(err.payload && err.payload.wallet_balance) +
+          ', required: ' + U.money(err.payload && err.payload.required) + '.', 'error');
+      } else if (err.status === 409) {
+        U.toast('That slot was just taken or the hold expired. Refreshing availability…', 'warning');
+        loadSlots();
+      } else {
+        U.toast(err.message, 'error');
+      }
+    } finally {
+      state.submitting = false;
+      U.setBusy(btn, false);
+    }
+  });
+
+  // ---- init
+  (function init() {
+    var now = new Date();
+    document.getElementById('bookDate').value = now.toISOString().slice(0, 10);
+    var next = new Date(now.getTime() + 60 * 60 * 1000);
+    next.setMinutes(0, 0, 0);
+    document.getElementById('startTime').value = String(next.getHours()).padStart(2, '0') + ':00';
+    updatePreview();
+    loadVehicleTypes();
+    loadFloors();
+  })();
+
+  if (offline) {
+    document.getElementById('confirmBtn').disabled = true;
+    document.getElementById('confirmBtn').textContent = 'System offline';
+  }
+})();
+</script>
+{% endblock %}

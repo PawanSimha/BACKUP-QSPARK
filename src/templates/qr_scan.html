@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}QR scan{% endblock %}
+{% block breadcrumb %}QR scan{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Gate scan</h1>
+  <p class="page-subtitle">The first scan records entry; the next scan records exit and settles any overtime from the customer wallet.</p>
+</div>
+
+<div class="grid grid-2">
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Camera</h2>
+      <span class="badge badge-slate" id="cameraState">Idle</span>
+    </div>
+    <div class="card-body">
+      <p class="text-sm text-muted mb-3" id="cameraHelp">
+        Camera access is requested only when you press Start camera. The video never leaves this device; only the decoded booking reference is sent to the server.
+      </p>
+      <div class="rounded-lg overflow-hidden mb-3" style="background:#0f172a;min-height:220px;display:flex;align-items:center;justify-content:center">
+        <video id="camera" playsinline muted style="width:100%;max-height:320px;display:none"></video>
+        <span class="text-xs" id="cameraPlaceholder" style="color:#94a3b8">Camera preview</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-primary" type="button" id="startCam">Start camera</button>
+        <button class="btn btn-secondary" type="button" id="stopCam" disabled>Stop camera</button>
+      </div>
+      <p class="field-error is-visible hidden mt-2" id="cameraError" role="alert"></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Enter a booking reference</h2></div>
+    <div class="card-body">
+      <form id="manualForm" class="grid" style="gap:0.9rem" novalidate>
+        <div class="field">
+          <label class="label" for="refInput">Booking reference</label>
+          <input class="input mono" id="refInput" placeholder="QSP-20261112-XXXX" autocomplete="off" required maxlength="40" aria-describedby="refHelp refError">
+          <p class="hint" id="refHelp">Use this when the customer's QR cannot be read or the camera is unavailable.</p>
+          <p class="field-error" id="refError">Enter the reference printed on the booking.</p>
+        </div>
+        <button class="btn btn-primary" type="submit" id="scanBtn">Record scan</button>
+      </form>
+    </div>
+  </section>
+</div>
+
+<section class="card mt-4" id="resultCard" hidden>
+  <div class="card-header">
+    <h2 class="card-title" id="resultTitle">Scan result</h2>
+    <button class="btn btn-ghost btn-sm" type="button" id="clearResult">Dismiss</button>
+  </div>
+  <div class="card-body" id="resultBody"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var stream = null, detector = null, timer = null, lastRef = '', lastRefAt = 0;
+  var video = document.getElementById('camera');
+  var placeholder = document.getElementById('cameraPlaceholder');
+  var stateBadge = document.getElementById('cameraState');
+
+  function setState(label, tone) {
+    stateBadge.textContent = label;
+    stateBadge.className = 'badge ' + (tone || 'badge-slate');
+  }
+
+  async function startCamera() {
+    var errBox = document.getElementById('cameraError');
+    errBox.classList.add('hidden');
+    if (!('mediaDevices' in navigator) || !navigator.mediaDevices.getUserMedia) {
+      errBox.textContent = 'This browser does not expose camera access. Use manual entry instead.';
+      errBox.classList.remove('hidden');
+      return;
+    }
+    if (!('BarcodeDetector' in window)) {
+      errBox.textContent = 'QR detection is not supported in this browser. Use Chrome or Edge, or type the reference below.';
+      errBox.classList.remove('hidden');
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    } catch (err) {
+      errBox.textContent = err && err.name === 'NotAllowedError'
+        ? 'Camera permission was denied. Allow it in the browser settings, or type the reference below.'
+        : 'No usable camera was found. Type the reference below.';
+      errBox.classList.remove('hidden');
+      return;
+    }
+    video.srcObject = stream;
+    video.style.display = 'block';
+    placeholder.style.display = 'none';
+    await video.play();
+    document.getElementById('startCam').disabled = true;
+    document.getElementById('stopCam').disabled = false;
+    setState('Scanning', 'badge-green');
+
+    detector = detector || new window.BarcodeDetector({ formats: ['qr_code'] });
+    timer = setInterval(async function () {
+      if (!detector || video.readyState < 2) return;
+      try {
+        var codes = await detector.detect(video);
+        if (!codes.length) return;
+        var value = (codes[0].rawValue || '').trim();
+        if (!value) return;
+        var now = Date.now();
+        if (value === lastRef && now - lastRefAt < 4000) return;
+        lastRef = value; lastRefAt = now;
+        await submit(value);
+      } catch (_) { /* transient decode failure; keep scanning */ }
+    }, 700);
+  }
+
+  function stopCamera() {
+    if (timer) { clearInterval(timer); timer = null; }
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    video.srcObject = null;
+    video.style.display = 'none';
+    placeholder.style.display = 'block';
+    document.getElementById('startCam').disabled = false;
+    document.getElementById('stopCam').disabled = true;
+    setState('Idle', 'badge-slate');
+  }
+
+  document.getElementById('startCam').addEventListener('click', startCamera);
+  document.getElementById('stopCam').addEventListener('click', stopCamera);
+  window.addEventListener('pagehide', stopCamera);
+
+  function showResult(tone, title, rows) {
+    document.getElementById('resultCard').hidden = false;
+    var titleEl = document.getElementById('resultTitle');
+    titleEl.textContent = title;
+    titleEl.className = 'card-title ' + tone;
+    document.getElementById('resultBody').innerHTML =
+      '<dl class="text-sm" style="display:grid;gap:0.4rem">' + rows.join('') + '</dl>';
+    document.getElementById('resultCard').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function row(label, value) {
+    return '<div class="flex justify-between gap-3 border-b border-slate-100 py-1">' +
+      '<span class="text-muted">' + label + '</span><span class="font-medium text-right">' + value + '</span></div>';
+  }
+
+  async function submit(ref) {
+    var btn = document.getElementById('scanBtn');
+    U.setBusy(btn, true, 'Recording…');
+    try {
+      var res = await QS.post('/api/qr/scan', { booking_reference: ref, scan_method: 'QR' });
+      showResult('text-emerald-700', res.action === 'ENTRY' ? 'Entry granted' : 'Exit granted', [
+        row('Booking', '<span class="mono">' + U.esc(res.booking_reference) + '</span>'),
+        row('Customer', U.esc(res.user_name || '—')),
+        row('Vehicle', U.esc(res.vehicle_number || '—')),
+        row('Slot', U.esc(res.slot_number || '—')),
+        res.action === 'ENTRY'
+          ? row('Entry time', U.dateTime(res.entry_time))
+          : row('Exit time', U.dateTime(res.exit_time) +
+              (Number(res.overstay_amount) > 0 ? ' · overtime ' + U.money(res.overstay_amount) : '')),
+        row('Status', U.statusBadge(res.action === 'ENTRY' ? 'OCCUPIED' : 'COMPLETED'))
+      ]);
+      U.toast(res.message || 'Scan recorded.', 'success');
+      document.getElementById('refInput').value = '';
+    } catch (err) {
+      var payload = err.payload || {};
+      if (err.status === 409 && payload.action === 'EXIT_BLOCKED') {
+        showResult('text-amber-700', 'Exit blocked — overtime unpaid', [
+          row('Booking', '<span class="mono">' + U.esc(payload.booking_reference || ref) + '</span>'),
+          row('Overtime hours', U.esc(payload.overstay_hours)),
+          row('Overtime amount', U.money(payload.overstay_amount)),
+          row('Wallet balance', U.money(payload.wallet_balance)),
+          row('Next step', 'Ask the customer to top up the wallet with an administrator, then scan again.')
+        ]);
+        U.toast(payload.message || 'Overtime must be settled before exit.', 'warning');
+      } else if (err.status === 409) {
+        showResult('text-red-700', 'Scan rejected', [
+          row('Reference', '<span class="mono">' + U.esc(ref) + '</span>'),
+          row('Reason', U.esc(err.message)),
+          row('Result', payload.exit_time ? 'Vehicle already exited at ' + U.dateTime(payload.exit_time) : 'No further action possible.')
+        ]);
+        U.toast(err.message, 'error');
+      } else if (err.status === 404) {
+        showResult('text-red-700', 'Unknown booking', [
+          row('Reference', '<span class="mono">' + U.esc(ref) + '</span>'),
+          row('Reason', 'No booking matches this reference.')
+        ]);
+        U.toast(err.message, 'error');
+      } else {
+        showResult('text-red-700', 'Scan failed', [row('Reason', U.esc(err.message))]);
+        U.toast(err.message, 'error');
+      }
+    } finally {
+      U.setBusy(btn, false);
+    }
+  }
+
+  document.getElementById('manualForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = document.getElementById('refInput');
+    var err = document.getElementById('refError');
+    var value = input.value.trim();
+    var ok = value.length >= 4;
+    err.classList.toggle('is-visible', !ok);
+    input.setAttribute('aria-invalid', ok ? 'false' : 'true');
+    if (!ok) { input.focus(); return; }
+    submit(value);
+  });
+
+  document.getElementById('clearResult').addEventListener('click', function () {
+    document.getElementById('resultCard').hidden = true;
+  });
+})();
+</script>
+{% endblock %}

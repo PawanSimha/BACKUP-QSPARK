@@ -1,36 +1,110 @@
-"""SHA-256 password hashing for QSPARK basic authentication."""
+"""Security helpers: password hashing, session auth, role guards."""
 
-import hashlib
-import hmac
-import os
-
-
-def hash_password(plain_text: str) -> str:
-    """Return the SHA-256 hex digest of a plain-text password."""
-    return hashlib.sha256(plain_text.encode("utf-8")).hexdigest()
+from functools import wraps
+from flask import session, jsonify, current_app
+from werkzeug.security import generate_password_hash, check_password_hash
+from src.services.db import get_connection
 
 
-def verify_password(plain_text: str, hashed: str) -> bool:
-    """Constant-time comparison of a plain-text password against a stored digest."""
-    return hmac.compare_digest(hash_password(plain_text), hashed)
+def hash_password(plain_password: str) -> str:
+    """Hash a plain-text password using Werkzeug (PBKDF2-SHA256)."""
+    return generate_password_hash(plain_password)
 
 
-def _sign(payload: str) -> str:
-    key = os.getenv("SECRET_KEY", "change_me_in_production").encode("utf-8")
-    return hmac.new(key, payload.encode("utf-8"), hashlib.sha256).hexdigest()
+def verify_password(plain_password: str, password_hash: str) -> bool:
+    """Verify a plain-text password against a stored hash."""
+    return check_password_hash(password_hash, plain_password)
 
 
-def create_token(user_id: int) -> str:
-    """Signed session token: "<user_id>.<hmac-sha256>". Stateless, no storage."""
-    payload = str(user_id)
-    return f"{payload}.{_sign(payload)}"
-
-
-def read_token(token: str) -> int | None:
-    """Return the user_id for a valid token, or None."""
-    try:
-        payload, signature = token.split(".", 1)
-        user_id = int(payload)
-    except (AttributeError, ValueError):
+def get_current_user():
+    """Return the current user dict from session, or None if not logged in."""
+    if "user_id" not in session:
         return None
-    return user_id if hmac.compare_digest(signature, _sign(payload)) else None
+    return {
+        "user_id": session["user_id"],
+        "username": session.get("username"),
+        "email": session.get("email"),
+        "full_name": session.get("full_name"),
+        "role": session.get("role"),
+        "wallet_balance": session.get("wallet_balance"),
+    }
+
+
+def require_login(view_func):
+    """Decorator: require authenticated user. Returns 401 if not logged in."""
+
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if get_current_user() is None:
+            return jsonify({"error": "Authentication required", "code": 401}), 401
+        return view_func(*args, **kwargs)
+
+    return wrapper
+
+
+def require_role(*allowed_roles):
+    """Decorator: require specific role(s). Returns 403 if role mismatch.
+
+    Usage: @require_role('ADMIN', 'SUPER_ADMIN')
+    Usage: @require_role('CUSTOMER')
+    Usage: @require_role('SUPER_ADMIN')
+    """
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(*args, **kwargs):
+            user = get_current_user()
+            if user is None:
+                return jsonify({"error": "Authentication required", "code": 401}), 401
+            if user["role"] not in allowed_roles:
+                return jsonify(
+                    {"error": "Role privileges required", "code": 403}
+                ), 403
+            return view_func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def require_admin(view_func):
+    """Decorator: require ADMIN or SUPER_ADMIN role."""
+    return require_role("ADMIN", "SUPER_ADMIN")(view_func)
+
+
+def login_user(user_row) -> None:
+    """Store user data in Flask session after successful login."""
+    session.clear()
+    session["user_id"] = user_row["user_id"]
+    session["username"] = user_row["username"]
+    session["email"] = user_row["email"]
+    session["full_name"] = user_row["full_name"]
+    session["role"] = user_row["role"]
+    session["wallet_balance"] = float(user_row["wallet_balance"])
+    session.permanent = True
+
+
+def logout_user() -> None:
+    """Clear the Flask session."""
+    session.clear()
+
+
+def authenticate_user(username: str, plain_password: str):
+    """Authenticate a user by username/email and password. Returns user row or None."""
+    conn = get_connection(current_app.config["DATABASE_PATH"])
+    try:
+        row = conn.execute(
+            """SELECT * FROM users
+               WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?))
+                 AND account_status = 'ACTIVE'""",
+            (username, username),
+        ).fetchone()
+        if row is None:
+            return None
+        if not row["password_hash"]:
+            return None
+        if not verify_password(plain_password, row["password_hash"]):
+            return None
+        return dict(row)
+    finally:
+        conn.close()

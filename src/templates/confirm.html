@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Booking {{ booking_reference }}{% endblock %}
+{% block breadcrumb %}Booking detail{% endblock %}
+{% block content %}
+<div class="page-header flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="page-title">Booking detail</h1>
+    <p class="page-subtitle mono">{{ booking_reference }}</p>
+  </div>
+  <a class="btn btn-secondary" href="/bookings/my">Back to my bookings</a>
+</div>
+
+<div class="grid grid-2">
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Reservation</h2></div>
+    <div class="card-body" id="detailBox"><div class="skeleton" style="width:70%"></div></div>
+  </section>
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">QR code &amp; gate events</h2></div>
+    <div class="card-body">
+      <div id="qrBox" class="text-sm text-muted">QR code is issued once the booking is confirmed.</div>
+      <div class="divider"></div>
+      <ul class="text-sm" id="eventList"><li class="text-muted">Loading events…</li></ul>
+      <div class="mt-4 flex gap-2" id="actions"></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var ref = {{ booking_reference|tojson }};
+
+  function row(label, value) {
+    return '<div style="display:flex;justify-content:space-between;gap:1rem;padding:0.35rem 0;border-bottom:1px solid #f1f5f9">' +
+      '<span class="text-muted text-sm">' + label + '</span><span class="text-sm font-medium text-right">' + value + '</span></div>';
+  }
+
+  async function load() {
+    try {
+      var b = await QS.get('/api/bookings/' + encodeURIComponent(ref));
+      document.getElementById('detailBox').innerHTML =
+        row('Status', U.statusBadge(b.booking_status)) +
+        row('Vehicle', U.esc(b.vehicle_number) + ' · ' + U.esc(b.vehicle_type)) +
+        row('Slot', U.esc(b.floor_code) + ' · ' + U.esc(b.slot_number)) +
+        row('Start', U.dateTime(b.booked_from)) +
+        row('End', U.dateTime(b.booked_until)) +
+        row('Amount', U.money(b.estimated_amount)) +
+        row('Booked by', U.esc(b.full_name || '—'));
+      var events = b.events || [];
+      document.getElementById('eventList').innerHTML = events.length
+        ? events.map(function (e) { return '<li>' + U.esc(e.event_type) + ' · ' + U.dateTime(e.created_at) + ' · ' + U.esc(e.scan_method) + '</li>'; }).join('')
+        : '<li class="text-muted">No gate events recorded yet.</li>';
+
+      if (b.booking_status === 'CONFIRMED') {
+        var qr = await QS.post('/api/qr/generate', { booking_reference: ref });
+        document.getElementById('qrBox').innerHTML =
+          '<img alt="Booking QR code" style="width:180px;height:180px;border:1px solid var(--border);border-radius:8px;background:#fff" src="data:image/png;base64,' + qr.qr_base64 + '">' +
+          '<p class="hint mt-1">Show this at the entry gate. The same code is reused for exit.</p>';
+      }
+      if (b.booking_status === 'HELD') {
+        document.getElementById('actions').innerHTML = '<button class="btn btn-primary" id="payNow">Pay and confirm</button>';
+        document.getElementById('payNow').addEventListener('click', async function (e) {
+          U.setBusy(e.target, true, 'Confirming…');
+          try {
+            var res = await QS.post('/api/bookings/' + encodeURIComponent(ref) + '/confirm', {});
+            U.toast('Confirmed. Amount ' + U.money(res.amount_debited) + ' debited.', 'success');
+            location.reload();
+          } catch (err) {
+            U.toast(err.message, 'error');
+            U.setBusy(e.target, false);
+          }
+        });
+      }
+    } catch (err) {
+      document.getElementById('detailBox').innerHTML = '<p class="text-sm text-red-600">' + U.esc(err.message) + '</p>';
+      U.toast(err.message, 'error');
+    }
+  }
+  load();
+})();
+</script>
+{% endblock %}

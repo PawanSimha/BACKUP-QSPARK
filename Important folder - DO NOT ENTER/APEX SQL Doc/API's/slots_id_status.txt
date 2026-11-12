@@ -1,0 +1,97 @@
+Module Base Path:/qsparking/api/v2/
+URI TEMPLATE: slots/:id/status
+Method: GET
+mime types: application/json
+
+https://ga97be9115f23e9-moviestreamworkshop.adb.ap-mumbai-1.oraclecloudapps.com/ords/nov_2026_batch/qsparking/api/v2/slots/:id/status
+
+DECLARE
+    l_body       CLOB;
+    l_slot_id    NUMBER;
+    l_status     VARCHAR2(50);
+    l_admin_id   NUMBER;
+    l_old_status VARCHAR2(20);
+    l_step       VARCHAR2(50) := 'INIT';
+BEGIN
+    l_step := 'READ_PARAMS';
+    l_slot_id := TO_NUMBER(:id);
+    l_body    := :body_text;
+ 
+    l_step := 'PARSE_JSON';
+    IF l_body IS NOT NULL AND DBMS_LOB.GETLENGTH(l_body) > 0 THEN
+        APEX_JSON.PARSE(l_body);
+        l_status   := UPPER(TRIM(APEX_JSON.GET_VARCHAR2(p_path => 'status')));
+        l_admin_id := APEX_JSON.GET_NUMBER(p_path => 'admin_user_id');
+    ELSE
+        :status_code := 400;
+        HTP.P('{"error": "Request body cannot be empty"}');
+        RETURN;
+    END IF;
+ 
+    l_step := 'VALIDATE_STATUS';
+    IF l_status NOT IN ('AVAILABLE', 'RESERVED', 'OCCUPIED', 'MAINTENANCE') THEN
+        :status_code := 400;
+        HTP.P('{"error": "Invalid status. Allowed: AVAILABLE, RESERVED, OCCUPIED, MAINTENANCE"}');
+        RETURN;
+    END IF;
+ 
+    l_step := 'FETCH_OLD_STATUS';
+    BEGIN
+        SELECT status
+          INTO l_old_status
+          FROM qspark_parking_slots
+         WHERE slot_id = l_slot_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            :status_code := 404;
+            HTP.P('{"error": "Slot ID ' || l_slot_id || ' not found"}');
+            RETURN;
+    END;
+ 
+    l_step := 'UPDATE_SLOT';
+    UPDATE qspark_parking_slots
+       SET status       = l_status,
+           last_updated = CURRENT_TIMESTAMP
+     WHERE slot_id = l_slot_id;
+ 
+    l_step := 'INSERT_AUDIT';
+    INSERT INTO qspark_audit_logs (
+        changed_by_user_id,
+        slot_id,
+        booking_id,
+        event_type,
+        old_state,
+        new_state,
+        log_details
+    ) VALUES (
+        l_admin_id,
+        l_slot_id,
+        NULL,
+        'SLOT_STATUS_CHANGE',
+        l_old_status,
+        l_status,
+        'Admin override via ORDS API'
+    );
+ 
+    l_step := 'COMMIT';
+    COMMIT;
+ 
+    :status_code := 200;
+    HTP.P('{');
+    HTP.P('"slot_id": ' || l_slot_id || ',');
+    HTP.P('"old_status": "' || l_old_status || '",');
+    HTP.P('"new_status": "' || l_status || '",');
+    HTP.P('"updated_by": ' || NVL(TO_CHAR(l_admin_id), 'null') || ',');
+    HTP.P('"message": "Slot status updated successfully"');
+    HTP.P('}');
+ 
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        :status_code := 500;
+        HTP.P('{');
+        HTP.P('"failed_at_step": "' || l_step || '",');
+        HTP.P('"error_code": ' || SQLCODE || ',');
+        HTP.P('"error_message": ' || APEX_JSON.STRINGIFY(SQLERRM));
+        HTP.P('}');
+END;

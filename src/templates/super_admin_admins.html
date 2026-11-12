@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% block title %}Admins &amp; users{% endblock %}
+{% block breadcrumb %}Admins &amp; users{% endblock %}
+{% block content %}
+<div class="page-header flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="page-title">Admins &amp; users</h1>
+    <p class="page-subtitle">Create staff accounts, block access and inspect wallets. Customer records are managed from Customers.</p>
+  </div>
+  <div class="flex gap-2">
+    <a class="btn btn-secondary" href="/admin/customers">Customers</a>
+    <button class="btn btn-primary" type="button" id="newAdminBtn">New admin</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="flex flex-wrap gap-2 items-center">
+      <label class="sr-only" for="statusFilter">Account status</label>
+      <select class="select" id="statusFilter" style="min-width:160px">
+        <option value="">Any status</option>
+        <option value="ACTIVE">Active</option>
+        <option value="BLOCKED">Blocked</option>
+        <option value="DELETED">Deactivated</option>
+      </select>
+      <label class="sr-only" for="searchBox">Search admins</label>
+      <input class="input" type="search" id="searchBox" placeholder="Name, admin ID or username" style="min-width:240px">
+    </div>
+    <span class="text-xs text-muted" id="countLabel"></span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Admin</th><th>Contact</th><th>Username</th><th>Status</th><th class="text-right">Wallet</th><th class="text-right">Actions</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="6" class="px-4 py-10 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<dialog class="app-dialog" id="adminDialog" aria-labelledby="adminDialogTitle">
+  <form id="adminForm" style="padding:1.25rem" novalidate>
+    <h2 class="text-base font-semibold mb-3" id="adminDialogTitle">New admin</h2>
+    <div class="grid" style="gap:0.75rem">
+      <div class="field"><label class="label" for="aName">Full name</label><input class="input" id="aName" required maxlength="80"></div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
+        <div class="field"><label class="label" for="aPhone">Mobile</label><input class="input" id="aPhone" type="tel" pattern="[0-9]{10}" required></div>
+        <div class="field"><label class="label" for="aEmail">Email (optional)</label><input class="input" id="aEmail" type="email"></div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
+        <div class="field"><label class="label" for="aUsername">Username</label><input class="input" id="aUsername" required maxlength="40" autocomplete="off"></div>
+        <div class="field" id="passwordField"><label class="label" for="aPassword">Temporary password</label><input class="input" id="aPassword" type="password" minlength="8" autocomplete="new-password"><p class="hint">At least 8 characters. Share it once, not in writing.</p></div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
+        <div class="field"><label class="label" for="aGender">Gender</label>
+          <select class="select" id="aGender"><option value="">Not specified</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option><option value="PREFER_NOT_TO_SAY">Prefer not to say</option></select>
+        </div>
+        <div class="field"><label class="label" for="aCompany">Company</label><input class="input" id="aCompany" maxlength="120"></div>
+      </div>
+      <p class="field-error is-visible hidden" id="aError" role="alert"></p>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button class="btn btn-secondary" type="button" id="adminCancel">Cancel</button>
+      <button class="btn btn-primary" type="submit" id="adminSubmit">Create admin</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="app-dialog" id="walletDialog" aria-labelledby="walletDialogTitle" style="max-width:560px">
+  <form id="walletForm" style="padding:1.25rem" novalidate>
+    <h2 class="text-base font-semibold mb-1" id="walletDialogTitle">Wallet adjustment</h2>
+    <p class="text-sm text-muted mb-3" id="walletUserLabel"></p>
+    <dl class="text-sm mb-3"><div class="flex justify-between"><dt class="text-muted">Current balance</dt><dd id="walletCurrent">—</dd></div></dl>
+    <div class="grid" style="gap:0.75rem">
+      <div class="field"><label class="label" for="wMode">Adjustment</label>
+        <select class="select" id="wMode"><option value="CREDIT">Credit — add to balance</option><option value="DEBIT">Debit — deduct from balance</option></select>
+      </div>
+      <div class="field"><label class="label" for="wAmount">Amount</label><input class="input" id="wAmount" type="number" min="0.01" step="0.01" required></div>
+      <div class="field"><label class="label" for="wReason">Reason</label><input class="input" id="wReason" maxlength="140" placeholder="Cash top-up at counter"></div>
+      <p class="field-error is-visible hidden" id="wError" role="alert"></p>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button class="btn btn-secondary" type="button" id="walletCancel">Cancel</button>
+      <button class="btn btn-primary" type="submit" id="walletSubmit">Apply</button>
+    </div>
+    <div class="divider"></div>
+    <h3 class="text-sm font-semibold mb-2">Recent transactions</h3>
+    <div class="table-wrap" style="max-height:220px;overflow:auto">
+      <table class="table"><thead><tr><th>Date</th><th>Type</th><th class="text-right">Amount</th><th class="text-right">Balance</th></tr></thead>
+      <tbody id="walletTx"><tr><td colspan="4" class="px-4 py-6 text-center text-sm text-slate-500">Select an admin to view transactions.</td></tr></tbody></table>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var admins = [], editing = null, walletAdmin = null;
+
+  function render() {
+    var status = document.getElementById('statusFilter').value;
+    var q = document.getElementById('searchBox').value.trim().toLowerCase();
+    var list = admins.filter(function (a) {
+      if (status && a.account_status !== status) return false;
+      if (!q) return true;
+      return [a.full_name, a.username, a.admin_id, a.phone, a.email].join(' ').toLowerCase().indexOf(q) !== -1;
+    });
+    document.getElementById('countLabel').textContent = list.length + ' staff account(s)';
+    document.getElementById('rows').innerHTML = list.length ? list.map(function (a) {
+      var isSuper = a.role === 'SUPER_ADMIN';
+      return '<tr>' +
+        '<td><div class="font-semibold">' + U.esc(a.full_name) + '</div><div class="text-xs text-muted mono">' + U.esc(a.admin_id || '—') + (isSuper ? ' · super admin' : '') + '</div></td>' +
+        '<td class="text-xs">' + U.esc(a.phone || '—') + '<div class="text-muted">' + U.esc(a.email || '') + '</div></td>' +
+        '<td class="mono">' + U.esc(a.username) + '</td>' +
+        '<td>' + U.statusBadge(a.account_status) + '</td>' +
+        '<td class="text-right">' + U.money(a.wallet_balance) + '</td>' +
+        '<td class="text-right whitespace-nowrap">' +
+          (isSuper ? '<span class="text-xs text-muted">Protected</span>' :
+            '<button class="btn btn-secondary btn-sm" data-edit="' + a.user_id + '">Edit</button> ' +
+            '<button class="btn btn-secondary btn-sm" data-wallet="' + a.user_id + '">Wallet</button> ' +
+            (a.account_status === 'ACTIVE'
+              ? '<button class="btn btn-danger btn-sm" data-block="' + a.user_id + '">Block</button>'
+              : a.account_status === 'BLOCKED'
+                ? '<button class="btn btn-secondary btn-sm" data-unblock="' + a.user_id + '">Unblock</button>'
+                : '')) +
+          (a.account_status !== 'DELETED' && !isSuper ? ' <button class="btn btn-danger btn-sm" data-off="' + a.user_id + '">Deactivate</button>' : '') +
+        '</td></tr>';
+    }).join('') : U.emptyRow(6, 'No staff accounts match these filters.');
+  }
+
+  async function load() {
+    try {
+      var data = await QS.get('/api/super-admin/admins');
+      admins = data.items || [];
+      render();
+    } catch (err) {
+      document.getElementById('rows').innerHTML = U.emptyRow(6, err.message);
+      U.toast(err.message, 'error');
+    }
+  }
+
+  document.getElementById('statusFilter').addEventListener('change', render);
+  document.getElementById('searchBox').addEventListener('input', U.debounce(render, 200));
+
+  function openAdminDialog(admin) {
+    editing = admin || null;
+    document.getElementById('adminDialogTitle').textContent = admin ? 'Edit ' + admin.full_name : 'New admin';
+    document.getElementById('adminSubmit').textContent = admin ? 'Save changes' : 'Create admin';
+    document.getElementById('aName').value = admin ? admin.full_name : '';
+    document.getElementById('aPhone').value = admin ? (admin.phone || '') : '';
+    document.getElementById('aEmail').value = admin ? (admin.email || '') : '';
+    document.getElementById('aUsername').value = admin ? admin.username : '';
+    document.getElementById('aUsername').disabled = !!admin;
+    document.getElementById('aGender').value = admin ? (admin.gender || '') : '';
+    document.getElementById('aCompany').value = admin ? (admin.company_name || '') : '';
+    document.getElementById('aPassword').value = '';
+    document.getElementById('aPassword').required = !admin;
+    document.getElementById('passwordField').style.display = admin ? 'none' : '';
+    document.getElementById('aError').classList.add('hidden');
+    document.getElementById('adminDialog').showModal();
+  }
+
+  document.getElementById('newAdminBtn').addEventListener('click', function () { openAdminDialog(null); });
+  document.getElementById('adminCancel').addEventListener('click', function () { document.getElementById('adminDialog').close(); });
+
+  document.getElementById('adminForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = document.getElementById('aError');
+    err.classList.add('hidden');
+    var payload = {
+      full_name: document.getElementById('aName').value.trim(),
+      phone: document.getElementById('aPhone').value.trim(),
+      email: document.getElementById('aEmail').value.trim() || null,
+      gender: document.getElementById('aGender').value || null,
+      company_name: document.getElementById('aCompany').value.trim() || null
+    };
+    if (!editing) {
+      payload.username = document.getElementById('aUsername').value.trim();
+      payload.password = document.getElementById('aPassword').value;
+      if (payload.password.length < 8) {
+        err.textContent = 'The temporary password must be at least 8 characters.';
+        err.classList.remove('hidden');
+        return;
+      }
+    }
+    if (!payload.full_name || !/^[0-9]{10}$/.test(payload.phone) || (!editing && !payload.username)) {
+      err.textContent = 'Name, a 10-digit mobile number and a username are required.';
+      err.classList.remove('hidden');
+      return;
+    }
+    var btn = document.getElementById('adminSubmit');
+    U.setBusy(btn, true, 'Saving…');
+    try {
+      if (editing) {
+        await QS.put('/api/super-admin/admins/' + editing.user_id, payload);
+        U.toast('Admin updated.', 'success');
+      } else {
+        var created = await QS.post('/api/super-admin/admins', payload);
+        U.toast('Admin ' + created.admin_id + ' created. Share the temporary password securely.', 'success');
+      }
+      document.getElementById('adminDialog').close();
+      await load();
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.classList.remove('hidden');
+    } finally { U.setBusy(btn, false); }
+  });
+
+  async function openWallet(admin) {
+    walletAdmin = admin;
+    document.getElementById('walletUserLabel').textContent = admin.full_name + ' · ' + (admin.admin_id || admin.username);
+    document.getElementById('walletCurrent').textContent = U.money(admin.wallet_balance);
+    document.getElementById('walletForm').reset();
+    document.getElementById('wError').classList.add('hidden');
+    document.getElementById('walletTx').innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-sm text-slate-500">Loading…</td></tr>';
+    document.getElementById('walletDialog').showModal();
+    try {
+      var d = await QS.get('/api/super-admin/users/' + admin.user_id + '/wallet');
+      document.getElementById('walletCurrent').textContent = U.money(d.wallet_balance);
+      var rows = d.transactions || [];
+      document.getElementById('walletTx').innerHTML = rows.length ? rows.map(function (t) {
+        return '<tr><td class="text-xs whitespace-nowrap">' + U.dateTime(t.created_at) + '</td>' +
+          '<td class="text-xs">' + U.esc(t.transaction_type.replace(/_/g, ' ')) + '</td>' +
+          '<td class="text-right ' + (t.direction === 'DEBIT' ? 'text-red-600' : 'text-emerald-600') + '">' +
+          (t.direction === 'DEBIT' ? '−' : '+') + U.money(t.amount) + '</td>' +
+          '<td class="text-right">' + U.money(t.balance_after) + '</td></tr>';
+      }).join('') : U.emptyRow(4, 'No wallet transactions for this account.');
+    } catch (err) {
+      document.getElementById('walletTx').innerHTML = U.emptyRow(4, err.message);
+    }
+  }
+
+  document.getElementById('walletCancel').addEventListener('click', function () { document.getElementById('walletDialog').close(); });
+
+  document.getElementById('walletForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = document.getElementById('wError');
+    err.classList.add('hidden');
+    var amount = Number(document.getElementById('wAmount').value);
+    if (!walletAdmin || !amount || amount <= 0) {
+      err.textContent = 'Enter an amount greater than zero.';
+      err.classList.remove('hidden');
+      return;
+    }
+    var direction = document.getElementById('wMode').value;
+    var signed = direction === 'DEBIT' ? -amount : amount;
+    var ok = await U.confirmDialog({
+      title: direction === 'CREDIT' ? 'Credit wallet' : 'Debit wallet',
+      danger: direction === 'DEBIT',
+      confirmLabel: direction === 'CREDIT' ? 'Credit' : 'Debit',
+      message: (direction === 'CREDIT' ? 'Add ' : 'Deduct ') + U.money(amount) + ' for ' + walletAdmin.full_name + '? A ledger entry is written for every adjustment.'
+    });
+    if (!ok) return;
+    var btn = document.getElementById('walletSubmit');
+    U.setBusy(btn, true, 'Applying…');
+    try {
+      var res = await QS.post('/api/super-admin/users/' + walletAdmin.user_id + '/wallet-adjustments', {
+        amount: signed,
+        description: document.getElementById('wReason').value.trim() || 'Super Admin adjustment'
+      });
+      U.toast('Balance updated to ' + U.money(res.new_balance) + '.', 'success');
+      document.getElementById('walletCurrent').textContent = U.money(res.new_balance);
+      walletAdmin.wallet_balance = res.new_balance;
+      await load();
+      await openWallet(walletAdmin);
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.classList.remove('hidden');
+    } finally { U.setBusy(btn, false); }
+  });
+
+  document.getElementById('rows').addEventListener('click', async function (e) {
+    var edit = e.target.closest('[data-edit]');
+    var wallet = e.target.closest('[data-wallet]');
+    var block = e.target.closest('[data-block]');
+    var unblock = e.target.closest('[data-unblock]');
+    var off = e.target.closest('[data-off]');
+    var find = function (id) { return admins.find(function (a) { return String(a.user_id) === id; }); };
+
+    if (edit) { var a = find(edit.dataset.edit); if (a) openAdminDialog(a); return; }
+    if (wallet) { var w = find(wallet.dataset.wallet); if (w) openWallet(w); return; }
+
+    if (block || unblock) {
+      var target = find((block || unblock).dataset[block ? 'block' : 'unblock']);
+      var toBlock = !!block;
+      var confirmed = await U.confirmDialog({
+        title: toBlock ? 'Block admin' : 'Unblock admin',
+        danger: toBlock,
+        confirmLabel: toBlock ? 'Block' : 'Unblock',
+        message: (toBlock ? 'Block ' + (target ? target.full_name : 'this admin') + '? They are signed out immediately and cannot use staff tools.'
+          : 'Restore access for ' + (target ? target.full_name : 'this admin') + '?')
+      });
+      if (!confirmed) return;
+      try {
+        await QS.patch('/api/super-admin/admins/' + (target ? target.user_id : '') + '/status',
+          { account_status: toBlock ? 'BLOCKED' : 'ACTIVE' });
+        U.toast(toBlock ? 'Admin blocked.' : 'Admin unblocked.', 'success');
+        await load();
+      } catch (err) { U.toast(err.message, 'error'); }
+      return;
+    }
+
+    if (off) {
+      var gone = find(off.dataset.off);
+      var okOff = await U.confirmDialog({
+        title: 'Deactivate admin', danger: true, confirmLabel: 'Deactivate',
+        message: 'Deactivate ' + (gone ? gone.full_name : 'this admin') + '? Historical bookings and audit records are kept.'
+      });
+      if (!okOff) return;
+      try {
+        await QS.del('/api/super-admin/admins/' + off.dataset.off);
+        U.toast('Admin deactivated.', 'success');
+        await load();
+      } catch (err) { U.toast(err.message, 'error'); }
+    }
+  });
+
+  load();
+})();
+</script>
+{% endblock %}

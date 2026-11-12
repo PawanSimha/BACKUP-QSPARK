@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}System overview{% endblock %}
+{% block breadcrumb %}System overview{% endblock %}
+{% block content %}
+<div class="page-header flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="page-title">System overview</h1>
+    <p class="page-subtitle">Inventory, revenue and activity across every floor.</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <span class="text-xs text-muted">System</span>
+    <span class="badge badge-slate" id="sysBadge">checking…</span>
+    <a class="btn btn-secondary btn-sm" href="/super-admin/system">Control</a>
+  </div>
+</div>
+
+<div class="grid grid-stats mb-4">
+  <div class="stat"><div class="stat-label">Customers</div><div class="stat-value" data-kpi="total_customers">—</div></div>
+  <div class="stat"><div class="stat-label">Bookings</div><div class="stat-value" data-kpi="total_bookings">—</div></div>
+  <div class="stat"><div class="stat-label">Completed</div><div class="stat-value" data-kpi="completed_bookings">—</div></div>
+  <div class="stat"><div class="stat-label">Net revenue</div><div class="stat-value" data-kpi="net_revenue">—</div></div>
+  <div class="stat"><div class="stat-label">Total slots</div><div class="stat-value" data-kpi="total_slots">—</div></div>
+  <div class="stat"><div class="stat-label">Occupied</div><div class="stat-value text-red-600" data-kpi="occupied_slots">—</div></div>
+  <div class="stat"><div class="stat-label">Occupancy</div><div class="stat-value" data-kpi="occupancy_percent">—</div></div>
+</div>
+
+<div class="grid grid-2">
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Floor occupancy</h2><a class="btn btn-ghost btn-sm" href="/super-admin/infrastructure">Infrastructure</a></div>
+    <div class="card-body" id="heatmapBox"><div class="skeleton" style="width:60%"></div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Revenue by day</h2><a class="btn btn-ghost btn-sm" href="/super-admin/analytics">Reports</a></div>
+    <div class="card-body" id="revenueBox"><div class="skeleton" style="width:60%"></div></div>
+  </section>
+</div>
+
+<section class="card mt-4">
+  <div class="card-header"><h2 class="card-title">Overtime activity (last 30 days)</h2></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Day</th><th class="text-right">Sessions</th><th class="text-right">Overtime collected</th></tr></thead>
+      <tbody id="overtimeRows"><tr><td colspan="3" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+
+  async function loadOverview() {
+    try {
+      var d = await QS.get('/api/super-admin/analytics/overview');
+      Object.keys(d).forEach(function (key) {
+        var el = document.querySelector('[data-kpi="' + key + '"]');
+        if (!el) return;
+        el.textContent = key === 'net_revenue' ? U.money(d[key])
+          : key === 'occupancy_percent' ? d[key] + '%' : d[key];
+      });
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  async function loadSystem() {
+    try {
+      var d = await QS.get('/api/system/status');
+      var badge = document.getElementById('sysBadge');
+      badge.textContent = d.system_status;
+      badge.className = 'badge ' + (d.system_status === 'ONLINE' ? 'badge-green' : 'badge-red');
+    } catch (_) { document.getElementById('sysBadge').textContent = 'unknown'; }
+  }
+
+  async function loadHeatmap() {
+    try {
+      var d = await QS.get('/api/super-admin/analytics/floor-heatmap');
+      var floors = d.floors || [];
+      document.getElementById('heatmapBox').innerHTML = floors.length ? floors.map(function (f) {
+        return '<div class="bar-row"><span class="font-semibold">' + U.esc(f.floor_code) + '</span>' +
+          '<span class="bar-track"><span class="bar-fill" style="width:' + Math.min(100, f.occupancy_percent) + '%"></span></span>' +
+          '<span class="text-muted text-right">' + f.occupancy_percent + '%</span></div>';
+      }).join('') : '<p class="text-sm text-muted">No floors configured.</p>';
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  async function loadRevenue() {
+    try {
+      var d = await QS.get('/api/super-admin/analytics/revenue');
+      var days = (d.by_day || []).slice(-10);
+      var max = days.reduce(function (m, x) { return Math.max(m, Number(x.amount)); }, 0);
+      document.getElementById('revenueBox').innerHTML = days.length ? days.map(function (x) {
+        var pct = max ? Math.round(100 * Number(x.amount) / max) : 0;
+        return '<div class="bar-row"><span class="text-xs">' + U.esc(x.day) + '</span>' +
+          '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%"></span></span>' +
+          '<span class="text-muted text-right text-xs">' + U.money(x.amount) + '</span></div>';
+      }).join('') : '<p class="text-sm text-muted">No revenue collections yet.</p>';
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  async function loadOvertime() {
+    try {
+      var d = await QS.get('/api/super-admin/analytics/overtime');
+      var rows = d.overtime || [];
+      document.getElementById('overtimeRows').innerHTML = rows.length ? rows.map(function (r) {
+        return '<tr><td>' + U.esc(r.day) + '</td><td class="text-right">' + U.esc(r.count) + '</td>' +
+          '<td class="text-right">' + U.money(r.amount) + '</td></tr>';
+      }).join('') : U.emptyRow(3, 'No overtime charges recorded.');
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  loadOverview(); loadSystem(); loadHeatmap(); loadRevenue(); loadOvertime();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Admin dashboard{% endblock %}
+{% block breadcrumb %}Admin dashboard{% endblock %}
+{% block content %}
+<div class="page-header flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="page-title">Operations dashboard</h1>
+    <p class="page-subtitle">Live occupancy and today's activity.</p>
+  </div>
+  <div class="flex gap-2">
+    <a class="btn btn-secondary" href="/admin/qr-scan">Scan QR</a>
+    <a class="btn btn-primary" href="/admin/customers">Register walk-in</a>
+  </div>
+</div>
+
+<div class="grid grid-stats mb-4" id="kpiGrid">
+  <div class="stat"><div class="stat-label">Total slots</div><div class="stat-value" data-kpi="total_slots">—</div></div>
+  <div class="stat"><div class="stat-label">Available</div><div class="stat-value text-emerald-600" data-kpi="available_slots">—</div></div>
+  <div class="stat"><div class="stat-label">Reserved</div><div class="stat-value text-amber-600" data-kpi="reserved_slots">—</div></div>
+  <div class="stat"><div class="stat-label">Occupied</div><div class="stat-value text-red-600" data-kpi="occupied_slots">—</div></div>
+  <div class="stat"><div class="stat-label">Maintenance</div><div class="stat-value text-slate-500" data-kpi="maintenance_slots">—</div></div>
+  <div class="stat"><div class="stat-label">Active users</div><div class="stat-value" data-kpi="active_users">—</div></div>
+  <div class="stat"><div class="stat-label">Revenue collected</div><div class="stat-value" data-kpi="total_revenue">—</div></div>
+</div>
+
+<div class="grid grid-2">
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Floor occupancy</h2><a class="btn btn-ghost btn-sm" href="/admin/slots">Manage slots</a></div>
+    <div class="card-body" id="floorBox"><div class="skeleton" style="width:55%"></div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Recently created bookings</h2><a class="btn btn-ghost btn-sm" href="/admin/bookings">All bookings</a></div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Reference</th><th>Customer</th><th>Slot</th><th>Status</th><th class="text-right">Amount</th></tr></thead>
+        <tbody id="recentBody"><tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<section class="card mt-4">
+  <div class="card-header"><h2 class="card-title">Vehicles currently inside</h2></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Reference</th><th>Customer</th><th>Vehicle</th><th>Slot</th><th>Entered</th><th>Expected exit</th></tr></thead>
+      <tbody id="insideBody"><tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+
+  async function loadKpis() {
+    try {
+      var k = await QS.get('/api/admin/dashboard');
+      Object.keys(k).forEach(function (key) {
+        var el = document.querySelector('[data-kpi="' + key + '"]');
+        if (el) el.textContent = key === 'total_revenue' ? U.money(k[key]) : k[key];
+      });
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  async function loadFloors() {
+    try {
+      var data = await QS.get('/api/admin/floors');
+      var items = data.items || [];
+      document.getElementById('floorBox').innerHTML = items.length ? items.map(function (f) {
+        var pct = f.total_slots ? Math.round(100 * f.occupied_slots / f.total_slots) : 0;
+        return '<div class="bar-row"><span class="font-semibold">' + U.esc(f.floor_code) + ' ' + U.statusBadge(f.floor_status) + '</span>' +
+          '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%"></span></span>' +
+          '<span class="text-muted">' + f.occupied_slots + '/' + f.total_slots + '</span></div>';
+      }).join('') : '<p class="text-sm text-muted">No floors configured.</p>';
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  async function loadBookings() {
+    try {
+      var data = await QS.get('/api/admin/bookings');
+      var items = data.items || [];
+      document.getElementById('recentBody').innerHTML = items.length ? items.slice(0, 8).map(function (b) {
+        return '<tr><td class="mono">' + U.esc(b.booking_reference) + '</td>' +
+          '<td>' + U.esc(b.full_name || b.username) + '</td>' +
+          '<td>' + U.esc(b.slot_number) + '</td>' +
+          '<td>' + U.statusBadge(b.booking_status) + '</td>' +
+          '<td class="text-right">' + U.money(b.estimated_amount) + '</td></tr>';
+      }).join('') : U.emptyRow(5, 'No bookings yet.');
+
+      var inside = items.filter(function (b) { return b.entry_time && !b.exit_time; });
+      document.getElementById('insideBody').innerHTML = inside.length ? inside.map(function (b) {
+        return '<tr><td class="mono">' + U.esc(b.booking_reference) + '</td>' +
+          '<td>' + U.esc(b.full_name || b.username) + '</td>' +
+          '<td>' + U.esc(b.vehicle_number) + '</td>' +
+          '<td>' + U.esc(b.floor_code) + ' · ' + U.esc(b.slot_number) + '</td>' +
+          '<td>' + U.dateTime(b.entry_time) + '</td>' +
+          '<td>' + U.dateTime(b.booked_until) + '</td></tr>';
+      }).join('') : U.emptyRow(6, 'No vehicles are inside right now.');
+    } catch (err) {
+      document.getElementById('recentBody').innerHTML = U.emptyRow(5, err.message);
+      U.toast(err.message, 'error');
+    }
+  }
+
+  loadKpis(); loadFloors(); loadBookings();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+{% block breadcrumb %}Profile{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Profile</h1>
+  <p class="page-subtitle">Your account details. Only contact details can be edited here.</p>
+</div>
+
+<div class="grid grid-2">
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Account</h2></div>
+    <div class="card-body" id="accountBox"><div class="skeleton" style="width:60%"></div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Edit contact details</h2></div>
+    <div class="card-body">
+      <form id="profileForm" class="grid" style="gap:0.9rem" novalidate>
+        <div class="field">
+          <label class="label" for="fullName">Full name</label>
+          <input class="input" id="fullName" name="full_name" type="text" required maxlength="80">
+        </div>
+        <div class="field">
+          <label class="label" for="phone">Mobile number</label>
+          <input class="input" id="phone" name="phone" type="tel" required pattern="[0-9]{10}" aria-describedby="phoneHint">
+          <p class="hint" id="phoneHint">10 digits, no spaces.</p>
+        </div>
+        <div class="field">
+          <label class="label" for="gender">Gender</label>
+          <select class="select" id="gender" name="gender">
+            <option value="">Not specified</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+            <option value="OTHER">Other</option>
+            <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label" for="companyName">Company</label>
+          <input class="input" id="companyName" name="company_name" type="text" maxlength="120">
+        </div>
+        <div id="profileError" class="hidden field-error is-visible" role="alert"></div>
+        <div><button class="btn btn-primary" type="submit" id="saveBtn">Save changes</button></div>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+
+  function render(user) {
+    document.getElementById('accountBox').innerHTML =
+      '<dl class="text-sm" style="display:grid;gap:0.4rem">' +
+        '<div class="flex justify-between gap-3"><dt class="text-muted">Username</dt><dd class="mono" style="margin:0">' + U.esc(user.username || '-') + '</dd></div>' +
+        '<div class="flex justify-between gap-3"><dt class="text-muted">Email</dt><dd style="margin:0">' + U.esc(user.email || '-') + '</dd></div>' +
+        '<div class="flex justify-between gap-3"><dt class="text-muted">Role</dt><dd style="margin:0">' + U.statusBadge(user.role) + '</dd></div>' +
+        '<div class="flex justify-between gap-3"><dt class="text-muted">Account status</dt><dd style="margin:0">' + U.statusBadge(user.account_status) + '</dd></div>' +
+        '<div class="flex justify-between gap-3"><dt class="text-muted">Wallet</dt><dd style="margin:0">' + U.money(user.wallet_balance) + '</dd></div>' +
+        '<div class="flex justify-between gap-3"><dt class="text-muted">Member since</dt><dd style="margin:0">' + U.dateOnly(user.created_at) + '</dd></div>' +
+      '</dl>';
+    document.getElementById('fullName').value = user.full_name || '';
+    document.getElementById('phone').value = user.phone || '';
+    document.getElementById('gender').value = user.gender || '';
+    document.getElementById('companyName').value = user.company_name || '';
+  }
+
+  QS.get('/api/auth/me').then(render).catch(function (err) { U.toast(err.message, 'error'); });
+
+  document.getElementById('profileForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var btn = document.getElementById('saveBtn');
+    var errBox = document.getElementById('profileError');
+    errBox.classList.add('hidden');
+    var payload = {
+      full_name: document.getElementById('fullName').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      gender: document.getElementById('gender').value || null,
+      company_name: document.getElementById('companyName').value.trim() || null
+    };
+    if (!payload.full_name || !/^[0-9]{10}$/.test(payload.phone)) {
+      errBox.textContent = 'Enter your full name and a 10-digit mobile number.';
+      errBox.classList.remove('hidden');
+      return;
+    }
+    U.setBusy(btn, true, 'Saving…');
+    try {
+      var updated = await QS.patch('/api/auth/me', payload);
+      U.toast('Profile updated.', 'success');
+      render(updated);
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.remove('hidden');
+    } finally {
+      U.setBusy(btn, false);
+    }
+  });
+})();
+</script>
+{% endblock %}

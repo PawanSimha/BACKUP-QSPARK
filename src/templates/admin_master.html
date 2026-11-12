@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Configuration{% endblock %}
+{% block breadcrumb %}Configuration{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Configuration</h1>
+  <p class="page-subtitle">Pricing and cancellation policy. Rates are read-only for Admins; the Super Admin maintains them.</p>
+</div>
+
+<div class="grid grid-2 mb-4">
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Vehicle types &amp; rates</h2></div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Type</th><th class="text-right">Hourly rate</th><th class="text-right">Overstay rate</th><th>Active</th></tr></thead>
+        <tbody id="typeRows"><tr><td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Cancellation rules</h2>
+      <button class="btn btn-primary btn-sm" type="button" id="newRuleBtn">New rule</button>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Rule</th><th>Window</th><th class="text-right">Refund</th><th class="text-right">Penalty</th><th>Active</th><th class="text-right">Actions</th></tr></thead>
+        <tbody id="ruleRows"><tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<dialog class="app-dialog" id="ruleDialog" aria-labelledby="ruleDialogTitle">
+  <form id="ruleForm" style="padding:1.25rem" novalidate>
+    <h2 class="text-base font-semibold mb-3" id="ruleDialogTitle">New cancellation rule</h2>
+    <div class="grid" style="gap:0.75rem">
+      <div class="field"><label class="label" for="ruleCode">Rule code</label><input class="input" id="ruleCode" required maxlength="30" placeholder="EARLY"><p class="hint">Short unique identifier, upper case.</p></div>
+      <div class="field"><label class="label" for="ruleName">Rule name</label><input class="input" id="ruleName" required maxlength="80"></div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
+        <div class="field"><label class="label" for="minHours">Min hours before</label><input class="input" id="minHours" type="number" min="0" step="0.5" required></div>
+        <div class="field"><label class="label" for="maxHours">Max hours before</label><input class="input" id="maxHours" type="number" min="0" step="0.5" required></div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
+        <div class="field"><label class="label" for="refundPct">Refund %</label><input class="input" id="refundPct" type="number" min="0" max="100" step="1" required></div>
+        <div class="field"><label class="label" for="penaltyPct">Penalty %</label><input class="input" id="penaltyPct" type="number" min="0" max="100" step="1" required></div>
+      </div>
+      <div class="field"><label class="label" for="ruleDesc">Description</label><input class="input" id="ruleDesc" maxlength="160"></div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="ruleNoShow"> Applies to no-show</label>
+      <p class="field-error is-visible hidden" id="ruleError" role="alert"></p>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button class="btn btn-secondary" type="button" id="ruleCancel">Cancel</button>
+      <button class="btn btn-primary" type="submit" id="ruleSubmit">Create rule</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var rules = [], editing = null;
+
+  async function loadTypes() {
+    try {
+      var data = await QS.get('/api/admin/vehicle-types');
+      var items = data.items || [];
+      document.getElementById('typeRows').innerHTML = items.length ? items.map(function (t) {
+        return '<tr><td class="font-semibold">' + U.esc(t.type_name) + '</td>' +
+          '<td class="text-right">' + U.money(t.hourly_rate) + '</td>' +
+          '<td class="text-right">' + U.money(t.overstay_rate) + '</td>' +
+          '<td>' + U.statusBadge(t.is_active ? 'ACTIVE' : 'INACTIVE') + '</td></tr>';
+      }).join('') : U.emptyRow(4, 'No vehicle types configured.');
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  function renderRules() {
+    document.getElementById('ruleRows').innerHTML = rules.length ? rules.map(function (r) {
+      return '<tr>' +
+        '<td><div class="font-semibold">' + U.esc(r.rule_name) + '</div><div class="text-xs text-muted mono">' + U.esc(r.rule_code) + '</div></td>' +
+        '<td class="text-xs whitespace-nowrap">' + U.esc(r.min_hours_before) + '–' + U.esc(r.max_hours_before) + ' h</td>' +
+        '<td class="text-right">' + U.esc(r.refund_percent) + '%</td>' +
+        '<td class="text-right">' + U.esc(r.penalty_percent) + '%</td>' +
+        '<td>' + U.statusBadge(r.is_active ? 'ACTIVE' : 'INACTIVE') + '</td>' +
+        '<td class="text-right whitespace-nowrap">' +
+          '<button class="btn btn-secondary btn-sm" data-edit="' + r.rule_id + '">Edit</button> ' +
+          (r.is_active ? '<button class="btn btn-danger btn-sm" data-off="' + r.rule_id + '">Deactivate</button>' : '') +
+        '</td></tr>';
+    }).join('') : U.emptyRow(6, 'No cancellation rules configured. Refunds fall back to zero.');
+  }
+
+  async function loadRules() {
+    try {
+      var data = await QS.get('/api/admin/cancellation-rules');
+      rules = data.items || [];
+      renderRules();
+    } catch (err) {
+      document.getElementById('ruleRows').innerHTML = U.emptyRow(6, err.message);
+      U.toast(err.message, 'error');
+    }
+  }
+
+  function openDialog(rule) {
+    editing = rule || null;
+    document.getElementById('ruleDialogTitle').textContent = rule ? 'Edit ' + rule.rule_name : 'New cancellation rule';
+    document.getElementById('ruleSubmit').textContent = rule ? 'Save changes' : 'Create rule';
+    document.getElementById('ruleCode').value = rule ? rule.rule_code : '';
+    document.getElementById('ruleCode').disabled = !!rule;
+    document.getElementById('ruleName').value = rule ? rule.rule_name : '';
+    document.getElementById('minHours').value = rule ? rule.min_hours_before : 0;
+    document.getElementById('maxHours').value = rule ? rule.max_hours_before : 24;
+    document.getElementById('refundPct').value = rule ? rule.refund_percent : 100;
+    document.getElementById('penaltyPct').value = rule ? rule.penalty_percent : 0;
+    document.getElementById('ruleDesc').value = rule ? (rule.description || '') : '';
+    document.getElementById('ruleNoShow').checked = !!(rule && rule.is_no_show);
+    document.getElementById('ruleError').classList.add('hidden');
+    document.getElementById('ruleDialog').showModal();
+  }
+
+  document.getElementById('newRuleBtn').addEventListener('click', function () { openDialog(null); });
+  document.getElementById('ruleCancel').addEventListener('click', function () { document.getElementById('ruleDialog').close(); });
+
+  document.getElementById('ruleForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = document.getElementById('ruleError');
+    err.classList.add('hidden');
+    var payload = {
+      rule_name: document.getElementById('ruleName').value.trim(),
+      min_hours_before: Number(document.getElementById('minHours').value),
+      max_hours_before: Number(document.getElementById('maxHours').value),
+      refund_percent: Number(document.getElementById('refundPct').value),
+      penalty_percent: Number(document.getElementById('penaltyPct').value),
+      description: document.getElementById('ruleDesc').value.trim() || null,
+      is_no_show: document.getElementById('ruleNoShow').checked ? 1 : 0
+    };
+    if (!editing) payload.rule_code = document.getElementById('ruleCode').value.trim();
+    if (!payload.rule_name || (!editing && !payload.rule_code) || payload.min_hours_before > payload.max_hours_before) {
+      err.textContent = 'A name, rule code and a valid hours window are required.';
+      err.classList.remove('hidden');
+      return;
+    }
+    var btn = document.getElementById('ruleSubmit');
+    U.setBusy(btn, true, 'Saving…');
+    try {
+      if (editing) await QS.put('/api/admin/cancellation-rules/' + editing.rule_id, payload);
+      else await QS.post('/api/admin/cancellation-rules', payload);
+      U.toast(editing ? 'Rule updated.' : 'Rule created.', 'success');
+      document.getElementById('ruleDialog').close();
+      await loadRules();
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.classList.remove('hidden');
+    } finally { U.setBusy(btn, false); }
+  });
+
+  document.getElementById('ruleRows').addEventListener('click', async function (e) {
+    var edit = e.target.closest('[data-edit]');
+    var off = e.target.closest('[data-off]');
+    if (edit) {
+      var rule = rules.find(function (r) { return String(r.rule_id) === edit.dataset.edit; });
+      if (rule) openDialog(rule);
+      return;
+    }
+    if (off) {
+      var target = rules.find(function (r) { return String(r.rule_id) === off.dataset.off; });
+      var ok = await U.confirmDialog({
+        title: 'Deactivate rule', danger: true, confirmLabel: 'Deactivate',
+        message: 'Deactivate "' + (target ? target.rule_name : 'this rule') + '"? Past cancellations keep the refund they received.'
+      });
+      if (!ok) return;
+      try {
+        await QS.del('/api/admin/cancellation-rules/' + off.dataset.off);
+        U.toast('Rule deactivated.', 'success');
+        await loadRules();
+      } catch (err) { U.toast(err.message, 'error'); }
+    }
+  });
+
+  loadTypes(); loadRules();
+})();
+</script>
+{% endblock %}

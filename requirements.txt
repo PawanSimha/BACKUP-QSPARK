@@ -1,9 +1,13 @@
-fastapi
-uvicorn
-jinja2
-openpyxl
-python-dotenv
-requests
-pydantic
-pytest
-httpx
+Flask>=3.0.0
+Werkzeug>=3.0.0
+Flask-WTF>=1.2.0
+python-dotenv>=1.0.0
+waitress>=3.0.0
+qrcode[pil]>=7.4.0
+Pillow>=10.0.0
+
+# Test and quality tooling
+pytest>=8.0.0
+requests>=2.31.0
+playwright>=1.40.0
+axe-playwright-python>=0.1.5

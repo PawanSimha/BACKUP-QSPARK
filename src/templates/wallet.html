@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Wallet{% endblock %}
+{% block breadcrumb %}Wallet{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Wallet</h1>
+  <p class="page-subtitle">QSPARK uses an internal balance. Top-ups are performed by parking staff, not an external gateway.</p>
+</div>
+
+<div class="grid grid-stats mb-4">
+  <div class="stat">
+    <div class="stat-label">Current balance</div>
+    <div class="stat-value" id="walletBalance">—</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total credited</div>
+    <div class="stat-value text-emerald-600" id="totalCredit">—</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total spent</div>
+    <div class="stat-value text-red-600" id="totalDebit">—</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Transaction history</h2>
+    <div class="flex gap-2 items-center">
+      <label class="sr-only" for="typeFilter">Transaction type</label>
+      <select class="select" id="typeFilter" style="min-width:200px">
+        <option value="">All transactions</option>
+        <option value="BOOKING_DEBIT">Booking debit</option>
+        <option value="OVERTIME_DEBIT">Overtime debit</option>
+        <option value="CANCELLATION_REFUND">Cancellation refund</option>
+        <option value="ADMIN_ADJUSTMENT">Admin adjustment</option>
+      </select>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Date</th><th>Type</th><th>Reference</th><th>Description</th><th class="text-right">Amount</th><th class="text-right">Balance after</th></tr></thead>
+      <tbody id="txBody"><tr><td colspan="6" class="px-4 py-10 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var rows = [];
+
+  function render() {
+    var filter = document.getElementById('typeFilter').value;
+    var list = filter ? rows.filter(function (t) { return t.transaction_type === filter; }) : rows;
+    document.getElementById('txBody').innerHTML = list.length ? list.map(function (t) {
+      var debit = t.direction === 'DEBIT';
+      return '<tr><td class="whitespace-nowrap">' + U.dateTime(t.created_at) + '</td>' +
+        '<td>' + U.esc(t.transaction_type.replace(/_/g, ' ')) + '</td>' +
+        '<td class="mono">' + U.esc(t.transaction_reference) + '</td>' +
+        '<td class="text-muted">' + U.esc(t.description || '—') + '</td>' +
+        '<td class="text-right font-semibold ' + (debit ? 'text-red-600' : 'text-emerald-600') + '">' + (debit ? '−' : '+') + U.money(t.amount) + '</td>' +
+        '<td class="text-right">' + U.money(t.balance_after) + '</td></tr>';
+    }).join('') : U.emptyRow(6, rows.length ? 'No transactions of this type.' : 'No wallet activity yet.');
+  }
+
+  async function load() {
+    try {
+      var data = await QS.get('/api/bookings/wallet/transactions/me');
+      rows = data.transactions || [];
+      document.getElementById('walletBalance').textContent = U.money(data.wallet_balance);
+      var credit = 0, debit = 0;
+      rows.forEach(function (t) {
+        if (t.direction === 'CREDIT') credit += Number(t.amount);
+        else debit += Number(t.amount);
+      });
+      document.getElementById('totalCredit').textContent = U.money(credit);
+      document.getElementById('totalDebit').textContent = U.money(debit);
+      render();
+    } catch (err) {
+      document.getElementById('txBody').innerHTML = U.emptyRow(6, err.message);
+      U.toast(err.message, 'error');
+    }
+  }
+
+  document.getElementById('typeFilter').addEventListener('change', render);
+  load();
+})();
+</script>
+{% endblock %}

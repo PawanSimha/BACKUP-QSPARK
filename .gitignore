@@ -1,35 +1,52 @@
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Environment & secret files
-.env
-.env.local
-*.pem
-*.key
-wallet/
-
-# Python cache & build files
+# Python
 __pycache__/
 *.py[cod]
-*.pyo
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environment
+.venv/
+
+# Environment files
+.env
+.env.local
+
+# SQLite database
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+
+# Testing
 .pytest_cache/
+.coverage
+htmlcov/
+.tox/
 
-# Local fallback databases
-*.db
-*.sqlite
-*.sqlite3
-
-# Personal manual tracker
-MY_TRACK.md
-mytrack.md
-
-# Private folder
-no_entry/
-
-# IDE & OS files
-.vscode/
+# IDE
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Tailwind standalone binary (downloaded, 40 MB)
+/tools/tailwindcss.exe
+
+# Temporary audit artifacts
+.sa_dump.txt
+a11y_audit.py
+dbg_overflow.py

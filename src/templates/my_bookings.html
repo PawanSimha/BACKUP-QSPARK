@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}My bookings{% endblock %}
+{% block breadcrumb %}My bookings{% endblock %}
+{% block content %}
+<div class="page-header flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="page-title">My bookings</h1>
+    <p class="page-subtitle">Track, open or cancel your parking reservations.</p>
+  </div>
+  <a class="btn btn-primary" href="/booking">New booking</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="flex flex-wrap gap-2 items-center">
+      <label class="sr-only" for="statusFilter">Status</label>
+      <select class="select" id="statusFilter" style="min-width:160px">
+        <option value="">All statuses</option>
+        <option value="CONFIRMED">Confirmed</option>
+        <option value="HELD">Held</option>
+        <option value="COMPLETED">Completed</option>
+        <option value="CANCELLED">Cancelled</option>
+        <option value="EXPIRED">Expired</option>
+      </select>
+      <label class="sr-only" for="searchBox">Search bookings</label>
+      <input class="input" id="searchBox" type="search" placeholder="Search reference, slot or vehicle" style="min-width:240px">
+    </div>
+    <span class="text-xs text-muted" id="countLabel"></span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Reference</th><th>Vehicle</th><th>Floor / slot</th><th>Window</th>
+          <th>Status</th><th class="text-right">Amount</th><th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="bookingsBody">
+        <tr><td colspan="7" class="px-4 py-10 text-center text-sm text-slate-500">Loading bookings…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card-body flex items-center justify-between gap-2">
+    <span class="text-xs text-muted" id="pageLabel"></span>
+    <div class="flex gap-2">
+      <button class="btn btn-secondary btn-sm" id="prevPage" type="button">Previous</button>
+      <button class="btn btn-secondary btn-sm" id="nextPage" type="button">Next</button>
+    </div>
+  </div>
+</div>
+
+<dialog class="app-dialog" id="detailDialog" aria-labelledby="detailTitle">
+  <div style="padding:1.25rem" id="detailBody"></div>
+  <div class="flex justify-end gap-2 px-5 pb-5">
+    <button class="btn btn-secondary" type="button" onclick="document.getElementById('detailDialog').close()">Close</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var all = [], filtered = [], page = 1, perPage = 8;
+  var tbody = document.getElementById('bookingsBody');
+
+  function canCancel(b) {
+    return (b.booking_status === 'HELD' || b.booking_status === 'CONFIRMED') && !b.has_entered;
+  }
+
+  function render() {
+    var start = (page - 1) * perPage;
+    var slice = filtered.slice(start, start + perPage);
+    document.getElementById('countLabel').textContent = filtered.length + ' booking(s)';
+    document.getElementById('pageLabel').textContent = filtered.length
+      ? 'Showing ' + (start + 1) + '–' + Math.min(start + perPage, filtered.length) + ' of ' + filtered.length : '';
+    document.getElementById('prevPage').disabled = page <= 1;
+    document.getElementById('nextPage').disabled = start + perPage >= filtered.length;
+
+    if (!slice.length) {
+      tbody.innerHTML = U.emptyRow(7, all.length ? 'No bookings match these filters.' : 'You have no bookings yet. Book a slot to get started.');
+      return;
+    }
+    tbody.innerHTML = slice.map(function (b) {
+      return '<tr>' +
+        '<td class="mono">' + U.esc(b.booking_reference) + '</td>' +
+        '<td>' + U.esc(b.vehicle_number) + '</td>' +
+        '<td>' + U.esc(b.floor_code) + ' · ' + U.esc(b.slot_number) + '</td>' +
+        '<td class="whitespace-nowrap text-xs">' + U.dateTime(b.booked_from) + '<br><span class="text-muted">→ ' + U.dateTime(b.booked_until) + '</span></td>' +
+        '<td>' + U.statusBadge(b.booking_status) + '</td>' +
+        '<td class="text-right">' + U.money(b.estimated_amount) + '</td>' +
+        '<td class="text-right whitespace-nowrap">' +
+          '<button class="btn btn-secondary btn-sm" data-detail="' + U.esc(b.booking_reference) + '">Details</button> ' +
+          (canCancel(b) ? '<button class="btn btn-danger btn-sm" data-cancel="' + U.esc(b.booking_reference) + '">Cancel</button>' : '') +
+        '</td></tr>';
+    }).join('');
+  }
+
+  function applyFilters() {
+    var status = document.getElementById('statusFilter').value;
+    var q = document.getElementById('searchBox').value.trim().toLowerCase();
+    filtered = all.filter(function (b) {
+      if (status && b.booking_status !== status) return false;
+      if (!q) return true;
+      return [b.booking_reference, b.slot_number, b.floor_code, b.vehicle_number]
+        .join(' ').toLowerCase().indexOf(q) !== -1;
+    });
+    page = 1;
+    render();
+  }
+
+  async function load() {
+    try {
+      var data = await QS.get('/api/bookings/my');
+      all = data.items || [];
+      applyFilters();
+    } catch (err) {
+      tbody.innerHTML = U.emptyRow(7, err.message);
+      U.toast(err.message, 'error');
+    }
+  }
+
+  document.getElementById('statusFilter').addEventListener('change', applyFilters);
+  document.getElementById('searchBox').addEventListener('input', U.debounce(applyFilters, 200));
+  document.getElementById('prevPage').addEventListener('click', function () { if (page > 1) { page--; render(); } });
+  document.getElementById('nextPage').addEventListener('click', function () {
+    if (page * perPage < filtered.length) { page++; render(); }
+  });
+
+  tbody.addEventListener('click', async function (e) {
+    var detail = e.target.closest('[data-detail]');
+    var cancel = e.target.closest('[data-cancel]');
+
+    if (detail) {
+      try {
+        var b = await QS.get('/api/bookings/' + encodeURIComponent(detail.dataset.detail));
+        var events = (b.events || []).map(function (ev) {
+          return '<li>' + U.esc(ev.event_type) + ' · ' + U.dateTime(ev.created_at) + ' (' + U.esc(ev.scan_method) + ')</li>';
+        }).join('') || '<li class="text-muted">No gate events yet.</li>';
+        document.getElementById('detailBody').innerHTML =
+          '<h2 class="text-base font-semibold mb-2" id="detailTitle">' + U.esc(b.booking_reference) + '</h2>' +
+          '<dl class="text-sm" style="display:grid;gap:0.35rem">' +
+            '<div><span class="text-muted">Status:</span> ' + U.statusBadge(b.booking_status) + '</div>' +
+            '<div><span class="text-muted">Vehicle:</span> ' + U.esc(b.vehicle_number) + '</div>' +
+            '<div><span class="text-muted">Slot:</span> ' + U.esc(b.floor_code) + ' · ' + U.esc(b.slot_number) + ' · ' + U.esc(b.vehicle_type) + '</div>' +
+            '<div><span class="text-muted">Window:</span> ' + U.dateTime(b.booked_from) + ' → ' + U.dateTime(b.booked_until) + '</div>' +
+            '<div><span class="text-muted">Amount:</span> ' + U.money(b.estimated_amount) + '</div>' +
+          '</dl>' +
+          '<h3 class="text-sm font-semibold mt-3 mb-1">Gate events</h3><ul class="text-sm">' + events + '</ul>' +
+          (b.booking_status === 'CONFIRMED' ? '<button class="btn btn-secondary btn-sm mt-3" type="button" id="detailQr">Show QR code</button>' : '');
+        var dlg = document.getElementById('detailDialog');
+        dlg.showModal();
+        var qrBtn = document.getElementById('detailQr');
+        if (qrBtn) qrBtn.addEventListener('click', async function () {
+          var res = await QS.post('/api/qr/generate', { booking_reference: b.booking_reference });
+          var w = window.open('', '_blank');
+          if (w) w.document.write('<title>QSPARK QR</title><p style="font-family:system-ui">' + U.esc(b.booking_reference) + '</p>' +
+            '<img alt="Booking QR" src="data:image/png;base64,' + res.qr_base64 + '">');
+        });
+      } catch (err) { U.toast(err.message, 'error'); }
+      return;
+    }
+
+    if (cancel) {
+      var ref = cancel.dataset.cancel;
+      var ok = await U.confirmDialog({
+        title: 'Cancel booking', danger: true, confirmLabel: 'Cancel booking',
+        message: 'Cancellation follows the refund rules. A booking can no longer be cancelled once the vehicle has entered.'
+      });
+      if (!ok) return;
+      U.setBusy(cancel, true, 'Cancelling…');
+      try {
+        var res = await QS.post('/api/bookings/' + encodeURIComponent(ref) + '/cancel', {});
+        U.toast('Booking cancelled. Refund ' + U.money(res.refund_amount) + '.', 'success');
+        await load();
+      } catch (err) {
+        U.toast(err.message, 'error');
+        U.setBusy(cancel, false);
+      }
+    }
+  });
+
+  load();
+})();
+</script>
+{% endblock %}

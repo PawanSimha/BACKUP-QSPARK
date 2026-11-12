@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}System control{% endblock %}
+{% block breadcrumb %}System control{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">System control</h1>
+  <p class="page-subtitle">Taking the system offline pauses new customer bookings. Staff can still scan QR codes and settle exits so nobody is stranded inside.</p>
+</div>
+
+<div class="grid grid-2">
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Current status</h2>
+      <span class="badge badge-slate" id="statusBadge">Checking…</span>
+    </div>
+    <div class="card-body">
+      <p class="text-sm text-muted mb-3" id="statusHelp">Reading the stored system setting.</p>
+      <dl class="text-sm" style="display:grid;gap:0.4rem">
+        <div class="flex justify-between"><dt class="text-muted">What OFFLINE changes</dt><dd class="text-right">New customer holds and confirmations are rejected with HTTP 503.</dd></div>
+        <div class="flex justify-between"><dt class="text-muted">What stays available</dt><dd class="text-right">Login, dashboards, QR scans, exits, admin adjustments.</dd></div>
+        <div class="flex justify-between"><dt class="text-muted">Existing bookings</dt><dd class="text-right">Remain valid and are not cancelled.</dd></div>
+      </dl>
+      <div class="divider"></div>
+      <button class="btn btn-danger" type="button" id="toggleBtn" disabled>Loading…</button>
+      <p class="field-error is-visible hidden mt-2" id="statusError" role="alert"></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Before you switch</h2></div>
+    <div class="card-body text-sm" style="display:grid;gap:0.6rem">
+      <p><strong>Offline is not a maintenance lock.</strong> Customers will see a paused-booking notice on the booking page, and the API refuses new bookings until the system is online again.</p>
+      <p><strong>Recovery stays possible.</strong> Super Admins keep full access to this page while offline, so the switch can always be reversed. Do not block your own account at the same time.</p>
+      <p><strong>Every change is audited.</strong> The transition, actor and previous value are written to <span class="mono">audit_logs</span>.</p>
+      <p class="text-muted">If you are going offline for a planned closure, announce it to floor staff first so walk-in customers are redirected.</p>
+    </div>
+  </section>
+</div>
+
+<section class="card mt-4">
+  <div class="card-header"><h2 class="card-title">Recent system changes</h2></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>When</th><th>Action</th><th>Previous</th><th>New</th><th>Actor</th></tr></thead>
+      <tbody id="auditRows"><tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var current = null;
+
+  function render() {
+    var badge = document.getElementById('statusBadge');
+    var online = current === 'ONLINE';
+    badge.textContent = current || 'unknown';
+    badge.className = 'badge ' + (online ? 'badge-green' : 'badge-red');
+    document.getElementById('statusHelp').textContent = online
+      ? 'The system is online. Customers can create and confirm bookings.'
+      : 'The system is offline. New customer bookings are rejected until you bring it back online.';
+    var btn = document.getElementById('toggleBtn');
+    btn.disabled = false;
+    btn.textContent = online ? 'Take system offline' : 'Bring system online';
+    btn.className = 'btn ' + (online ? 'btn-danger' : 'btn-primary');
+  }
+
+  async function loadStatus() {
+    try {
+      var d = await QS.get('/api/system/status');
+      current = d.system_status;
+      render();
+    } catch (err) {
+      document.getElementById('statusError').textContent = err.message;
+      document.getElementById('statusError').classList.remove('hidden');
+    }
+  }
+
+  async function loadAudit() {
+    try {
+      var d = await QS.get('/api/super-admin/db-tables/audit_logs?page=1&per_page=100');
+      var rows = (d.items || []).filter(function (r) {
+        return r.action_type === 'SYSTEM_ONLINE' || r.action_type === 'SYSTEM_OFFLINE';
+      }).slice(0, 15);
+      document.getElementById('auditRows').innerHTML = rows.length ? rows.map(function (r) {
+        return '<tr><td class="text-xs whitespace-nowrap">' + U.dateTime(r.created_at) + '</td>' +
+          '<td>' + U.esc(r.action_type) + '</td>' +
+          '<td>' + U.esc(r.old_values || '—') + '</td>' +
+          '<td>' + U.esc(r.new_values || '—') + '</td>' +
+          '<td class="text-xs">user #' + U.esc(r.created_by || '—') + '</td></tr>';
+      }).join('') : U.emptyRow(5, 'No status changes recorded yet.');
+    } catch (err) {
+      document.getElementById('auditRows').innerHTML = U.emptyRow(5, err.message);
+    }
+  }
+
+  document.getElementById('toggleBtn').addEventListener('click', async function () {
+    var goingOffline = current === 'ONLINE';
+    var target = goingOffline ? 'OFFLINE' : 'ONLINE';
+    var ok = await U.confirmDialog({
+      title: goingOffline ? 'Take the system offline' : 'Bring the system online',
+      danger: goingOffline,
+      confirmLabel: goingOffline ? 'Go offline' : 'Go online',
+      message: goingOffline
+        ? 'New customer bookings will be rejected immediately. Existing bookings, QR entry and exit keep working. Continue?'
+        : 'Customers will be able to create and confirm bookings again immediately. Continue?'
+    });
+    if (!ok) return;
+    var btn = document.getElementById('toggleBtn');
+    U.setBusy(btn, true, 'Applying…');
+    var errBox = document.getElementById('statusError');
+    errBox.classList.add('hidden');
+    try {
+      var res = await QS.patch('/api/system/super-admin/system/status', { system_status: target });
+      current = res.system_status;
+      render();
+      U.toast('System is now ' + current + '.', 'success');
+      loadAudit();
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.remove('hidden');
+      U.setBusy(btn, false);
+      render();
+    }
+  });
+
+  loadStatus(); loadAudit();
+})();
+</script>
+{% endblock %}

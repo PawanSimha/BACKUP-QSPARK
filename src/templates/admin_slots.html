@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Floors &amp; slots{% endblock %}
+{% block breadcrumb %}Floors &amp; slots{% endblock %}
+{% block content %}
+<div class="page-header flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="page-title">Floors &amp; slots</h1>
+    <p class="page-subtitle">Live slot states are calculated from bookings and gate events. Only maintenance, reservation and active states can be changed here.</p>
+  </div>
+  <button class="btn btn-secondary" id="refreshBtn" type="button">Refresh</button>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div class="flex flex-wrap gap-2 items-center">
+      <label class="sr-only" for="floorSelect">Floor</label>
+      <select class="select" id="floorSelect" style="min-width:160px"></select>
+      <label class="sr-only" for="typeFilter">Vehicle type</label>
+      <select class="select" id="typeFilter" style="min-width:150px"><option value="">All vehicle types</option></select>
+      <label class="sr-only" for="statusFilter">Live status</label>
+      <select class="select" id="statusFilter" style="min-width:150px">
+        <option value="">All states</option>
+        <option value="AVAILABLE">Available</option>
+        <option value="RESERVED">Reserved</option>
+        <option value="OCCUPIED">Occupied</option>
+        <option value="MAINTENANCE">Maintenance</option>
+        <option value="INACTIVE">Inactive</option>
+      </select>
+    </div>
+    <span class="text-xs text-muted" id="summaryLabel"></span>
+  </div>
+  <div class="card-body">
+    <div class="legend mb-3">
+      <span><i style="background:#ecfdf5;border:1px solid #a7f3d0"></i>Available</span>
+      <span><i style="background:#fffbeb;border:1px solid #fde68a"></i>Reserved</span>
+      <span><i style="background:#fef2f2;border:1px solid #fecaca"></i>Occupied</span>
+      <span><i style="background:#f1f5f9;border:1px solid #e2e8f0"></i>Maintenance / inactive</span>
+    </div>
+    <div class="slot-grid" id="slotGrid"></div>
+    <p class="hint mt-3">Select a slot to change its stored state.</p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-header"><h2 class="card-title">Selected slot</h2></div>
+  <div class="card-body" id="slotDetail"><p class="text-sm text-muted">No slot selected.</p></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var floors = [], slots = [], selected = null;
+
+  async function loadFilters() {
+    var [f, t] = await Promise.all([QS.get('/api/admin/floors'), QS.get('/api/admin/vehicle-types')]);
+    floors = f.items || [];
+    var fs = document.getElementById('floorSelect');
+    fs.innerHTML = floors.map(function (x) {
+      return '<option value="' + x.floor_id + '">' + U.esc(x.floor_code) + ' · ' + x.available_slots + ' free</option>';
+    }).join('');
+    var ts = document.getElementById('typeFilter');
+    (t.items || []).forEach(function (v) {
+      var o = document.createElement('option');
+      o.value = v.type_name;
+      o.textContent = v.type_name;
+      ts.appendChild(o);
+    });
+    if (floors.length) fs.value = floors[0].floor_id;
+  }
+
+  async function loadSlots() {
+    var floorId = document.getElementById('floorSelect').value;
+    var data = await QS.get('/api/admin/slots' + (floorId ? '?floor_id=' + floorId : ''));
+    slots = data.items || [];
+    render();
+  }
+
+  function render() {
+    var type = document.getElementById('typeFilter').value;
+    var status = document.getElementById('statusFilter').value;
+    var list = slots.filter(function (s) {
+      if (type && s.vehicle_type !== type) return false;
+      if (status && s.status !== status) return false;
+      return true;
+    });
+    document.getElementById('summaryLabel').textContent = list.length + ' slot(s) shown';
+    document.getElementById('slotGrid').innerHTML = list.length ? list.map(function (s) {
+      return '<button type="button" class="slot" data-slot="' + s.slot_id + '" data-status="' + U.esc(s.status) + '" aria-pressed="' +
+        (selected && selected.slot_id === s.slot_id ? 'true' : 'false') + '" title="' +
+        U.esc(s.slot_number + ' · ' + s.status + ' · ' + s.vehicle_type) + '">' + U.esc(s.slot_number) + '</button>';
+    }).join('') : '<p class="text-sm text-muted">No slots match these filters.</p>';
+  }
+
+  function renderDetail() {
+    var box = document.getElementById('slotDetail');
+    if (!selected) { box.innerHTML = '<p class="text-sm text-muted">No slot selected.</p>'; return; }
+    var s = selected;
+    var stored = s.control_status;
+    var options = [
+      ['ACTIVE', 'Mark active (available to book)'],
+      ['ADMIN_RESERVED', 'Reserve for staff'],
+      ['MAINTENANCE', 'Put under maintenance']
+    ];
+    box.innerHTML =
+      '<div class="flex flex-wrap items-center gap-3 mb-3">' +
+        '<strong class="mono text-base">' + U.esc(s.slot_number) + '</strong>' +
+        U.statusBadge(s.status) +
+        '<span class="text-sm text-muted">' + U.esc(s.floor_code) + ' · ' + U.esc(s.vehicle_type) + '</span>' +
+        '<span class="text-xs text-muted">stored state: ' + U.esc(stored) + '</span>' +
+      '</div>' +
+      (s.status === 'OCCUPIED'
+        ? '<p class="text-sm text-amber-700">This slot has a vehicle inside. It cannot be changed until the vehicle exits.</p>'
+        : '<div class="flex flex-wrap gap-2">' + options
+            .filter(function (o) { return o[0] !== stored; })
+            .map(function (o) { return '<button class="btn btn-secondary btn-sm" data-set="' + o[0] + '">' + o[1] + '</button>'; })
+            .join('') + '</div>');
+  }
+
+  document.getElementById('slotGrid').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-slot]');
+    if (!btn) return;
+    selected = slots.find(function (s) { return String(s.slot_id) === btn.dataset.slot; });
+    render();
+    renderDetail();
+  });
+
+  document.getElementById('slotDetail').addEventListener('click', async function (e) {
+    var btn = e.target.closest('[data-set]');
+    if (!btn || !selected) return;
+    var label = btn.textContent.trim();
+    var ok = await U.confirmDialog({
+      title: 'Change slot state',
+      message: 'Apply "' + label + '" to slot ' + selected.slot_number + '? This is recorded in the audit log.'
+    });
+    if (!ok) return;
+    U.setBusy(btn, true, 'Saving…');
+    try {
+      await QS.patch('/api/admin/slots/' + selected.slot_id + '/control-status', { control_status: btn.dataset.set });
+      U.toast('Slot updated.', 'success');
+      await loadSlots();
+      selected = slots.find(function (s) { return s.slot_id === selected.slot_id; }) || null;
+      renderDetail();
+    } catch (err) {
+      U.toast(err.message, 'error');
+      U.setBusy(btn, false);
+    }
+  });
+
+  ['floorSelect', 'typeFilter', 'statusFilter'].forEach(function (id) {
+    document.getElementById(id).addEventListener('change', id === 'floorSelect' ? loadSlots : render);
+  });
+  document.getElementById('refreshBtn').addEventListener('click', function () {
+    loadFilters().then(loadSlots).catch(function (err) { U.toast(err.message, 'error'); });
+  });
+
+  loadFilters().then(loadSlots).catch(function (err) { U.toast(err.message, 'error'); });
+})();
+</script>
+{% endblock %}

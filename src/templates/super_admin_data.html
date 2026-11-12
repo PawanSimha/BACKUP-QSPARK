@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Database views{% endblock %}
+{% block breadcrumb %}Database views{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Database views</h1>
+  <p class="page-subtitle">Read-only access to approved tables. Arbitrary SQL is never accepted from the browser, and password hashes are never exposed.</p>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="flex flex-wrap gap-2 items-center">
+      <label class="label" for="tableSelect" style="margin:0">Table</label>
+      <select class="select" id="tableSelect" style="min-width:240px">
+        <option value="users">users</option>
+        <option value="floors">floors</option>
+        <option value="vehicle_types">vehicle_types</option>
+        <option value="parking_slots">parking_slots</option>
+        <option value="bookings">bookings</option>
+        <option value="cancellation_rules">cancellation_rules</option>
+        <option value="wallet_transactions">wallet_transactions</option>
+        <option value="booking_events">booking_events</option>
+        <option value="audit_logs">audit_logs</option>
+        <option value="revenue_collections">revenue_collections</option>
+        <option value="system_settings">system_settings</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" type="button" id="refreshBtn">Refresh</button>
+    </div>
+    <span class="text-xs text-muted" id="rowCount"></span>
+  </div>
+  <div class="table-wrap" tabindex="0" role="region" aria-label="Database table rows">
+    <table class="table">
+      <thead id="dataHead"><tr><th>Select a table to load rows.</th></tr></thead>
+      <tbody id="dataBody"><tr><td class="px-4 py-10 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <div class="card-body flex items-center justify-between gap-2">
+    <span class="text-xs text-muted" id="pageLabel"></span>
+    <div class="flex gap-2">
+      <button class="btn btn-secondary btn-sm" type="button" id="prevPage" disabled>Previous</button>
+      <button class="btn btn-secondary btn-sm" type="button" id="nextPage" disabled>Next</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var page = 1, perPage = 25, total = 0, columns = [];
+
+  function cell(key, value) {
+    if (value === null || value === undefined) return '<span class="text-muted">—</span>';
+    var text = String(value);
+    if (/password/i.test(key)) return '<span class="text-muted">hidden</span>';
+    if (/_at$|_from$|_until$|_expires_at$/.test(key) && /\d{4}-\d{2}-\d{2}/.test(text)) return U.dateTime(text);
+    return U.esc(text.length > 90 ? text.slice(0, 90) + '…' : text);
+  }
+
+  async function load() {
+    var table = document.getElementById('tableSelect').value;
+    var body = document.getElementById('dataBody');
+    var head = document.getElementById('dataHead');
+    body.innerHTML = '<tr><td colspan="6" class="px-4 py-10 text-center text-sm text-slate-500">Loading…</td></tr>';
+    try {
+      var data = await QS.get('/api/super-admin/db-tables/' + encodeURIComponent(table) + '?page=' + page + '&per_page=' + perPage);
+      var items = data.items || [];
+      total = data.total || 0;
+      columns = items.length ? Object.keys(items[0]) : [];
+      head.innerHTML = columns.length
+        ? '<tr>' + columns.map(function (c) { return '<th>' + U.esc(c) + '</th>'; }).join('') + '</tr>'
+        : '<tr><th>Rows</th></tr>';
+      body.innerHTML = items.length
+        ? items.map(function (row) {
+            return '<tr>' + columns.map(function (c) { return '<td class="text-xs">' + cell(c, row[c]) + '</td>'; }).join('') + '</tr>';
+          }).join('')
+        : '<tr><td colspan="' + Math.max(1, columns.length) + '" class="px-4 py-10 text-center text-sm text-slate-500">This table has no rows.</td></tr>';
+
+      var start = total ? (page - 1) * perPage + 1 : 0;
+      document.getElementById('rowCount').textContent = total + ' row(s) · ' + columns.length + ' column(s)';
+      document.getElementById('pageLabel').textContent = total
+        ? 'Showing ' + start + '–' + Math.min(page * perPage, total) + ' of ' + total : 'No rows';
+      document.getElementById('prevPage').disabled = page <= 1;
+      document.getElementById('nextPage').disabled = page * perPage >= total;
+    } catch (err) {
+      head.innerHTML = '<tr><th>Error</th></tr>';
+      body.innerHTML = '<tr><td class="px-4 py-10 text-center text-sm text-red-600">' + U.esc(err.message) + '</td></tr>';
+      U.toast(err.message, 'error');
+    }
+  }
+
+  document.getElementById('tableSelect').addEventListener('change', function () { page = 1; load(); });
+  document.getElementById('refreshBtn').addEventListener('click', load);
+  document.getElementById('prevPage').addEventListener('click', function () { if (page > 1) { page--; load(); } });
+  document.getElementById('nextPage').addEventListener('click', function () {
+    if (page * perPage < total) { page++; load(); }
+  });
+
+  load();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}QSPARK{% endblock %} · QSPARK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+{% set current_user = user if user is defined and user else none %}
+{% macro nav(href, label, key) -%}
+  <a class="nav-item" href="{{ href }}" {% if request.path == href or (key and request.path.startswith(key)) %}aria-current="page"{% endif %}>{{ label }}</a>
+{%- endmacro %}
+{% macro section(label) -%}
+  <div class="sidebar-section">{{ label }}</div>
+{%- endmacro %}
+
+{% if current_user %}
+<div class="app-shell" data-role="{{ current_user.role }}">
+  <aside class="sidebar" id="sidebar" aria-label="Primary">
+    <div class="sidebar-brand">
+      <span aria-hidden="true" style="width:28px;height:28px;border-radius:8px;background:var(--brand-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">Q</span>
+      <span>QSPARK</span>
+    </div>
+    <nav class="sidebar-nav">
+      {{ section('Parking') }}
+      {{ nav('/dashboard', 'Dashboard', '') }}
+      {{ nav('/booking', 'Book a slot', '/booking') }}
+      {{ nav('/bookings/my', 'My bookings', '/bookings/my') }}
+      {{ nav('/wallet', 'Wallet', '/wallet') }}
+      {{ nav('/profile', 'Profile', '/profile') }}
+
+      {% if current_user.role in ('ADMIN', 'SUPER_ADMIN') %}
+        {{ section('Operations') }}
+        {{ nav('/admin/dashboard', 'Admin dashboard', '/admin/dashboard') }}
+        {{ nav('/admin/bookings', 'Bookings', '/admin/bookings') }}
+        {{ nav('/admin/qr-scan', 'QR scan', '/admin/qr-scan') }}
+        {{ nav('/admin/customers', 'Customers', '/admin/customers') }}
+        {{ nav('/admin/slots', 'Floors & slots', '/admin/slots') }}
+        {{ nav('/admin/analytics', 'Analytics', '/admin/analytics') }}
+        {{ nav('/admin/master', 'Configuration', '/admin/master') }}
+      {% endif %}
+
+      {% if current_user.role == 'SUPER_ADMIN' %}
+        {{ section('Administration') }}
+        {{ nav('/super-admin/dashboard', 'System overview', '/super-admin/dashboard') }}
+        {{ nav('/super-admin/admins', 'Admins & users', '/super-admin/admins') }}
+        {{ nav('/super-admin/infrastructure', 'Infrastructure', '/super-admin/infrastructure') }}
+        {{ nav('/super-admin/analytics', 'Revenue & reports', '/super-admin/analytics') }}
+        {{ nav('/super-admin/data', 'Database views', '/super-admin/data') }}
+        {{ nav('/super-admin/system', 'System control', '/super-admin/system') }}
+      {% endif %}
+    </nav>
+    <div style="padding:0.85rem;border-top:1px solid var(--border);">
+      <div class="flex items-center gap-2">
+        <span aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background:var(--brand-50);color:var(--brand-700);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;">{{ (current_user.full_name or current_user.username or 'U')[:1]|upper }}</span>
+        <div style="min-width:0">
+          <div class="text-xs font-semibold truncate">{{ current_user.full_name or current_user.username }}</div>
+          <div class="text-[11px] text-muted">{{ current_user.role|replace('_', ' ') }}</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-column">
+    <header class="topbar">
+      <div class="flex items-center gap-2">
+        <button class="btn btn-ghost btn-icon lg:hidden" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <span class="text-sm font-semibold">{% block breadcrumb %}QSPARK{% endblock %}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="badge badge-blue" title="Wallet balance">₹<span id="navWallet">{{ '%.2f'|format(current_user.wallet_balance or 0) }}</span></span>
+        <form method="POST" action="/api/auth/logout" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-secondary btn-sm" type="submit">Sign out</button>
+        </form>
+      </div>
+    </header>
+{% endif %}
+
+<main class="{{ 'page' if current_user else '' }}" id="main">
+  {% block content %}{% endblock %}
+</main>
+
+{% if current_user %}
+  </div>
+</div>
+{% endif %}
+
+<div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="false"></div>
+
+<dialog class="app-dialog" id="appDialog" aria-labelledby="appDialogTitle">
+  <div style="padding:1.25rem;">
+    <h2 id="appDialogTitle" class="text-base font-semibold mb-2">Please confirm</h2>
+    <p id="appDialogMessage" class="text-sm text-muted mb-4"></p>
+    <div class="flex justify-end gap-2">
+      <button class="btn btn-secondary" type="button" onclick="document.getElementById('appDialog').close('')">Cancel</button>
+      <button class="btn btn-primary" type="button" id="appDialogOk">Confirm</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/core/api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/core/ui.js') }}"></script>
+<script>
+  (function () {
+    var toggle = document.getElementById('navToggle');
+    var sidebar = document.getElementById('sidebar');
+    if (toggle && sidebar) {
+      toggle.addEventListener('click', function () {
+        var open = sidebar.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', String(open));
+      });
+    }
+    document.addEventListener('click', function (e) {
+      if (!sidebar || window.innerWidth >= 1024 || !sidebar.classList.contains('is-open')) return;
+      if (sidebar.contains(e.target) || (toggle && toggle.contains(e.target))) return;
+      sidebar.classList.remove('is-open');
+      if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    });
+  })();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

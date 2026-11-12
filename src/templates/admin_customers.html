@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}Customers{% endblock %}
+{% block breadcrumb %}Customers{% endblock %}
+{% block content %}
+<div class="page-header flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="page-title">Customers</h1>
+    <p class="page-subtitle">Register walk-in customers, update their details and manage wallets.</p>
+  </div>
+  <button class="btn btn-primary" id="newCustomerBtn" type="button">Register walk-in customer</button>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="flex flex-wrap gap-2 items-center">
+      <label class="sr-only" for="roleFilter">Role</label>
+      <select class="select" id="roleFilter" style="min-width:150px">
+        <option value="CUSTOMER">Customers</option>
+        <option value="">All users</option>
+        <option value="ADMIN">Admins</option>
+      </select>
+      <label class="sr-only" for="searchBox">Search users</label>
+      <input class="input" type="search" id="searchBox" placeholder="Name, phone or username" style="min-width:240px">
+    </div>
+    <span class="text-xs text-muted" id="countLabel"></span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Phone</th><th>Username</th><th>Role</th><th>Status</th><th class="text-right">Wallet</th><th class="text-right">Actions</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="7" class="px-4 py-10 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<dialog class="app-dialog" id="customerDialog" aria-labelledby="customerDialogTitle">
+  <form method="dialog" id="customerForm" style="padding:1.25rem" novalidate>
+    <h2 class="text-base font-semibold mb-3" id="customerDialogTitle">Register walk-in customer</h2>
+    <div class="grid" style="gap:0.75rem">
+      <div class="field"><label class="label" for="cFullName">Full name</label><input class="input" id="cFullName" required maxlength="80"></div>
+      <div class="field"><label class="label" for="cPhone">Mobile number</label><input class="input" id="cPhone" type="tel" required pattern="[0-9]{10}"><p class="hint">10 digits.</p></div>
+      <div class="field"><label class="label" for="cGender">Gender</label>
+        <select class="select" id="cGender"><option value="">Not specified</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option><option value="PREFER_NOT_TO_SAY">Prefer not to say</option></select>
+      </div>
+      <div class="field"><label class="label" for="cCompany">Company</label><input class="input" id="cCompany" maxlength="120"></div>
+      <div class="field"><label class="label" for="cEmail">Email (optional)</label><input class="input" id="cEmail" type="email"></div>
+      <p class="field-error is-visible hidden" id="cError" role="alert"></p>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button class="btn btn-secondary" type="button" onclick="document.getElementById('customerDialog').close()">Cancel</button>
+      <button class="btn btn-primary" type="submit" id="cSubmit">Register</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="app-dialog" id="walletDialog" aria-labelledby="walletDialogTitle">
+  <form method="dialog" id="walletForm" style="padding:1.25rem" novalidate>
+    <h2 class="text-base font-semibold mb-1" id="walletDialogTitle">Adjust wallet</h2>
+    <p class="text-sm text-muted mb-3" id="walletUserLabel"></p>
+    <dl class="text-sm mb-3"><div class="flex justify-between"><dt class="text-muted">Current balance</dt><dd id="walletCurrent">—</dd></div></dl>
+    <div class="grid" style="gap:0.75rem">
+      <div class="field"><label class="label" for="wMode">Adjustment</label>
+        <select class="select" id="wMode"><option value="CREDIT">Credit — add to balance</option><option value="DEBIT">Debit — deduct from balance</option></select>
+      </div>
+      <div class="field"><label class="label" for="wAmount">Amount</label><input class="input" id="wAmount" type="number" min="0.01" step="0.01" required></div>
+      <div class="field"><label class="label" for="wReason">Reason</label><input class="input" id="wReason" maxlength="140" placeholder="Cash top-up at counter"></div>
+      <p class="field-error is-visible hidden" id="wError" role="alert"></p>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button class="btn btn-secondary" type="button" onclick="document.getElementById('walletDialog').close()">Cancel</button>
+      <button class="btn btn-primary" type="submit" id="wSubmit">Apply adjustment</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var users = [], editing = null, walletUser = null;
+
+  function render() {
+    var role = document.getElementById('roleFilter').value;
+    var q = document.getElementById('searchBox').value.trim().toLowerCase();
+    var list = users.filter(function (u) {
+      if (role && u.role !== role) return false;
+      if (!q) return true;
+      return [u.full_name, u.username, u.phone].join(' ').toLowerCase().indexOf(q) !== -1;
+    });
+    document.getElementById('countLabel').textContent = list.length + ' user(s)';
+    document.getElementById('rows').innerHTML = list.length ? list.map(function (u) {
+      return '<tr>' +
+        '<td>' + U.esc(u.full_name) + '</td>' +
+        '<td class="mono">' + U.esc(u.phone || '—') + '</td>' +
+        '<td class="mono">' + U.esc(u.username || '—') + '</td>' +
+        '<td>' + U.statusBadge(u.role) + '</td>' +
+        '<td>' + U.statusBadge(u.account_status) + '</td>' +
+        '<td class="text-right">' + U.money(u.wallet_balance) + '</td>' +
+        '<td class="text-right whitespace-nowrap">' +
+          '<button class="btn btn-secondary btn-sm" data-edit="' + u.user_id + '">Edit</button> ' +
+          (u.role === 'CUSTOMER' || {{ 'true' if user.role == 'SUPER_ADMIN' else 'false' }} ? '<button class="btn btn-secondary btn-sm" data-wallet="' + u.user_id + '">Wallet</button> ' : '') +
+          (u.account_status === 'ACTIVE' ? '<button class="btn btn-danger btn-sm" data-deactivate="' + u.user_id + '">Deactivate</button>' : '') +
+        '</td></tr>';
+    }).join('') : U.emptyRow(7, 'No users match these filters.');
+  }
+
+  async function load() {
+    try {
+      var data = await QS.get('/api/admin/users');
+      users = (data.items || []).filter(function (u) { return u.role !== 'SUPER_ADMIN'; });
+      render();
+    } catch (err) {
+      document.getElementById('rows').innerHTML = U.emptyRow(7, err.message);
+      U.toast(err.message, 'error');
+    }
+  }
+
+  document.getElementById('roleFilter').addEventListener('change', render);
+  document.getElementById('searchBox').addEventListener('input', U.debounce(render, 200));
+
+  // create
+  document.getElementById('newCustomerBtn').addEventListener('click', function () {
+    editing = null;
+    document.getElementById('customerForm').reset();
+    document.getElementById('customerDialogTitle').textContent = 'Register walk-in customer';
+    document.getElementById('cSubmit').textContent = 'Register';
+    document.getElementById('cError').classList.add('hidden');
+    document.getElementById('customerDialog').showModal();
+  });
+
+  document.getElementById('customerForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = document.getElementById('cError');
+    err.classList.add('hidden');
+    var payload = {
+      full_name: document.getElementById('cFullName').value.trim(),
+      phone: document.getElementById('cPhone').value.trim(),
+      gender: document.getElementById('cGender').value || null,
+      company_name: document.getElementById('cCompany').value.trim() || null,
+      email: document.getElementById('cEmail').value.trim() || null
+    };
+    if (!payload.full_name || !/^[0-9]{10}$/.test(payload.phone)) {
+      err.textContent = 'Name and a 10-digit mobile number are required.';
+      err.classList.remove('hidden');
+      return;
+    }
+    var btn = document.getElementById('cSubmit');
+    U.setBusy(btn, true, 'Saving…');
+    try {
+      if (editing) {
+        await QS.put('/api/admin/users/' + editing, payload);
+        U.toast('Customer updated.', 'success');
+      } else {
+        var created = await QS.post('/api/admin/users', payload);
+        U.toast('Customer registered as ' + created.username + '.', 'success');
+      }
+      document.getElementById('customerDialog').close();
+      await load();
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.classList.remove('hidden');
+    } finally { U.setBusy(btn, false); }
+  });
+
+  // row actions
+  document.getElementById('rows').addEventListener('click', async function (e) {
+    var edit = e.target.closest('[data-edit]');
+    var wallet = e.target.closest('[data-wallet]');
+    var deactivate = e.target.closest('[data-deactivate]');
+
+    if (edit) {
+      var u = users.find(function (x) { return String(x.user_id) === edit.dataset.edit; });
+      if (!u) return;
+      editing = u.user_id;
+      document.getElementById('customerDialogTitle').textContent = 'Edit ' + u.full_name;
+      document.getElementById('cSubmit').textContent = 'Save changes';
+      document.getElementById('cFullName').value = u.full_name || '';
+      document.getElementById('cPhone').value = u.phone || '';
+      document.getElementById('cGender').value = u.gender || '';
+      document.getElementById('cCompany').value = u.company_name || '';
+      document.getElementById('cEmail').value = u.email || '';
+      document.getElementById('cError').classList.add('hidden');
+      document.getElementById('customerDialog').showModal();
+      return;
+    }
+
+    if (wallet) {
+      walletUser = users.find(function (x) { return String(x.user_id) === wallet.dataset.wallet; });
+      if (!walletUser) return;
+      document.getElementById('walletUserLabel').textContent = walletUser.full_name + ' · ' + (walletUser.username || '');
+      document.getElementById('walletCurrent').textContent = U.money(walletUser.wallet_balance);
+      document.getElementById('walletForm').reset();
+      document.getElementById('wError').classList.add('hidden');
+      document.getElementById('walletDialog').showModal();
+      return;
+    }
+
+    if (deactivate) {
+      var target = users.find(function (x) { return String(x.user_id) === deactivate.dataset.deactivate; });
+      var ok = await U.confirmDialog({
+        title: 'Deactivate account', danger: true, confirmLabel: 'Deactivate',
+        message: 'Deactivate ' + (target ? target.full_name : 'this user') + '? Booking and payment history is preserved; the account can no longer sign in.'
+      });
+      if (!ok) return;
+      try {
+        await QS.del('/api/admin/users/' + deactivate.dataset.deactivate);
+        U.toast('Account deactivated.', 'success');
+        await load();
+      } catch (err) { U.toast(err.message, 'error'); }
+    }
+  });
+
+  document.getElementById('walletForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = document.getElementById('wError');
+    err.classList.add('hidden');
+    var amount = Number(document.getElementById('wAmount').value);
+    if (!amount || amount <= 0) {
+      err.textContent = 'Enter an amount greater than zero.';
+      err.classList.remove('hidden');
+      return;
+    }
+    var signedAmount = document.getElementById('wMode').value === 'DEBIT' ? -amount : amount;
+    var ok = await U.confirmDialog({
+      title: signedAmount > 0 ? 'Credit wallet' : 'Debit wallet',
+      danger: signedAmount < 0,
+      confirmLabel: signedAmount > 0 ? 'Credit' : 'Debit',
+      message: (signedAmount > 0 ? 'Add ' : 'Deduct ') + U.money(amount) + ' for ' +
+        (walletUser ? walletUser.full_name : 'this customer') + '? Every adjustment writes a wallet ledger entry.'
+    });
+    if (!ok) return;
+    var btn = document.getElementById('wSubmit');
+    U.setBusy(btn, true, 'Applying…');
+    try {
+      var res = await QS.post('/api/admin/users/' + walletUser.user_id + '/wallet-adjustments', {
+        amount: signedAmount,
+        description: document.getElementById('wReason').value.trim() || 'Counter adjustment'
+      });
+      U.toast('Balance updated to ' + U.money(res.new_balance) + '.', 'success');
+      document.getElementById('walletDialog').close();
+      await load();
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.classList.remove('hidden');
+    } finally { U.setBusy(btn, false); }
+  });
+
+  load();
+})();
+</script>
+{% endblock %}

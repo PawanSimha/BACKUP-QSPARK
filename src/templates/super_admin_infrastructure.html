@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block title %}Infrastructure{% endblock %}
+{% block breadcrumb %}Infrastructure{% endblock %}
+{% block content %}
+<div class="page-header flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="page-title">Infrastructure</h1>
+    <p class="page-subtitle">Floors and slots. Deactivation is logical: bookings, revenue and audit history are never deleted.</p>
+  </div>
+  <button class="btn btn-primary" type="button" id="newFloorBtn">Add floor</button>
+</div>
+
+<section class="card mb-4">
+  <div class="card-header"><h2 class="card-title">Floors</h2><span class="text-xs text-muted" id="floorCount"></span></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Floor</th><th>Status</th><th class="text-right">Slots</th><th class="text-right">Available</th><th class="text-right">Occupied</th><th class="text-right">Actions</th></tr></thead>
+      <tbody id="floorRows"><tr><td colspan="6" class="px-4 py-10 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">Slots</h2>
+    <div class="flex flex-wrap gap-2 items-center">
+      <label class="sr-only" for="floorSelect">Floor</label>
+      <select class="select" id="floorSelect" style="min-width:160px"></select>
+      <button class="btn btn-secondary btn-sm" type="button" id="newSlotBtn">Add slot</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Slot</th><th>Vehicle type</th><th>Stored state</th><th>Live state</th><th class="text-right">Actions</th></tr></thead>
+      <tbody id="slotRows"><tr><td colspan="5" class="px-4 py-10 text-center text-sm text-slate-500">Select a floor.</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<dialog class="app-dialog" id="floorDialog" aria-labelledby="floorDialogTitle">
+  <form id="floorForm" style="padding:1.25rem" novalidate>
+    <h2 class="text-base font-semibold mb-3" id="floorDialogTitle">Add floor</h2>
+    <div class="field"><label class="label" for="floorCode">Floor code</label><input class="input" id="floorCode" required maxlength="10" placeholder="F5"><p class="hint">Upper-case short code, unique across the site.</p></div>
+    <p class="field-error is-visible hidden mt-2" id="floorError" role="alert"></p>
+    <div class="flex justify-end gap-2 mt-4">
+      <button class="btn btn-secondary" type="button" id="floorCancel">Cancel</button>
+      <button class="btn btn-primary" type="submit" id="floorSubmit">Create floor</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="app-dialog" id="slotDialog" aria-labelledby="slotDialogTitle">
+  <form id="slotForm" style="padding:1.25rem" novalidate>
+    <h2 class="text-base font-semibold mb-3" id="slotDialogTitle">Add slot</h2>
+    <p class="text-sm text-muted mb-3" id="slotFloorLabel"></p>
+    <div class="grid" style="gap:0.75rem">
+      <div class="field"><label class="label" for="slotNumber">Slot number</label><input class="input mono" id="slotNumber" required maxlength="12" placeholder="B-241"></div>
+      <div class="field"><label class="label" for="slotType">Vehicle type</label><select class="select" id="slotType"></select></div>
+      <p class="field-error is-visible hidden" id="slotError" role="alert"></p>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button class="btn btn-secondary" type="button" id="slotCancel">Cancel</button>
+      <button class="btn btn-primary" type="submit" id="slotSubmit">Create slot</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+  var floors = [], slots = [], types = [], activeFloor = null;
+
+  async function loadFloors() {
+    try {
+      var data = await QS.get('/api/admin/floors');
+      floors = data.items || [];
+      document.getElementById('floorCount').textContent = floors.length + ' floor(s)';
+      document.getElementById('floorRows').innerHTML = floors.length ? floors.map(function (f) {
+        return '<tr>' +
+          '<td class="font-semibold">' + U.esc(f.floor_code) + '</td>' +
+          '<td>' + U.statusBadge(f.floor_status) + '</td>' +
+          '<td class="text-right">' + f.total_slots + '</td>' +
+          '<td class="text-right">' + f.available_slots + '</td>' +
+          '<td class="text-right">' + f.occupied_slots + '</td>' +
+          '<td class="text-right whitespace-nowrap">' +
+            '<select class="select" data-floor-status="' + f.floor_id + '" style="min-width:130px;display:inline-block" aria-label="Floor status">' +
+              ['OPEN', 'CLOSED', 'MAINTENANCE', 'INACTIVE'].map(function (s) {
+                return '<option value="' + s + '"' + (s === f.floor_status ? ' selected' : '') + '>' + s + '</option>';
+              }).join('') +
+            '</select> ' +
+            (f.floor_status !== 'INACTIVE' ? '<button class="btn btn-danger btn-sm" data-floor-off="' + f.floor_id + '">Deactivate</button>' : '') +
+          '</td></tr>';
+      }).join('') : U.emptyRow(6, 'No floors configured. Add the first floor to start.');
+
+      var sel = document.getElementById('floorSelect');
+      var previous = sel.value;
+      sel.innerHTML = floors.map(function (f) {
+        return '<option value="' + f.floor_id + '">' + U.esc(f.floor_code) + '</option>';
+      }).join('');
+      if (previous) sel.value = previous;
+      if (floors.length) loadSlots();
+    } catch (err) {
+      document.getElementById('floorRows').innerHTML = U.emptyRow(6, err.message);
+      U.toast(err.message, 'error');
+    }
+  }
+
+  async function loadTypes() {
+    try {
+      var data = await QS.get('/api/admin/vehicle-types');
+      types = (data.items || []).filter(function (t) { return t.is_active; });
+      document.getElementById('slotType').innerHTML = types.map(function (t) {
+        return '<option value="' + t.vehicle_type_id + '">' + U.esc(t.type_name) + '</option>';
+      }).join('');
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  async function loadSlots() {
+    var floorId = document.getElementById('floorSelect').value;
+    activeFloor = floors.find(function (f) { return String(f.floor_id) === floorId; }) || null;
+    if (!floorId) { document.getElementById('slotRows').innerHTML = U.emptyRow(5, 'Add a floor first.'); return; }
+    try {
+      var data = await QS.get('/api/admin/slots?floor_id=' + floorId);
+      slots = data.items || [];
+      document.getElementById('slotRows').innerHTML = slots.length ? slots.map(function (s) {
+        var options = ['ACTIVE', 'ADMIN_RESERVED', 'MAINTENANCE', 'INACTIVE'].filter(function (cs) { return cs !== s.control_status; });
+        return '<tr>' +
+          '<td class="mono font-semibold">' + U.esc(s.slot_number) + '</td>' +
+          '<td>' + U.esc(s.vehicle_type) + '</td>' +
+          '<td><span class="badge badge-slate">' + U.esc(s.control_status) + '</span></td>' +
+          '<td>' + U.statusBadge(s.status) + '</td>' +
+          '<td class="text-right whitespace-nowrap">' +
+            (s.status === 'OCCUPIED'
+              ? '<span class="text-xs text-amber-700">Vehicle inside</span>'
+              : '<select class="select" data-slot-status="' + s.slot_id + '" style="min-width:140px;display:inline-block" aria-label="Slot state">' +
+                  '<option value="">' + U.esc(s.control_status) + '</option>' +
+                  options.map(function (o) { return '<option value="' + o + '">→ ' + o + '</option>'; }).join('') +
+                '</select> ' +
+                '<button class="btn btn-danger btn-sm" data-slot-off="' + s.slot_id + '">Remove</button>') +
+          '</td></tr>';
+      }).join('') : U.emptyRow(5, 'This floor has no slots yet.');
+    } catch (err) {
+      document.getElementById('slotRows').innerHTML = U.emptyRow(5, err.message);
+      U.toast(err.message, 'error');
+    }
+  }
+
+  // floor status change
+  document.getElementById('floorRows').addEventListener('change', async function (e) {
+    var sel = e.target.closest('[data-floor-status]');
+    if (!sel) return;
+    var floor = floors.find(function (f) { return String(f.floor_id) === sel.dataset.floorStatus; });
+    var ok = await U.confirmDialog({
+      title: 'Change floor status',
+      message: 'Set ' + (floor ? floor.floor_code : 'this floor') + ' to ' + sel.value + '? A closed or inactive floor is hidden from customers.'
+    });
+    if (!ok) { sel.value = floor ? floor.floor_status : ''; return; }
+    try {
+      await QS.put('/api/super-admin/floors/' + sel.dataset.floorStatus, { floor_status: sel.value });
+      U.toast('Floor status updated.', 'success');
+      await loadFloors();
+    } catch (err) {
+      U.toast(err.message, 'error');
+      await loadFloors();
+    }
+  });
+
+  document.getElementById('floorRows').addEventListener('click', async function (e) {
+    var btn = e.target.closest('[data-floor-off]');
+    if (!btn) return;
+    var floor = floors.find(function (f) { return String(f.floor_id) === btn.dataset.floorOff; });
+    var ok = await U.confirmDialog({
+      title: 'Deactivate floor', danger: true, confirmLabel: 'Deactivate',
+      message: 'Deactivate ' + (floor ? floor.floor_code : 'this floor') + '? It is hidden from booking and its ' +
+        (floor ? floor.total_slots : 0) + ' slot(s) stop accepting new reservations. Existing history is kept.'
+    });
+    if (!ok) return;
+    try {
+      await QS.del('/api/super-admin/floors/' + btn.dataset.floorOff);
+      U.toast('Floor deactivated.', 'success');
+      await loadFloors();
+    } catch (err) { U.toast(err.message, 'error'); }
+  });
+
+  // slot state change + removal
+  document.getElementById('slotRows').addEventListener('change', async function (e) {
+    var sel = e.target.closest('[data-slot-status]');
+    if (!sel || !sel.value) return;
+    var slot = slots.find(function (s) { return String(s.slot_id) === sel.dataset.slotStatus; });
+    var ok = await U.confirmDialog({
+      title: 'Change slot state',
+      message: 'Set ' + (slot ? slot.slot_number : 'this slot') + ' to ' + sel.value + '? Slot state changes are audited.'
+    });
+    if (!ok) { sel.value = ''; return; }
+    try {
+      await QS.put('/api/super-admin/slots/' + sel.dataset.slotStatus, { control_status: sel.value });
+      U.toast('Slot updated.', 'success');
+      await loadSlots();
+      await loadFloors();
+    } catch (err) {
+      U.toast(err.message, 'error');
+      sel.value = '';
+    }
+  });
+
+  document.getElementById('slotRows').addEventListener('click', async function (e) {
+    var btn = e.target.closest('[data-slot-off]');
+    if (!btn) return;
+    var slot = slots.find(function (s) { return String(s.slot_id) === btn.dataset.slotOff; });
+    var ok = await U.confirmDialog({
+      title: 'Remove slot', danger: true, confirmLabel: 'Remove',
+      message: 'Deactivate slot ' + (slot ? slot.slot_number : '') + '? The record stays in the database for history.'
+    });
+    if (!ok) return;
+    try {
+      await QS.del('/api/super-admin/slots/' + btn.dataset.slotOff);
+      U.toast('Slot deactivated.', 'success');
+      await loadSlots();
+      await loadFloors();
+    } catch (err) { U.toast(err.message, 'error'); }
+  });
+
+  document.getElementById('floorSelect').addEventListener('change', loadSlots);
+
+  // add floor
+  document.getElementById('newFloorBtn').addEventListener('click', function () {
+    document.getElementById('floorForm').reset();
+    document.getElementById('floorError').classList.add('hidden');
+    document.getElementById('floorDialog').showModal();
+  });
+  document.getElementById('floorCancel').addEventListener('click', function () { document.getElementById('floorDialog').close(); });
+  document.getElementById('floorForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = document.getElementById('floorError');
+    err.classList.add('hidden');
+    var code = document.getElementById('floorCode').value.trim().toUpperCase();
+    if (!code) {
+      err.textContent = 'A floor code is required.';
+      err.classList.remove('hidden');
+      return;
+    }
+    var btn = document.getElementById('floorSubmit');
+    U.setBusy(btn, true, 'Creating…');
+    try {
+      await QS.post('/api/super-admin/floors', { floor_code: code });
+      U.toast('Floor ' + code + ' created. Add slots to make it bookable.', 'success');
+      document.getElementById('floorDialog').close();
+      await loadFloors();
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.classList.remove('hidden');
+    } finally { U.setBusy(btn, false); }
+  });
+
+  // add slot
+  document.getElementById('newSlotBtn').addEventListener('click', function () {
+    if (!activeFloor) { U.toast('Select a floor first.', 'warning'); return; }
+    document.getElementById('slotForm').reset();
+    document.getElementById('slotFloorLabel').textContent = 'Floor ' + activeFloor.floor_code;
+    document.getElementById('slotError').classList.add('hidden');
+    document.getElementById('slotDialog').showModal();
+  });
+  document.getElementById('slotCancel').addEventListener('click', function () { document.getElementById('slotDialog').close(); });
+  document.getElementById('slotForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = document.getElementById('slotError');
+    err.classList.add('hidden');
+    var number = document.getElementById('slotNumber').value.trim();
+    var typeId = Number(document.getElementById('slotType').value);
+    if (!number || !typeId) {
+      err.textContent = 'A slot number and vehicle type are required.';
+      err.classList.remove('hidden');
+      return;
+    }
+    var btn = document.getElementById('slotSubmit');
+    U.setBusy(btn, true, 'Creating…');
+    try {
+      await QS.post('/api/super-admin/floors/' + activeFloor.floor_id + '/slots', {
+        slot_number: number, vehicle_type_id: typeId
+      });
+      U.toast('Slot created.', 'success');
+      document.getElementById('slotDialog').close();
+      await loadSlots();
+      await loadFloors();
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.classList.remove('hidden');
+    } finally { U.setBusy(btn, false); }
+  });
+
+  Promise.all([loadTypes(), loadFloors()]).catch(function (err) { U.toast(err.message, 'error'); });
+})();
+</script>
+{% endblock %}

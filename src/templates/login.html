@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center p-4" style="background:linear-gradient(180deg,#f6f8fb 0%,#eef2f9 100%);">
+  <div class="w-full" style="max-width:420px;">
+    <div class="flex items-center gap-2 justify-center mb-6">
+      <span aria-hidden="true" style="width:36px;height:36px;border-radius:10px;background:var(--brand-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;">Q</span>
+      <div>
+        <div class="text-lg font-bold leading-tight">QSPARK</div>
+        <div class="text-xs text-muted">Smart parking management</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h1 class="text-xl font-semibold mb-1">Sign in</h1>
+        <p class="text-sm text-muted mb-5">Use the credentials issued by your parking administrator.</p>
+
+        <div id="loginError" class="hidden mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert"></div>
+
+        <form id="loginForm" class="grid" style="gap:0.9rem" novalidate>
+          <div class="field">
+            <label class="label" for="username">Username or email</label>
+            <input class="input" id="username" name="username" type="text" autocomplete="username" required aria-describedby="usernameError">
+            <p class="field-error" id="usernameError">Enter your username or email.</p>
+          </div>
+          <div class="field">
+            <label class="label" for="password">Password</label>
+            <div class="relative">
+              <input class="input" id="password" name="password" type="password" autocomplete="current-password" required aria-describedby="passwordError" style="padding-right:4.5rem">
+              <button type="button" id="togglePw" class="btn btn-ghost btn-sm" style="position:absolute;right:4px;top:4px" aria-pressed="false">Show</button>
+            </div>
+            <p class="field-error" id="passwordError">Enter your password.</p>
+          </div>
+          <button class="btn btn-primary w-full" type="submit" id="loginBtn">Sign in</button>
+        </form>
+
+        <div class="divider"></div>
+        <p class="text-xs text-muted">
+          Accounts are provisioned by the Super Admin. Forgot your password? Contact parking operations.
+        </p>
+      </div>
+    </div>
+
+    <p class="text-center text-xs text-muted mt-4">System status: <span id="sysStatus">checking…</span></p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var form = document.getElementById('loginForm');
+  var errBox = document.getElementById('loginError');
+  var btn = document.getElementById('loginBtn');
+  var pw = document.getElementById('password');
+  var toggle = document.getElementById('togglePw');
+
+  var messages = {
+    session_expired: 'Your session expired. Please sign in again.',
+    login_required: 'Please sign in to continue.',
+    admin_required: 'Sign in to open that page.',
+    invalid_credentials: 'Those credentials did not match an active account.',
+  };
+  var param = new URLSearchParams(location.search).get('error');
+  if (param && messages[param]) {
+    errBox.textContent = messages[param];
+    errBox.classList.remove('hidden');
+  }
+
+  toggle.addEventListener('click', function () {
+    var show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password';
+    toggle.textContent = show ? 'Hide' : 'Show';
+    toggle.setAttribute('aria-pressed', String(show));
+    pw.focus();
+  });
+
+  QS.get('/api/system/status').then(function (d) {
+    document.getElementById('sysStatus').textContent = d.system_status === 'ONLINE' ? 'Online' : 'Offline (bookings paused)';
+  }).catch(function () { document.getElementById('sysStatus').textContent = 'Unavailable'; });
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    errBox.classList.add('hidden');
+    var username = document.getElementById('username');
+    var valid = true;
+    [[username, 'usernameError'], [pw, 'passwordError']].forEach(function (pair) {
+      var el = pair[0], msg = document.getElementById(pair[1]);
+      var ok = el.value.trim().length > 0;
+      el.classList.toggle('is-invalid', !ok);
+      msg.classList.toggle('is-visible', !ok);
+      if (!ok) valid = false;
+    });
+    if (!valid) { (username.value.trim() ? pw : username).focus(); return; }
+
+    QSUI.setBusy(btn, true, 'Signing in…');
+    try {
+      var res = await QS.post('/api/auth/login', { username: username.value.trim(), password: pw.value });
+      location.href = res.user && res.user.role === 'SUPER_ADMIN' ? '/super-admin/dashboard'
+        : res.user && res.user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+    } catch (err) {
+      errBox.textContent = err.status === 401
+        ? 'Those credentials did not match an active account.'
+        : (err.message || 'Could not sign in. Try again.');
+      errBox.classList.remove('hidden');
+      QSUI.setBusy(btn, false);
+      pw.select();
+    }
+  });
+})();
+</script>
+{% endblock %}

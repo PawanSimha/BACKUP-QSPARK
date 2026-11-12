@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Bookings{% endblock %}
+{% block breadcrumb %}Bookings{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">All bookings</h1>
+  <p class="page-subtitle">Filter by date, status, floor or vehicle type. Entry and exit times come from gate events.</p>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <form class="flex flex-wrap gap-2 items-end" id="filterForm">
+      <div class="field"><label class="label" for="dateFrom">From</label><input class="input" type="date" id="dateFrom"></div>
+      <div class="field"><label class="label" for="dateTo">To</label><input class="input" type="date" id="dateTo"></div>
+      <div class="field"><label class="label" for="statusFilter">Status</label>
+        <select class="select" id="statusFilter">
+          <option value="">Any</option><option value="HELD">Held</option><option value="CONFIRMED">Confirmed</option>
+          <option value="COMPLETED">Completed</option><option value="CANCELLED">Cancelled</option><option value="EXPIRED">Expired</option>
+        </select>
+      </div>
+      <div class="field"><label class="label" for="floorFilter">Floor</label><select class="select" id="floorFilter"><option value="">Any</option></select></div>
+      <div class="field"><label class="label" for="searchBox">Customer</label><input class="input" type="search" id="searchBox" placeholder="Name or username"></div>
+      <button class="btn btn-primary" type="submit">Apply</button>
+      <button class="btn btn-secondary" type="button" id="resetBtn">Reset</button>
+    </form>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Reference</th><th>Customer</th><th>Vehicle</th><th>Slot</th><th>Window</th><th>Entry</th><th>Exit</th><th>Status</th><th class="text-right">Amount</th></tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="9" class="px-4 py-10 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <div class="card-body flex justify-between items-center">
+    <span class="text-xs text-muted" id="totalLabel"></span>
+    <a class="btn btn-secondary btn-sm" href="/admin/analytics">Open analytics</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var U = QSUI;
+
+  async function loadFloors() {
+    try {
+      var data = await QS.get('/api/admin/floors');
+      var sel = document.getElementById('floorFilter');
+      (data.items || []).forEach(function (f) {
+        var o = document.createElement('option');
+        o.value = f.floor_code;
+        o.textContent = f.floor_code;
+        sel.appendChild(o);
+      });
+    } catch (_) { /* filter stays optional */ }
+  }
+
+  async function load() {
+    var params = new URLSearchParams();
+    ['dateFrom', 'dateTo'].forEach(function (id) {
+      var v = document.getElementById(id).value;
+      if (v) params.set(id === 'dateFrom' ? 'date_from' : 'date_to', v);
+    });
+    var status = document.getElementById('statusFilter').value;
+    if (status) params.set('status', status);
+    var floor = document.getElementById('floorFilter').value;
+    if (floor) params.set('floor', floor);
+    var q = document.getElementById('searchBox').value.trim();
+    if (q) params.set('user_search', q);
+
+    var tbody = document.getElementById('rows');
+    tbody.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr>';
+    try {
+      var data = await QS.get('/api/admin/bookings' + (params.toString() ? '?' + params : ''));
+      var items = data.items || [];
+      document.getElementById('totalLabel').textContent = items.length + ' booking(s)';
+      tbody.innerHTML = items.length ? items.map(function (b) {
+        return '<tr>' +
+          '<td class="mono">' + U.esc(b.booking_reference) + '</td>' +
+          '<td>' + U.esc(b.full_name || b.username) + '<div class="text-xs text-muted">' + U.esc(b.username) + '</div></td>' +
+          '<td>' + U.esc(b.vehicle_number) + '<div class="text-xs text-muted">' + U.esc(b.vehicle_type) + '</div></td>' +
+          '<td>' + U.esc(b.floor_code) + ' · ' + U.esc(b.slot_number) + '</td>' +
+          '<td class="text-xs whitespace-nowrap">' + U.dateTime(b.booked_from) + '<br><span class="text-muted">→ ' + U.dateTime(b.booked_until) + '</span></td>' +
+          '<td class="text-xs">' + (b.entry_time ? U.dateTime(b.entry_time) : '—') + '</td>' +
+          '<td class="text-xs">' + (b.exit_time ? U.dateTime(b.exit_time) : '—') + '</td>' +
+          '<td>' + U.statusBadge(b.booking_status) + '</td>' +
+          '<td class="text-right">' + U.money(b.estimated_amount) + '</td></tr>';
+      }).join('') : U.emptyRow(9, 'No bookings match these filters.');
+    } catch (err) {
+      tbody.innerHTML = U.emptyRow(9, err.message);
+      U.toast(err.message, 'error');
+    }
+  }
+
+  document.getElementById('filterForm').addEventListener('submit', function (e) { e.preventDefault(); load(); });
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    document.getElementById('filterForm').reset();
+    load();
+  });
+  loadFloors(); load();
+})();
+</script>
+{% endblock %}
