@@ -185,6 +185,8 @@ Validate both client-side for usability and server-side for correctness. Normali
 
 All three roles use the same Flask application and one design system. Every page is a Jinja2 shell that reads real JSON APIs; there are no hardcoded KPIs.
 
+**Public landing** — `GET /landing` is a static marketing page for signed-out visitors (features, how it works, architecture, roles, FAQ); `GET /` redirects there. It reads no API and links to the sign-in page.
+
 **Customer** — login; dashboard (wallet, live available slots per floor, active bookings, recent ledger); 5-step booking wizard (vehicle type → registration → floor/slot grid with live states → schedule with server-side 05:00–23:00 / ≤18 h rules → review) with hold + confirm, wallet debit and QR display; My bookings with status filter, search, paging, detail dialog, QR and rule-checked cancellation; wallet ledger with credit/debit breakdown; profile self-service edit of name, mobile, gender and company.
 
 **Admin** — operations dashboard (slot counts by live state, revenue, floor occupancy, recent bookings, vehicles inside); walk-in registration (name, mobile, gender, company, optional email) with duplicate handling; customer search/update/deactivate and wallet adjustments (explicit credit/debit with confirmation); floor/slot control (maintenance, admin reservation, release) blocked for occupied slots; all-bookings table with date/status/floor/customer filters; QR gate page (camera `BarcodeDetector` when available, manual reference fallback, entry then exit, overtime block explained); analytics for occupancy and floor revenue; configuration page for read-only rates and cancellation-rule CRUD.
@@ -193,7 +195,7 @@ All three roles use the same Flask application and one design system. Every page
 
 Booking and overtime money movement stays atomic and server-side: debit customer → credit Super Admin → write `revenue_collections`, all in one transaction. The UI never deducts, credits or overwrites a balance. Admins and Super Admins can also book on behalf of a registered customer.
 
-Known gaps are tracked in `open_questions.md` and `test_results.md` (CSRF token scheme, browser camera capture not automated, Chromium-only browser testing).
+Known gaps are tracked in `open_questions.md` and `markdown/test_results.md`: the CSRF token scheme is resolved (Q1), physical camera QR capture is not testable in this environment (Q7), automatic QR decoding needs the native `BarcodeDetector` API so manual reference entry is the fallback in other browsers (Q8), and no Safari/real-mobile run has been performed.
 
 ## 11. Completion criteria
 

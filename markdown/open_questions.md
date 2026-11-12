@@ -15,6 +15,13 @@ No Node/npm, no bundler, no framework.
 ### Q7. Physical QR scanning — BLOCKED, not a business question
 The camera path uses `getUserMedia` and the same `/api/qr/scan` backend as manual entry. No camera device is available in this environment, so real-device scanning is untested. Manual reference entry works and is validated server-side, but it is not cryptographic QR proof. Recorded in `markdown/test_results.md`.
 
+### Q8. Automatic QR decoding needs the native `BarcodeDetector` API — OPEN
+The camera preview, the camera lifecycle and manual reference entry work in every browser, but decoding a QR from the video stream uses the native `BarcodeDetector` API. It is feature-detected (`typeof window.BarcodeDetector === 'function'`); when it is missing the camera keeps running and the operator types the reference into the manual form, which hits the identical server-side endpoint. Firefox does not implement the API, and Chrome/Edge expose it only on some platforms and origins.
+
+**Question:** should a JS decoder (for example `jsQR`) be bundled locally so scanning works in every browser, or is manual reference entry an acceptable operating model at the gate?
+
+**Safe default (in effect):** manual reference entry as the fallback; no CDN runtime dependency and no npm/bundler step is introduced.
+
 ## Open questions
 
 ### Q3. Exact report definitions

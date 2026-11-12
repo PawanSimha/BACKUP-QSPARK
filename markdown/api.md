@@ -110,7 +110,14 @@ Available to CUSTOMER, ADMIN and SUPER_ADMIN.
 
 ### GET /api/admin/slots?floor_id=
 - 200: `{"items": [{slot_id, slot_number, floor_id, vehicle_type_id, control_status, status, floor_code, vehicle_type}], total}`
-- Compatibility aliases: `GET /api/admin/master/{floors,vehicle-types,slots,users,cancellation-rules}` delegate to the same handlers.
+- Compatibility aliases (same handlers, kept working):
+  - `GET /api/admin/master/floors`
+  - `GET /api/admin/master/vehicle-types`
+  - `GET /api/admin/master/slots`
+  - `GET /api/admin/master/users`
+  - `GET /api/admin/master/cancellation-rules`
+  - `PUT /api/admin/master/floors/{floor_id}` — body `{floor_status}`; same as `PUT /api/super-admin/floors/{floor_id}`
+  - `PUT /api/admin/master/slots/{slot_id}/status` — body `{control_status}`; same as `PATCH /api/admin/slots/{slot_id}/control-status`
 
 ### GET /api/admin/dashboard
 - 200: `{total_slots, available_slots, reserved_slots, occupied_slots, maintenance_slots, total_revenue, active_users}`
@@ -272,6 +279,7 @@ Every page route below requires a signed-in session. Unknown roles receive `erro
 
 | Route | Template | Roles |
 |---|---|---|
+| `/landing` | `landing.html` | public |
 | `/login` | `login.html` | public |
 | `/dashboard` | `dashboard.html` | any authenticated |
 | `/booking` | `booking.html` | any authenticated |
@@ -293,7 +301,7 @@ Every page route below requires a signed-in session. Unknown roles receive `erro
 | `/super-admin/data` | `super_admin_data.html` | SUPER_ADMIN |
 | `/super-admin/system` | `super_admin_system.html` | SUPER_ADMIN |
 
-`GET /health` and `GET /` (redirect) are also public. HTML 404/500/400 render `error.html`; API paths receive JSON errors.
+`GET /health` and `GET /` (redirect to `/landing` when signed out, `/dashboard` when signed in) are also public. HTML 404/500/400 render `error.html`; API paths receive JSON errors.
 
 ## HTTP status codes used
 - 200 OK, 201 Created, 400 Bad Request (validation or CSRF), 401 Unauthenticated, 402 Payment Required,

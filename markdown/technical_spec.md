@@ -216,6 +216,7 @@ When OFFLINE:
 Server-rendered Jinja2 shells, compiled Tailwind CSS (no CDN), `src/static/css/app.css` design tokens and vanilla ES2017. No framework, bundler or npm step; Node is not installed.
 
 - **Shell**: `src/templates/base.html` owns the sidebar (role-filtered blocks), topbar, mobile off-canvas nav, toast region and one shared confirm `<dialog>`. Pages fill `title`, `breadcrumb`, `content`, `scripts`.
+- **Public landing page**: `src/templates/landing.html` is a static marketing page served at `GET /landing` for signed-out visitors; `GET /` redirects there. It reads no API and holds no session state. It links to `/login` via `url_for('login_page')`.
 - **Page routes**: `app.py` registers every page, resolves the session user once per request (`_current_user`), and re-checks the role in a single `page()` guard → `error.html` with 403. Templates contain no KPI maths; every number arrives from JSON.
 - **API client**: `src/static/js/core/api.js` exposes `window.QS` (`get/post/put/patch/del/download`). It sends `credentials: 'same-origin'`, JSON bodies, the `X-CSRFToken` header on every non-GET request, redirects to `/login?error=session_expired` on 401 and throws an `Error` carrying `.status`, `.payload` and `.network`.
 - **UI helpers**: `src/static/js/core/ui.js` exposes `window.QSUI` (`esc`, `money`, `dateTime`, `statusBadge`, `emptyRow`, `debounce`, `toast`, `confirmDialog`, `setBusy`). All dynamic HTML passes through `esc`; irreversible actions go through `confirmDialog`; every submit uses `setBusy`.

@@ -1,0 +1,39 @@
+docs: bring the markdown documentation in line with the current project state
+
+Regenerated / corrected every canonical document against the running code
+rather than from memory:
+
+- ERD.md rewritten from the live schema. The old file described a legacy
+  design that does not exist (payments, error_logs, park_slots, reserved1-3,
+  CASCADE deletes, columns like is_active/actual_entry/qr_generated).
+  Now 11 tables, real columns, real FKs, 20 indexes, 4 triggers.
+- api.md: added the two undocumented PUT /api/admin/master/* compatibility
+  aliases, the new GET /landing page route and the corrected / redirect.
+- db.md: added the PASSWORD_ROTATION audit action type and the rule that
+  audit rows never hold a plaintext password or hash.
+- frontend.md: landing page layer, CSS coverage rule, rewritten QR scanner
+  section, src/static/images/, test_frontend_wiring.py.
+- technical_spec.md: camera lifecycle, decoder feature detection, DOM wiring
+  rule, public landing page.
+- project_spec.md: landing page in the implemented status, corrected gaps.
+- open_questions.md: Q8 records that automatic QR decoding needs the native
+  BarcodeDetector API and manual entry is the fallback.
+- implementation_plan.md: Phase 8c for the landing page.
+- deployment.md: /health response shape corrected.
+- test_results.md: real per-suite results.
+- PHASE1_RELEASE_READINESS_REPORT.md: marked as a 12 Nov snapshot pointing at
+  the canonical docs.
+
+Also fixed while verifying:
+- landing.html referenced url_for('auth_bp.login_page'); the endpoint is
+  'login_page', so /landing returned HTTP 500. Four links corrected.
+- 11 classes used by landing.html had no rule in app.css or tailwind.css and
+  rendered unstyled (hero-content, hero-cta-primary/secondary, btn-outline,
+  vp-icon and the six mobile-menu-* rules). Rules added using the existing
+  design tokens and breakpoints.
+- tests/test_frontend_wiring.py now also asserts every class used in every
+  template resolves to a rule, and that the landing stylesheet layer exists
+  (28 tests).
+
+Verified: 136 tests pass (58 frontend + wiring, 40 qr/security/financial/
+booking-safety, 38 system).

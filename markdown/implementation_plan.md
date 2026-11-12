@@ -113,6 +113,15 @@ Legend: `[x]` implemented and verified by the command in `markdown/test_results.
 - [ ] Report business definitions confirmed by owner (`open_questions.md` Q3).
 - [ ] Walk-in activation model approved (`open_questions.md` Q4).
 
+## Phase 8c — Public landing page (in progress)
+
+- [x] `GET /landing` route + `src/templates/landing.html`; `GET /` redirects there for signed-out visitors.
+- [x] Sign-in links resolve to the real `login_page` endpoint (the page 500s otherwise).
+- [x] Landing stylesheet added to `src/static/css/app.css` (hero, floating nav, features, value proposition, timeline, architecture, roles, tech stack, FAQ, final CTA, mobile menu dialog).
+- [x] Every class used by `landing.html` resolves to a rule — enforced by `tests/test_frontend_wiring.py`.
+- [ ] Hero image asset `src/static/images/parking-hero.webp` is referenced by `landing.html` but not present in the repository.
+- [ ] Landing page included in the axe-core audit (`tests/test_a11y.py`) and the responsive overflow check.
+
 ## Phase 9 — Future Phase 2 (Oracle APEX/ORDS) — not started
 
 - [ ] Plan schema migration.

@@ -137,7 +137,11 @@ def create_app():
 
     @app.get("/")
     def root():
-        return redirect("/dashboard" if session.get("user_id") else "/login")
+        return redirect("/landing" if not session.get("user_id") else "/dashboard")
+
+    @app.get("/landing")
+    def landing_page():
+        return render_template("landing.html")
 
     @app.get("/login")
     def login_page():

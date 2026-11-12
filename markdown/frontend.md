@@ -10,6 +10,7 @@ Flask + Jinja2 templates, **compiled Tailwind CSS** (standalone binary, no Node/
 
 ```
 src/templates/base.html            layout: sidebar, topbar, mobile nav, toast region, confirm <dialog>, blocks title|breadcrumb|content|scripts
+src/templates/landing.html         public landing page (GET /landing) — static, no API calls
 src/templates/login.html           public sign-in
 src/templates/dashboard.html       customer dashboard
 src/templates/booking.html         5-step booking wizard
@@ -23,6 +24,7 @@ src/templates/super_admin_*.html   dashboard, admins, infrastructure, analytics,
 src/static/css/app.css             design tokens + component classes
 src/static/css/tailwind.input.css  Tailwind source (@tailwind directives)
 src/static/css/tailwind.css        compiled output — committed, linked before app.css
+src/static/images/                 logo-light.webp, logo-dark.webp, favicon.ico
 tailwind.config.js                 content paths: src/templates/**/*.html, src/static/js/**/*.js
 tools/tailwindcss.exe              standalone Tailwind v3.4.17 CLI (downloaded, gitignored)
 src/static/js/core/api.js          window.QS — fetch wrapper + X-CSRFToken
@@ -45,7 +47,21 @@ If `tools\tailwindcss.exe` is missing (it is gitignored, ~40 MB), download the v
 
 Defined in `:root` in `app.css`: brand scale (`--brand-50/100/500/600/700`), `--surface`, `--canvas`, `--text`, `--muted`, `--border`, `--success`, `--warning`, `--danger`, `--info`, radii, shadows, `--ring`, z-index. Slot colours: available green, reserved amber, occupied red, maintenance/inactive slate. Components: `.card`, `.stat`, `.btn` (`-primary/-secondary/-danger/-ghost/-sm/-icon`), `.field/.label/.input/.select/.textarea/.hint/.field-error`, `.table`, `.badge` (`-blue/-green/-amber/-red/-slate`), `.slot`, `.slot-grid`, `.steps/.step`, `.skeleton`, `.bar-row/.bar-track/.bar-fill`, `.toast-region`, `dialog.app-dialog`.
 
-Tailwind utilities handle layout only (grid/flex/spacing). Never introduce raw hex colours in templates; use the tokens.
+`app.css` also carries the public **landing page** layer, appended after the application
+tokens: `.floating-nav*`, `.hero-*`, `.value-proposition-*`, `.features-*`, `.feature-*`,
+`.timeline-*`, `.architecture-*`, `.roles-*`, `.role-*`, `.tech-*`, `.faq-*`,
+`.final-cta-*`, `.mobile-menu*`, `.vp-icon`, `.wallet-note` and `.section-*`. Tailwind
+utilities handle layout only (grid/flex/spacing). Never introduce raw hex colours in
+templates; use the tokens.
+
+**CSS coverage rule:** every `class` used in a template must resolve to a rule in
+`app.css` or to a compiled Tailwind utility. A class that resolves to neither renders
+unstyled. `tests/test_frontend_wiring.py` enforces this for every template in the
+project:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_frontend_wiring.py -q
+```
 
 ## JavaScript rules
 
@@ -78,15 +94,40 @@ Tested engines via Playwright: Chromium 158 (Chrome/Edge equivalent), Firefox, W
 
 ## QR scanning behaviour
 
-The scan page uses `navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})` and decodes with the in-page scanner; denial or absence of a camera shows an inline message and leaves manual reference entry available. Both paths call `POST /api/qr/scan`; the server validates the reference, the scanner's authority, booking state and duplicate entry/exit. Manual entry is convenience, not proof of a physical QR.
+`src/templates/qr_scan.html` requests `navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})`
+only when the operator presses **Start camera**, then attaches the stream to
+`video.srcObject` (with `playsInline`) and starts playback. The preview is wired **before**
+any decoder work, so a browser without a QR decoder still shows a live camera.
+
+Decoding uses the native `BarcodeDetector` API and is feature-detected with
+`typeof window.BarcodeDetector === 'function'` before the constructor is called. If it is
+absent the camera keeps running and the operator uses the manual reference form — both
+paths call the same `POST /api/qr/scan`, so the server validates the reference, the
+scanner's authority, booking state and duplicate entry/exit identically.
+
+Error handling is per cause: `NotAllowedError` (permission denied), `NotFoundError` /
+`OverconstrainedError` (no device), `NotReadableError` (device already in use), an
+insecure context (`window.isSecureContext` must be true), and a browser without
+`getUserMedia`. Tracks are stopped on **Stop camera** and on `pagehide`; a track `ended`
+event flips the badge to "Interrupted". A "Scanner log" `<details>` panel mirrors the
+same messages to `console.log`; `log()` is null-guarded so it can never break the
+scanner.
+
+**DOM wiring rule:** every `getElementById()` target in a page's inline script must exist
+in the rendered page. A missing element throws inside the page IIFE and silently kills
+every listener registered after it, which leaves the whole page inert. `tests/test_frontend_wiring.py`
+enforces this for all 18 authenticated pages.
+
+Manual entry is convenience, not proof of a physical QR.
 
 ## Frontend tests
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/test_frontend.py -q   # render + endpoint contracts
-.\.venv\Scripts\python.exe -m pytest tests/test_e2e.py -q        # Playwright, temp DB on 127.0.0.1:5099
-.\.venv\Scripts\python.exe -m pytest tests/test_a11y.py -q       # axe-core, temp DB on 127.0.0.1:5096
-.\.venv\Scripts\python.exe -m pytest tests/test_browsers.py -q   # Chromium/Firefox/WebKit, port 5095
+.\.venv\Scripts\python.exe -m pytest tests/test_frontend.py -q          # render + endpoint contracts
+.\.venv\Scripts\python.exe -m pytest tests/test_frontend_wiring.py -q   # inline-script DOM wiring guard
+.\.venv\Scripts\python.exe -m pytest tests/test_e2e.py -q                # Playwright, temp DB on 127.0.0.1:5099
+.\.venv\Scripts\python.exe -m pytest tests/test_a11y.py -q               # axe-core, temp DB on 127.0.0.1:5096
+.\.venv\Scripts\python.exe -m pytest tests/test_browsers.py -q           # Chromium/Firefox/WebKit, port 5095
 ```
 
 Playwright is the Python package (`pip install playwright`, `python -m playwright install chromium firefox webkit`). Node is not required.

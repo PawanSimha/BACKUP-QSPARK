@@ -134,7 +134,7 @@ Rules:
 - The app uses Python's standard `logging` through `app.logger`: startup secret-key warning, failed logins (username + remote address, never the password), CSRF rejections, and unhandled 500s with stack trace server-side only.
 - Users see a generic error page/JSON; stack traces are never returned.
 - Financial and management writes are recorded in `audit_logs` (actor, action, old/new values) inside the same transaction as the change.
-- `GET /health` returns `{"status": "ok"}` and is unauthenticated — use it for liveness checks, not as an auth bypass.
+- `GET /health` returns `{"service":"QSPARK","status":"ok"}` and is unauthenticated — use it for liveness checks, not as an auth bypass.
 - SQLite: `PRAGMA foreign_keys=ON` on every connection, `BEGIN IMMEDIATE` for writes, WAL is not enabled by default. Keep one app process (waitress threads are fine); do not run two independent app instances against the same file over a network share.
 
 ## 11. Troubleshooting

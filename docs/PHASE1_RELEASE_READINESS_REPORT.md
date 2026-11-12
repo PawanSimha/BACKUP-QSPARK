@@ -1,8 +1,26 @@
 # QSPARK — Phase 1 Release Readiness Report
 
+> **Snapshot, not current state.** This report captures the assessment made on
+> 12 Nov 2026. For the live schema, routes, frontend architecture and the most recent
+> test results, use the canonical documents:
+> `markdown/db.md`, `markdown/ERD.md`, `markdown/api.md`, `markdown/frontend.md`,
+> `markdown/technical_spec.md` and `markdown/test_results.md`.
+>
+> Changes made after this report was written:
+> - **Privileged-account password rotation** — `admin1` and `superadmin` hashes were
+>   rotated; the previous credentials are rejected. `audit_logs` gained the
+>   `PASSWORD_ROTATION` action type.
+> - **QR scanner repair** — the scan page referenced two elements it never rendered;
+>   the resulting `TypeError` killed every listener on the page. The camera preview is
+>   now independent of QR-decoder availability and `BarcodeDetector` is feature-detected.
+> - **New suite** — `tests/test_frontend_wiring.py` (26 tests) fails if an inline
+>   script references an element the page does not render.
+> - **Documentation layout** — the specification files moved from `docs/` to
+>   `markdown/`; `docs/` now holds this report and the diagrams.
+
 **Report date:** 12 Nov 2026 (local time)
 **Assessment window:** Full suite + smoke tests against a fresh temp DB
-**Result:** 118 passed, 0 failed across all test modules
+**Result at that date:** 118 passed, 0 failed across all test modules
 
 ## 1. Current Application State
 

@@ -312,10 +312,14 @@ Normal user deletion is soft deletion (account_status = 'DELETED'), not physical
 - FLOOR_CREATED, FLOOR_UPDATED, FLOOR_DEACTIVATED
 - SLOT_CREATED, SLOT_UPDATED
 - SYSTEM_OFFLINE, SYSTEM_ONLINE
+- PASSWORD_ROTATION — privileged-account credential rotation; `old_values`/`new_values`
+  record only a marker such as "old password rotated" / "new hash set". Plaintext
+  passwords, password hashes and session tokens are **never** written to this table.
 
 **Constraints:**
 - No physical deletion of historical audit records
 - created_by identifies the person performing the action
+- `old_values` / `new_values` must never contain a plaintext password or a password hash
 
 **Relationships:**
 - audit_logs.created_by → users.user_id (SET NULL)
