@@ -1,6 +1,6 @@
 # QSPARK — Phase 1 Deployment Guide
 
-Phase 1 is a single Python/Flask process with a local SQLite file. There is no external payment gateway, no message queue and no separate frontend build server. Read `docs/technical_spec.md` §16–§18 for the security and financial rules this guide assumes.
+Phase 1 is a single Python/Flask process with a local SQLite file. There is no external payment gateway, no message queue and no separate frontend build server. Read `markdown/technical_spec.md` §16–§18 for the security and financial rules this guide assumes.
 
 ## 1. Requirements
 

@@ -41,7 +41,7 @@ def superadmin(client):
 def test_customer_pages_render(customer, path):
     res = customer.get(path)
     assert res.status_code == 200
-    assert b"QSPARK" in res.data
+    assert b'alt="QSPARK"' in res.data
 
 
 @pytest.mark.parametrize("path", ADMIN_PAGES)

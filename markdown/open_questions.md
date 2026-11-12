@@ -13,7 +13,7 @@ The CDN script was removed. Tailwind v3.4.17 is compiled by the standalone `tool
 No Node/npm, no bundler, no framework.
 
 ### Q7. Physical QR scanning — BLOCKED, not a business question
-The camera path uses `getUserMedia` and the same `/api/qr/scan` backend as manual entry. No camera device is available in this environment, so real-device scanning is untested. Manual reference entry works and is validated server-side, but it is not cryptographic QR proof. Recorded in `docs/test_results.md`.
+The camera path uses `getUserMedia` and the same `/api/qr/scan` backend as manual entry. No camera device is available in this environment, so real-device scanning is untested. Manual reference entry works and is validated server-side, but it is not cryptographic QR proof. Recorded in `markdown/test_results.md`.
 
 ## Open questions
 

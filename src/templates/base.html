@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
+  <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
   <title>{% block title %}QSPARK{% endblock %} · QSPARK</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,8 +25,7 @@
 <div class="app-shell" data-role="{{ current_user.role }}">
   <aside class="sidebar" id="sidebar" aria-label="Primary">
     <div class="sidebar-brand">
-      <span aria-hidden="true" style="width:28px;height:28px;border-radius:8px;background:var(--brand-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">Q</span>
-      <span>QSPARK</span>
+      <img src="{{ url_for('static', filename='images/logo-light.webp') }}" alt="QSPARK" style="height:28px;vertical-align:middle;">
     </div>
     <nav class="sidebar-nav">
       {{ section('Parking') }}

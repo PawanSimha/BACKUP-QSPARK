@@ -46,7 +46,7 @@ Keep business rules out of templates and avoid embedding SQL directly in route h
 
 ## 3. Database table inventory
 
-The intended core model has these 11 tables. The executable `schema.sql` and `docs/db.md` must ultimately be checked against each other; if implementation reveals a necessary constraint or column adjustment, document and test it before changing the model.
+The intended core model has these 11 tables. The executable `schema.sql` and `markdown/db.md` must ultimately be checked against each other; if implementation reveals a necessary constraint or column adjustment, document and test it before changing the model.
 
 | Table | Responsibility |
 |---|---|
@@ -172,7 +172,7 @@ Backend authorization is mandatory. Frontend visibility is not security.
 - Paginate list endpoints and table views.
 - Never expose password hashes, session secrets, environment secrets or unrestricted SQL.
 - For state-changing browser requests, protect against CSRF.
-- Generate `docs/api.md` from the implemented route inventory and tested contracts; do not preserve stale endpoint lists as if they are live.
+- Generate `markdown/api.md` from the implemented route inventory and tested contracts; do not preserve stale endpoint lists as if they are live.
 
 ## 10. Analytics and reports
 
@@ -206,10 +206,10 @@ When OFFLINE:
 ## 12. Documentation generated from implementation
 
 - `schema.sql` is the executable schema authority.
-- `docs/db.md` must describe exactly the columns/constraints/indexes/triggers present in `schema.sql`.
-- `docs/api.md` must describe actual registered routes and current request/response schemas.
-- `docs/test_results.md` must contain actual executed test outcomes, not planned/predicted results.
-- `docs/frontend.md` describes the implemented page/asset/JS architecture.
+- `markdown/db.md` must describe exactly the columns/constraints/indexes/triggers present in `schema.sql`.
+- `markdown/api.md` must describe actual registered routes and current request/response schemas.
+- `markdown/test_results.md` must contain actual executed test outcomes, not planned/predicted results.
+- `markdown/frontend.md` describes the implemented page/asset/JS architecture.
 
 ## 13. Implemented frontend architecture (12 Nov 2026)
 
@@ -233,14 +233,14 @@ Server-rendered Jinja2 shells, compiled Tailwind CSS (no CDN), `src/static/css/a
 | `tests/test_frontend.py` | Every page route renders for its role; anonymous requests redirect; wrong role gets 403; static assets; HTML 404; `PATCH /api/auth/me`; admin floors/types/slots contracts; live occupancy; Super Admin analytics, DB whitelist and `password_hash` masking, floor/slot CRUD, system toggle, CSV downloads |
 | `tests/test_e2e.py` | Playwright (Python package, Chromium headless shell) against a throwaway DB on `127.0.0.1:5099`: full customer booking→wallet→cancel, admin walk-in/slot/QR/analytics, Super Admin admin+wallet+floor+CSV+table+system flows, responsive overflow check. Console `pageerror` and `console.error` are asserted empty apart from the intentional 404 |
 
-Run commands are in `docs/test_results.md`. No destructive browser test touches `database/parking_local.db`.
+Run commands are in `markdown/test_results.md`. No destructive browser test touches `database/parking_local.db`.
 
 ## 15. Deviations actually in effect
 
 | Spec section | Deviation | Reason |
 |---|---|---|
 | §9 response envelope | Errors are `{"error": "...", "code": n}`; successes are bare resource objects (`{"items": [...]}` for lists) | Matches the existing API and every client; changing it now would break all callers |
-| §9 pagination | Paginated: `/api/bookings/my` is not, Super Admin `db-tables` is. List endpoints return complete sets | Data volumes in Phase 1 are small; documented in `docs/api.md` |
+| §9 pagination | Paginated: `/api/bookings/my` is not, Super Admin `db-tables` is. List endpoints return complete sets | Data volumes in Phase 1 are small; documented in `markdown/api.md` |
 | §9 CSRF | Implemented with Flask-WTF `CSRFProtect`; tokens are issued per session, exposed via `<meta name="csrf-token">`, and accepted as `X-CSRFToken` or `csrf_token` form field | See §16 |
 | §10 charts | CSS bars, not a charting library | No npm build; avoids shipping a vendored dependency |
 | §10 report definitions | Occupancy per floor and revenue per floor, as implemented | Pending confirmation (`open_questions.md` Q3) |
@@ -273,5 +273,10 @@ Run commands are in `docs/test_results.md`. No destructive browser test touches 
 - **CSS build**: `tools/tailwindcss.exe` (standalone v3.4.17, no Node) scans `src/templates/**/*.html` and `src/static/js/**/*.js`; output `src/static/css/tailwind.css` (~9.5 KB minified) is committed and linked from `base.html` before `app.css`. Build command: `.\tools\tailwindcss.exe -c tailwind.config.js -i src\static\css\tailwind.input.css -o src\static\css\tailwind.css --minify`.
 - **Accessibility**: axe-core via `tests/test_a11y.py` scans all 18 authenticated pages for Customer, Admin and Super Admin; the suite requires zero violations. Fixes applied: `--muted` contrast (`#475569`), underlined in-paragraph links, `dt`/`dd` groups in the profile list, focusable `role="region"` wrapper around the Super Admin DB table viewer.
 - **Responsive**: `grid-stats`/`grid-2` use `minmax(min(…, 100%), 1fr)` so a 320 px viewport cannot be widened by the grid track minimum.
-- **QR**: the backend validates the booking reference, owner/admin authority and booking state; `ENTRY` requires `CONFIRMED`, the second scan becomes `EXIT`, and a third is rejected. Camera scanning uses `getUserMedia` (Chromium/Firefox/WebKit; permission prompt required). Manual reference entry calls the same `/api/qr/scan` endpoint, so it inherits the same server-side validation but is **not** cryptographic proof of a printed QR — it only proves the operator knows the reference. Physical camera scanning on real hardware is **not tested** (no camera device available in this environment); see `docs/test_results.md`.
+- **QR**: the backend validates the booking reference, owner/admin authority and booking state; `ENTRY` requires `CONFIRMED`, the second scan becomes `EXIT`, and a third is rejected.
+- **Camera lifecycle** (`src/templates/qr_scan.html`): `getUserMedia` is requested only when the user presses Start camera. The stream is attached to `video.srcObject` and the preview is shown **before** any decoder work, so a missing QR decoder can never hide the preview or stop the camera. The decoder is feature-detected with `typeof window.BarcodeDetector === 'function'` and constructed inside a `try/catch`; if it is absent the camera keeps running and the manual reference form remains the fallback. `video.play()` rejection is caught. Distinct messages are shown for `NotAllowedError` (permission denied), `NotFoundError`/`OverconstrainedError` (no device), `NotReadableError` (device already in use), an insecure context (`window.isSecureContext`) and a browser without `getUserMedia`. Tracks are stopped on Stop camera and on `pagehide`, and a track `ended` event flips the badge to "Interrupted".
+- **Scanner log**: an optional `<details>` panel plus `console.log` mirror. `log()` is null-guarded and wrapped in `try/catch`, so logging can never interrupt camera initialization.
+- **Manual entry**: the manual reference form calls the same `/api/qr/scan` endpoint, so it inherits the same server-side validation but is **not** cryptographic proof of a printed QR — it only proves the operator knows the reference.
+- **DOM wiring**: every `getElementById()` target in a page's inline script must exist in the rendered page. `tests/test_frontend_wiring.py` parses the rendered HTML of all 18 authenticated pages and fails on any missing element id, which prevents a null-reference error from silently killing the page's listeners.
+- Physical camera scanning on real hardware is **not tested** (no camera device available in this environment); see `markdown/test_results.md`.
 
