@@ -20,7 +20,17 @@ Only commands actually executed (Windows, `.\.venv\Scripts\python.exe`) are reco
 | `.\.venv\Scripts\python.exe -m pytest tests/test_a11y.py -q` | **skipped** in this environment — no Playwright browser binaries installed; not a test failure |
 | Production smoke: `waitress-serve --listen=127.0.0.1:5093 --call app:create_app` with `APP_ENV=production` | `GET /health` → `{"service":"QSPARK","status":"ok"}` |
 
-Environment: Python 3.14 in `.venv`; playwright 1.65.1 with chromium-headless-shell 158.0.8127.18, Firefox and WebKit 27.2; axe-playwright-python; Flask 3.1.3 + Flask-WTF. Browser suites use throwaway databases and ports 5095–5099, never `database/parking_local.db`.
+## Manual verification (this session, no pytest run)
+
+Only smoke checks actually performed against `database/parking_local.db` are listed; no pytest suite was run in this session.
+
+- `POST /api/auth/login` as `pawan.simha`/`pawan.simha` → 200, user_id 1 (Super Admin).
+- `POST /api/auth/login` as `jeswin`/`JESW@0099` → 200, user_id 50 (CUSTOMER).
+- `GET /api/slots/vehicle-types` → 2 items (2-Wheeler ₹5/hr, 4-Wheeler ₹10/hr).
+- `GET /api/slots/availability?floor_id=1` → 64 slots (B1).
+- `PUT /api/admin/users/<id>` `{account_status:'BLOCKED'|'ACTIVE'}` → 200 (admin customers status toggle).
+- `PRAGMA foreign_key_check` → 0 issues after all CSV imports and user renumber.
+- Imported: users (50), floors (4), vehicle_types (2), parking_slots (256), bookings (49), wallet_transactions (111), cancellation_rules (4), revenue_collections (49), booking_events (98).
 
 ## Baseline before this change (historical)
 
