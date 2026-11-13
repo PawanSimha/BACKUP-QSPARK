@@ -5,7 +5,7 @@ import io
 from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app, make_response
 from src.services.db import get_connection, transaction
-from src.core.security import require_role, get_current_user
+from src.core.security import require_role, get_current_user, generate_user_password
 from src.api.reports import occupancy_csv as _occ_csv, revenue_csv as _rev_csv
 
 super_admin_bp = Blueprint("super_admin", __name__, url_prefix="/api/super-admin")
@@ -36,7 +36,7 @@ def create_admin():
     gender = data.get("gender")
     company_name = data.get("company_name")
     username = (data.get("username") or "").strip()
-    password = data.get("password") or ""
+    password = generate_user_password(full_name, phone)
 
     if not all([full_name, phone, username, password]):
         return jsonify({"error": "full_name, phone, username, password required", "code": 400}), 400

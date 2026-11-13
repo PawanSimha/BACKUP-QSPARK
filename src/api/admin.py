@@ -3,7 +3,7 @@
 from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
 from src.services.db import get_connection, transaction
-from src.core.security import require_admin, get_current_user
+from src.core.security import require_admin, get_current_user, generate_user_password
 from werkzeug.security import generate_password_hash
 from src.api.qr import scan as _qr_scan
 
@@ -165,8 +165,12 @@ def create_customer():
                 """INSERT INTO users
                    (admin_id, full_name, email, phone, gender, company_name, username,
                     password_hash, role, wallet_balance, account_status, created_by)
-                   VALUES (NULL, ?, ?, ?, ?, ?, ?, NULL, 'CUSTOMER', 1000, 'PENDING', ?)""",
-                (full_name, email, phone, gender, company_name, username, actor["user_id"]),
+                   VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, 'CUSTOMER', 1000, 'PENDING', ?)""",
+                (
+                    full_name, email, phone, gender, company_name, username,
+                    generate_password_hash(generate_user_password(full_name, phone)),
+                    actor["user_id"],
+                ),
             )
             uid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
             conn.execute(
@@ -215,6 +219,9 @@ def update_user(user_id):
                 if col in data:
                     fields.append(f"{col} = ?")
                     params.append(data[col])
+            if data.get("account_status") == "ACTIVE" and not old["password_hash"]:
+                fields.append("password_hash = ?")
+                params.append(generate_password_hash(old["username"] or f"customer{user_id}"))
             if not fields:
                 return jsonify({"error": "No updatable fields", "code": 400}), 400
             params.extend([actor["user_id"], user_id])

@@ -99,6 +99,7 @@
         '<td class="text-right whitespace-nowrap">' +
           '<button class="btn btn-secondary btn-sm" data-edit="' + u.user_id + '">Edit</button> ' +
           (u.role === 'CUSTOMER' || {{ 'true' if user.role == 'SUPER_ADMIN' else 'false' }} ? '<button class="btn btn-secondary btn-sm" data-wallet="' + u.user_id + '">Wallet</button> ' : '') +
+          '<button class="btn btn-secondary btn-sm" data-status="' + u.user_id + '" data-status-to="' + (u.account_status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE') + '">' + (u.account_status === 'ACTIVE' ? 'Block' : 'Activate') + '</button> ' +
           (u.account_status === 'ACTIVE' ? '<button class="btn btn-danger btn-sm" data-deactivate="' + u.user_id + '">Deactivate</button>' : '') +
         '</td></tr>';
     }).join('') : U.emptyRow(7, 'No users match these filters.');
@@ -167,6 +168,25 @@
     var edit = e.target.closest('[data-edit]');
     var wallet = e.target.closest('[data-wallet]');
     var deactivate = e.target.closest('[data-deactivate]');
+    var status = e.target.closest('[data-status]');
+
+    if (status) {
+      var target = users.find(function (x) { return String(x.user_id) === status.dataset.status; });
+      var toStatus = status.dataset.statusTo;
+      var ok = await U.confirmDialog({
+        title: toStatus === 'BLOCKED' ? 'Block account' : 'Activate account',
+        danger: toStatus === 'BLOCKED',
+        confirmLabel: toStatus === 'BLOCKED' ? 'Block' : 'Activate',
+        message: (toStatus === 'BLOCKED' ? 'Block ' : 'Activate ') + (target ? target.full_name : 'this user') + '?'
+      });
+      if (!ok) return;
+      try {
+        await QS.put('/api/admin/users/' + status.dataset.status, { account_status: toStatus });
+        U.toast(toStatus === 'BLOCKED' ? 'User blocked.' : 'User activated.', 'success');
+        await load();
+      } catch (err) { U.toast(err.message, 'error'); }
+      return;
+    }
 
     if (edit) {
       var u = users.find(function (x) { return String(x.user_id) === edit.dataset.edit; });

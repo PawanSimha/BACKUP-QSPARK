@@ -269,18 +269,20 @@
     var grid = document.getElementById('slotGrid');
     grid.innerHTML = '<div class="skeleton" style="height:44px"></div><div class="skeleton" style="height:44px"></div>';
     try {
-      var url = '/api/slots/availability?vehicle_type_id=' + state.vehicleType.vehicle_type_id +
-        (state.floorId ? '&floor_id=' + state.floorId : '');
+      var url = '/api/slots/availability' +
+        (state.floorId ? '?floor_id=' + state.floorId : '');
       var data = await QS.get(url);
       state.slots = data.items || [];
       if (!state.slots.length) {
-        grid.innerHTML = '<p class="text-sm text-muted">No slots match this vehicle type on the selected floor.</p>';
+        grid.innerHTML = '<p class="text-sm text-muted">No slots on the selected floor.</p>';
         return;
       }
       grid.innerHTML = state.slots.map(function (s) {
-        var disabled = s.status !== 'AVAILABLE';
-        return '<button type="button" class="slot" data-slot="' + s.slot_id + '" data-status="' + U.esc(s.status) + '"' +
-          (disabled ? ' disabled' : '') + ' aria-pressed="false" title="' + U.esc(s.slot_number + ' · ' + s.status) + '">' +
+        var typeMismatch = String(s.vehicle_type_id) !== String(state.vehicleType.vehicle_type_id);
+        var disabled = s.status !== 'AVAILABLE' || typeMismatch;
+        var title = s.slot_number + ' · ' + s.status + (typeMismatch ? ' · ' + s.vehicle_type + ' only' : '');
+         return '<button type="button" class="slot" data-slot="' + s.slot_id + '" data-status="' + U.esc(s.status) + '"' +
+          (disabled ? ' disabled' : '') + ' aria-pressed="false" title="' + U.esc(title) + '">' +
           U.esc(s.slot_number) + '<small>' + U.esc(s.status.slice(0, 4)) + '</small></button>';
       }).join('');
     } catch (err) { U.toast(err.message, 'error'); }

@@ -16,6 +16,13 @@ def verify_password(plain_password: str, password_hash: str) -> bool:
     return check_password_hash(password_hash, plain_password)
 
 
+def generate_user_password(full_name: str, phone: str) -> str:
+    """Prototype credential rule: <first-4-chars-of-name>@<last-4-chars-of-phone>."""
+    name_part = (full_name or "").strip().split()[0][:4].upper() if (full_name or "").strip() else "USER"
+    tail = (phone or "").strip()[-4:]
+    return f"{name_part}@{tail}"
+
+
 def get_current_user():
     """Return the current user dict from session, or None if not logged in."""
     if "user_id" not in session:
