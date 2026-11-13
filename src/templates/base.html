@@ -14,8 +14,8 @@
 <body>
 <a class="skip-link" href="#main">Skip to main content</a>
 {% set current_user = user if user is defined and user else none %}
-{% macro nav(href, label, key) -%}
-  <a class="nav-item" href="{{ href }}" {% if request.path == href or (key and request.path.startswith(key)) %}aria-current="page"{% endif %}>{{ label }}</a>
+{% macro nav(href, label, key, icon='circle') -%}
+  <a class="nav-item" href="{{ href }}" title="{{ label }}" {% if request.path == href or (key and (request.path == key or request.path.startswith(key ~ '/'))) %}aria-current="page"{% endif %}><i data-lucide="{{ icon }}" aria-hidden="true"></i><span class="nav-label">{{ label }}</span></a>
 {%- endmacro %}
 {% macro section(label) -%}
   <div class="sidebar-section">{{ label }}</div>
@@ -25,41 +25,42 @@
 <div class="app-shell" data-role="{{ current_user.role }}">
   <aside class="sidebar" id="sidebar" aria-label="Primary">
     <div class="sidebar-brand">
-      <img src="{{ url_for('static', filename='images/logo-light.webp') }}" alt="QSPARK" style="height:28px;vertical-align:middle;">
+      <img src="{{ url_for('static', filename='images/logo-light.webp') }}" alt="QSPARK" style="height:28px;vertical-align:middle;" class="sidebar-logo">
+      <button class="btn btn-ghost btn-icon" id="sidebarCollapse" aria-label="Toggle sidebar" style="margin-left:auto;"><i data-lucide="panel-left-close"></i></button>
     </div>
     <nav class="sidebar-nav">
       {{ section('Parking') }}
-      {{ nav('/dashboard', 'Dashboard', '') }}
-      {{ nav('/booking', 'Book a slot', '/booking') }}
-      {{ nav('/bookings/my', 'My bookings', '/bookings/my') }}
-      {{ nav('/wallet', 'Wallet', '/wallet') }}
-      {{ nav('/profile', 'Profile', '/profile') }}
+      {{ nav('/dashboard', 'Dashboard', '', 'layout-dashboard') }}
+      {{ nav('/booking', 'Book a slot', '/booking', 'calendar-plus') }}
+      {{ nav('/bookings/my', 'My bookings', '/bookings/my', 'calendar-check') }}
+      {{ nav('/wallet', 'Wallet', '/wallet', 'wallet') }}
+      {{ nav('/profile', 'Profile', '/profile', 'user') }}
 
       {% if current_user.role in ('ADMIN', 'SUPER_ADMIN') %}
         {{ section('Operations') }}
-        {{ nav('/admin/dashboard', 'Admin dashboard', '/admin/dashboard') }}
-        {{ nav('/admin/bookings', 'Bookings', '/admin/bookings') }}
-        {{ nav('/admin/qr-scan', 'QR scan', '/admin/qr-scan') }}
-        {{ nav('/admin/customers', 'Customers', '/admin/customers') }}
-        {{ nav('/admin/slots', 'Floors & slots', '/admin/slots') }}
-        {{ nav('/admin/analytics', 'Analytics', '/admin/analytics') }}
-        {{ nav('/admin/master', 'Configuration', '/admin/master') }}
+        {{ nav('/admin/dashboard', 'Admin dashboard', '/admin/dashboard', 'layout-dashboard') }}
+        {{ nav('/admin/bookings', 'Bookings', '/admin/bookings', 'list-checks') }}
+        {{ nav('/admin/qr-scan', 'QR scan', '/admin/qr-scan', 'qr-code') }}
+        {{ nav('/admin/customers', 'Customers', '/admin/customers', 'users') }}
+        {{ nav('/admin/slots', 'Floors & slots', '/admin/slots', 'parking-square') }}
+        {{ nav('/admin/analytics', 'Analytics', '/admin/analytics', 'bar-chart-3') }}
+        {{ nav('/admin/master', 'Configuration', '/admin/master', 'settings') }}
       {% endif %}
 
       {% if current_user.role == 'SUPER_ADMIN' %}
         {{ section('Administration') }}
-        {{ nav('/super-admin/dashboard', 'System overview', '/super-admin/dashboard') }}
-        {{ nav('/super-admin/admins', 'Admins & users', '/super-admin/admins') }}
-        {{ nav('/super-admin/infrastructure', 'Infrastructure', '/super-admin/infrastructure') }}
-        {{ nav('/super-admin/analytics', 'Revenue & reports', '/super-admin/analytics') }}
-        {{ nav('/super-admin/data', 'Database views', '/super-admin/data') }}
-        {{ nav('/super-admin/system', 'System control', '/super-admin/system') }}
+        {{ nav('/super-admin/dashboard', 'System overview', '/super-admin/dashboard', 'gauge') }}
+        {{ nav('/super-admin/admins', 'Admins & users', '/super-admin/admins', 'users-round') }}
+        {{ nav('/super-admin/infrastructure', 'Infrastructure', '/super-admin/infrastructure', 'building-2') }}
+        {{ nav('/super-admin/analytics', 'Revenue & reports', '/super-admin/analytics', 'trending-up') }}
+        {{ nav('/super-admin/data', 'Database views', '/super-admin/data', 'database') }}
+        {{ nav('/super-admin/system', 'System control', '/super-admin/system', 'sliders-horizontal') }}
       {% endif %}
     </nav>
     <div style="padding:0.85rem;border-top:1px solid var(--border);">
       <div class="flex items-center gap-2">
         <span aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background:var(--brand-50);color:var(--brand-700);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;">{{ (current_user.full_name or current_user.username or 'U')[:1]|upper }}</span>
-        <div style="min-width:0">
+        <div class="sidebar-profile-text" style="min-width:0">
           <div class="text-xs font-semibold truncate">{{ current_user.full_name or current_user.username }}</div>
           <div class="text-[11px] text-muted">{{ current_user.role|replace('_', ' ') }}</div>
         </div>
@@ -70,16 +71,14 @@
   <div class="main-column">
     <header class="topbar">
       <div class="flex items-center gap-2">
-        <button class="btn btn-ghost btn-icon lg:hidden" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
         <span class="text-sm font-semibold">{% block breadcrumb %}QSPARK{% endblock %}</span>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="badge badge-blue" title="Wallet balance">₹<span id="navWallet">{{ '%.2f'|format(current_user.wallet_balance or 0) }}</span></span>
+      <div class="flex items-center gap-3">
+        <a href="/wallet" class="nav-ctrl nav-ctrl-wallet"><span>₹<span id="navWallet">{{ '%.2f'|format(current_user.wallet_balance or 0) }}</span></span></a>
+        <div id="liveClock" class="nav-ctrl nav-ctrl-clock"><div id="clockTime"></div><div id="clockDate" class="text-muted"></div></div>
         <form method="POST" action="/api/auth/logout" style="display:inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn-secondary btn-sm" type="submit">Sign out</button>
+          <button class="nav-ctrl nav-ctrl-signout" type="submit">Sign out</button>
         </form>
       </div>
     </header>
@@ -107,18 +106,27 @@
   </div>
 </dialog>
 
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 <script src="{{ url_for('static', filename='js/core/api.js') }}"></script>
 <script src="{{ url_for('static', filename='js/core/ui.js') }}"></script>
 <script>
   (function () {
     var toggle = document.getElementById('navToggle');
     var sidebar = document.getElementById('sidebar');
-    if (toggle && sidebar) {
-      toggle.addEventListener('click', function () {
-        var open = sidebar.classList.toggle('is-open');
-        toggle.setAttribute('aria-expanded', String(open));
-      });
-    }
+    var uid = '{{ current_user.id if current_user else "" }}';
+    var key = 'qspark_sidebar_' + uid;
+    if (sidebar && localStorage.getItem(key) === 'collapsed') sidebar.classList.add('is-collapsed');
+    // desktop collapse toggle via double-click brand? use a button instead: add collapse button
+    var collapseBtn = document.getElementById('sidebarCollapse');
+    if (collapseBtn && sidebar) collapseBtn.addEventListener('click', function () {
+      var c = sidebar.classList.toggle('is-collapsed');
+      localStorage.setItem(key, c ? 'collapsed' : 'expanded');
+      if (window.lucide) lucide.createIcons();
+    });
+    function ord(n){var s=['th','st','nd','rd'];var v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+    function tick(){var d=new Date();var h=d.getHours();var m=d.getMinutes();var s=d.getSeconds();var ampm=h>=12?'PM':'AM';h=h%12||12;var t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+' '+ampm;document.getElementById('clockTime').textContent=t;var mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];document.getElementById('clockDate').textContent=ord(d.getDate())+' '+mon[d.getMonth()]+' '+d.getFullYear();}
+    tick(); setInterval(tick,1000);
     document.addEventListener('click', function (e) {
       if (!sidebar || window.innerWidth >= 1024 || !sidebar.classList.contains('is-open')) return;
       if (sidebar.contains(e.target) || (toggle && toggle.contains(e.target))) return;

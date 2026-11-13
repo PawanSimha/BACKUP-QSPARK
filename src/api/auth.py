@@ -67,16 +67,16 @@ def login():
 def me():
     """Get current user details from session."""
     user = get_current_user()
-    # Refresh wallet balance from DB
     conn = get_connection(current_app.config["DATABASE_PATH"])
     try:
         row = conn.execute(
-            "SELECT wallet_balance FROM users WHERE user_id = ?",
+            """SELECT user_id, admin_id, full_name, email, phone, gender, company_name,
+                      username, role, wallet_balance, account_status, created_at
+               FROM users WHERE user_id = ?""",
             (user["user_id"],),
         ).fetchone()
         if row:
-            user["wallet_balance"] = float(row["wallet_balance"])
-            session["wallet_balance"] = user["wallet_balance"]
+            return jsonify(dict(row))
     finally:
         conn.close()
     return jsonify(user)

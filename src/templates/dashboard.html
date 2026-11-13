@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header flex flex-wrap items-end justify-between gap-3">
   <div>
-    <h1 class="page-title">Welcome back, {{ (user.full_name or user.username).split(' ')[0] }}</h1>
+    <h1 class="page-title">Welcome back, <span style="color:var(--brand-600)">{{ (user.full_name or user.username).split(' ')[0] }}</span></h1>
     <p class="page-subtitle">Here is your parking activity at a glance.</p>
   </div>
   <a class="btn btn-primary" href="/booking">Book a parking slot</a>
@@ -13,7 +13,7 @@
 <div class="grid grid-stats mb-4">
   <div class="stat">
     <div class="stat-label">Wallet balance</div>
-    <div class="stat-value" id="walletBalance">—</div>
+    <div class="stat-value" id="walletBalance" style="color:#16a34a">—</div>
     <a class="text-xs" href="/wallet">View transactions</a>
   </div>
   <div class="stat">
