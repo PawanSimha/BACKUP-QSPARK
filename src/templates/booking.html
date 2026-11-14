@@ -304,6 +304,8 @@
   var dateEl = document.getElementById('bookDate');
   var startEl = document.getElementById('startTime');
   var durEl = document.getElementById('durationHours');
+   var today = new Date().toISOString().slice(0,10);
+   dateEl.min = today;
 
   function isoLocal(d) {
     var pad = function (n) { return String(n).padStart(2, '0'); };
