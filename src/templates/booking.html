@@ -339,13 +339,20 @@
     return true;
   }
 
-  function updatePreview() {
-    var w = currentWindow();
-    document.getElementById('previewStart').textContent = w ? w.start.toLocaleString() : '—';
-    document.getElementById('previewEnd').textContent = w ? w.end.toLocaleString() : '—';
-    document.getElementById('previewFare').textContent = (w && state.vehicleType)
-      ? U.money(w.hours * Number(state.vehicleType.hourly_rate)) : '—';
-  }
+   function fmtDate(d) {
+     var mon = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+     return String(d.getDate()).padStart(2,'0') + ' ' + mon[d.getMonth()] + ' ' + d.getFullYear();
+   }
+   function updatePreview() {
+     var w = currentWindow();
+     document.getElementById('previewStart').textContent = w ? fmtDate(w.start) + ' · ' + w.start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—';
+     document.getElementById('previewEnd').textContent = w ? fmtDate(w.end) + ' · ' + w.end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—';
+     var fare = (w && state.vehicleType) ? w.hours * Number(state.vehicleType.hourly_rate) : null;
+     var f = document.getElementById('previewFare');
+     f.textContent = fare === null ? '—' : '₹' + fare.toFixed(2);
+     f.style.fontSize = '1.4rem';
+     f.style.color = '#089981';
+   }
   [dateEl, startEl, durEl].forEach(function (el) { el.addEventListener('change', updatePreview); el.addEventListener('input', updatePreview); });
 
   // ---- review
