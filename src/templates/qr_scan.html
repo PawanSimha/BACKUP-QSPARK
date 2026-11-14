@@ -202,7 +202,7 @@
        if (value === lastRef && now - lastRefAt < 4000) return;
        lastRef = value;
        lastRefAt = now;
-       log('QR code read: ' + value);
+       log('QR code read: ' + value); console.log('QR decoded:', value);
        await submit(value);
      }, 700);
   }
