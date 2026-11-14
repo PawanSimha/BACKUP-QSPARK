@@ -25,15 +25,18 @@
 <div class="card">
   <div class="card-header">
     <h2 class="card-title">Transaction history</h2>
-    <div class="flex gap-2 items-center">
+    <div class="flex gap-2 items-center flex-wrap">
       <label class="sr-only" for="typeFilter">Transaction type</label>
-      <select class="select" id="typeFilter" style="min-width:200px">
+      <select class="select" id="typeFilter" style="min-width:160px">
         <option value="">All transactions</option>
         <option value="BOOKING_DEBIT">Booking debit</option>
         <option value="OVERTIME_DEBIT">Overtime debit</option>
         <option value="CANCELLATION_REFUND">Cancellation refund</option>
         <option value="ADMIN_ADJUSTMENT">Admin adjustment</option>
       </select>
+      <input class="input" id="dateFrom" type="date" style="min-width:130px">
+      <input class="input" id="dateTo" type="date" style="min-width:130px">
+      <input class="input" id="searchRef" placeholder="Search reference/desc" style="min-width:160px">
     </div>
   </div>
   <div class="table-wrap">
@@ -53,7 +56,16 @@
 
   function render() {
     var filter = document.getElementById('typeFilter').value;
-    var list = filter ? rows.filter(function (t) { return t.transaction_type === filter; }) : rows;
+    var from = document.getElementById('dateFrom').value;
+    var to = document.getElementById('dateTo').value;
+    var q = (document.getElementById('searchRef').value || '').toLowerCase();
+    var list = rows.filter(function (t) {
+      if (filter && t.transaction_type !== filter) return false;
+      if (from && String(t.created_at).slice(0,10) < from) return false;
+      if (to && String(t.created_at).slice(0,10) > to) return false;
+      if (q && !(String(t.transaction_reference||'').toLowerCase().includes(q) || String(t.description||'').toLowerCase().includes(q))) return false;
+      return true;
+    });
     document.getElementById('txBody').innerHTML = list.length ? list.map(function (t) {
       var debit = t.direction === 'DEBIT';
       return '<tr><td class="whitespace-nowrap">' + U.dateTime(t.created_at) + '</td>' +
@@ -85,6 +97,9 @@
   }
 
   document.getElementById('typeFilter').addEventListener('change', render);
+  document.getElementById('dateFrom').addEventListener('change', render);
+  document.getElementById('dateTo').addEventListener('change', render);
+  document.getElementById('searchRef').addEventListener('input', render);
   load();
 })();
 </script>
