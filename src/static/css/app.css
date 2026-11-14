@@ -106,6 +106,8 @@ p a { text-decoration: underline; }
 
 .main-column { flex: 1; min-width: 0; margin-left: 272px; display: flex; flex-direction: column; }
 .topbar { margin: 12px 12px 0 0; border-radius: 16px; border: 1px solid var(--border); }
+.navbar-title { font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 700; color: #1e293b; letter-spacing: -0.3px; line-height: 1.3; }
+@media (max-width: 768px) { .navbar-title { font-size: 18px; } }
 h1,h2,h3,.page-title,.card-title,.sidebar-brand,.sidebar-section { font-family: 'Montserrat', sans-serif; }
 .stat-value, table, #liveClock, #navWallet { font-family: 'Roboto', sans-serif; }
 .material-symbols-outlined { font-size: 20px; vertical-align: middle; line-height: 1; }

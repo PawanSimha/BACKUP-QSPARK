@@ -73,7 +73,7 @@
   <div class="main-column">
     <header class="topbar">
       <div class="flex items-center gap-2">
-        <span class="text-sm font-semibold">{% block breadcrumb %}QSPARK{% endblock %}</span>
+        <span class="navbar-title">{% block breadcrumb %}QSPARK{% endblock %}</span>
       </div>
       <div class="flex items-center gap-3">
         <a href="/wallet" class="nav-ctrl nav-ctrl-wallet"><span>₹<span id="navWallet">{{ '%.2f'|format(current_user.wallet_balance or 0) }}</span></span></a>
