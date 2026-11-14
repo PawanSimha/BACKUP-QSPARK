@@ -118,6 +118,11 @@ h1,h2,h3,.page-title,.card-title,.sidebar-brand,.sidebar-section { font-family: 
 .sidebar.is-collapsed { width: 64px; }
 .sidebar.is-collapsed .nav-label, .sidebar.is-collapsed .sidebar-section, .sidebar.is-collapsed .sidebar-logo-expanded, .sidebar.is-collapsed .sidebar-expand-arrow { display: none; }
 .sidebar .sidebar-logo-collapsed { display: none; }
+.sidebar .icon-expand { display: none; }
+.sidebar .icon-collapse { display: inline; }
+.sidebar.is-collapsed .icon-expand { display: none; }
+.sidebar.is-collapsed .icon-collapse { display: none; }
+.sidebar.is-collapsed #sidebarBrand:hover .icon-expand { display: inline; }
 .sidebar.is-collapsed .sidebar-logo-collapsed { display: block; margin: 0 auto; }
 .sidebar.is-collapsed #sidebarBrand:hover .sidebar-logo-collapsed { display: none; }
 .sidebar.is-collapsed #sidebarBrand:hover .sidebar-expand-arrow { display: inline-flex; }
