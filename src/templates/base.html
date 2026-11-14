@@ -7,7 +7,8 @@
   <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
   <title>{% block title %}QSPARK{% endblock %} · QSPARK</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Montserrat:wght@600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
@@ -15,7 +16,7 @@
 <a class="skip-link" href="#main">Skip to main content</a>
 {% set current_user = user if user is defined and user else none %}
 {% macro nav(href, label, key, icon='circle') -%}
-  <a class="nav-item" href="{{ href }}" title="{{ label }}" {% if request.path == href or (key and (request.path == key or request.path.startswith(key ~ '/'))) %}aria-current="page"{% endif %}><i data-lucide="{{ icon }}" aria-hidden="true"></i><span class="nav-label">{{ label }}</span></a>
+  <a class="nav-item" href="{{ href }}" title="{{ label }}" {% if request.path == href or (key and (request.path == key or request.path.startswith(key ~ '/'))) %}aria-current="page"{% endif %}><span class="material-symbols-outlined" aria-hidden="true">{{ icon }}</span><span class="nav-label">{{ label }}</span></a>
 {%- endmacro %}
 {% macro section(label) -%}
   <div class="sidebar-section">{{ label }}</div>
@@ -26,35 +27,35 @@
   <aside class="sidebar" id="sidebar" aria-label="Primary">
     <div class="sidebar-brand">
       <img src="{{ url_for('static', filename='images/logo-light.webp') }}" alt="QSPARK" style="height:28px;vertical-align:middle;" class="sidebar-logo">
-      <button class="btn btn-ghost btn-icon" id="sidebarCollapse" aria-label="Toggle sidebar" style="margin-left:auto;"><i data-lucide="panel-left-close"></i></button>
+      <button class="btn btn-ghost btn-icon" id="sidebarCollapse" aria-label="Toggle sidebar" style="margin-left:auto;"><span class="material-symbols-outlined">chevron_left</span></button>
     </div>
     <nav class="sidebar-nav">
       {{ section('Parking') }}
-      {{ nav('/dashboard', 'Dashboard', '', 'layout-dashboard') }}
-      {{ nav('/booking', 'Book a slot', '/booking', 'calendar-plus') }}
-      {{ nav('/bookings/my', 'My bookings', '/bookings/my', 'calendar-check') }}
-      {{ nav('/wallet', 'Wallet', '/wallet', 'wallet') }}
-      {{ nav('/profile', 'Profile', '/profile', 'user') }}
+      {{ nav('/dashboard', 'Dashboard', '', 'dashboard') }}
+      {{ nav('/booking', 'Book a slot', '/booking', 'event') }}
+      {{ nav('/bookings/my', 'My bookings', '/bookings/my', 'event_available') }}
+      {{ nav('/wallet', 'Wallet', '/wallet', 'account_balance_wallet') }}
+      {{ nav('/profile', 'Profile', '/profile', 'person') }}
 
       {% if current_user.role in ('ADMIN', 'SUPER_ADMIN') %}
         {{ section('Operations') }}
-        {{ nav('/admin/dashboard', 'Admin dashboard', '/admin/dashboard', 'layout-dashboard') }}
-        {{ nav('/admin/bookings', 'Bookings', '/admin/bookings', 'list-checks') }}
-        {{ nav('/admin/qr-scan', 'QR scan', '/admin/qr-scan', 'qr-code') }}
-        {{ nav('/admin/customers', 'Customers', '/admin/customers', 'users') }}
-        {{ nav('/admin/slots', 'Floors & slots', '/admin/slots', 'parking-square') }}
-        {{ nav('/admin/analytics', 'Analytics', '/admin/analytics', 'bar-chart-3') }}
+        {{ nav('/admin/dashboard', 'Admin dashboard', '/admin/dashboard', 'dashboard') }}
+        {{ nav('/admin/bookings', 'Bookings', '/admin/bookings', 'fact_check') }}
+        {{ nav('/admin/qr-scan', 'QR scan', '/admin/qr-scan', 'qr_code_scanner') }}
+        {{ nav('/admin/customers', 'Customers', '/admin/customers', 'group') }}
+        {{ nav('/admin/slots', 'Floors & slots', '/admin/slots', 'local_parking') }}
+        {{ nav('/admin/analytics', 'Analytics', '/admin/analytics', 'bar_chart') }}
         {{ nav('/admin/master', 'Configuration', '/admin/master', 'settings') }}
       {% endif %}
 
       {% if current_user.role == 'SUPER_ADMIN' %}
         {{ section('Administration') }}
-        {{ nav('/super-admin/dashboard', 'System overview', '/super-admin/dashboard', 'gauge') }}
-        {{ nav('/super-admin/admins', 'Admins & users', '/super-admin/admins', 'users-round') }}
-        {{ nav('/super-admin/infrastructure', 'Infrastructure', '/super-admin/infrastructure', 'building-2') }}
-        {{ nav('/super-admin/analytics', 'Revenue & reports', '/super-admin/analytics', 'trending-up') }}
+        {{ nav('/super-admin/dashboard', 'System overview', '/super-admin/dashboard', 'speed') }}
+        {{ nav('/super-admin/admins', 'Admins & users', '/super-admin/admins', 'group') }}
+        {{ nav('/super-admin/infrastructure', 'Infrastructure', '/super-admin/infrastructure', 'apartment') }}
+        {{ nav('/super-admin/analytics', 'Revenue & reports', '/super-admin/analytics', 'trending_up') }}
         {{ nav('/super-admin/data', 'Database views', '/super-admin/data', 'database') }}
-        {{ nav('/super-admin/system', 'System control', '/super-admin/system', 'sliders-horizontal') }}
+        {{ nav('/super-admin/system', 'System control', '/super-admin/system', 'tune') }}
       {% endif %}
     </nav>
     <div style="padding:0.85rem;border-top:1px solid var(--border);">
@@ -106,8 +107,6 @@
   </div>
 </dialog>
 
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<script>if (window.lucide) lucide.createIcons();</script>
 <script src="{{ url_for('static', filename='js/core/api.js') }}"></script>
 <script src="{{ url_for('static', filename='js/core/ui.js') }}"></script>
 <script>
