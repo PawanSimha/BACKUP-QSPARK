@@ -206,7 +206,7 @@
       document.getElementById('vehicleError').classList.toggle('is-visible', !ok);
       input.setAttribute('aria-invalid', ok ? 'false' : 'true');
       if (!ok) { input.focus(); return false; }
-      state.vehicleNumber = value;
+      if (ok) state.vehicleNumber = value;
       state.vehicleFormat = document.getElementById('vehicleFormat').value;
     }
     if (step === 3 && !state.slot) { U.toast('Select an available slot.', 'warning'); return false; }

@@ -91,6 +91,9 @@ def hold():
 
     slot_id = data.get("slot_id")
     vehicle_number = (data.get("vehicle_number") or "").strip().upper()
+    import re
+    if not re.match(r'^([A-Z]{2} [0-9]{2} [A-Z] [0-9]{4}|[A-Z]{2} [0-9]{2} [A-Z]{2} [0-9]{4}|[A-Z]{2} [0-9]{2} [A-Z]{3} [0-9]{4}|[0-9]{2} BH [0-9]{4} [A-Z]{2})$', vehicle_number):
+        return jsonify({"error": "invalid vehicle number format", "code": 400}), 400
     vehicle_format = (data.get("vehicle_format") or "std1").strip()
     booked_from = data.get("booked_from")
     booked_until = data.get("booked_until")
