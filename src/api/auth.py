@@ -134,6 +134,14 @@ def update_me():
         conn.close()
 
 
+@auth_bp.post("/session/end")
+@require_login
+def end_session():
+    """Best-effort tab-close session termination."""
+    session.clear()
+    return jsonify({"ok": True})
+
+
 @auth_bp.post("/logout")
 @require_login
 def logout():

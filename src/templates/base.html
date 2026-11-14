@@ -127,6 +127,11 @@
     function ord(n){var s=['th','st','nd','rd'];var v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
     function tick(){var d=new Date();var h=d.getHours();var m=d.getMinutes();var s=d.getSeconds();var ampm=h>=12?'PM':'AM';h=h%12||12;var t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+' '+ampm;document.getElementById('clockTime').textContent=t;var mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];document.getElementById('clockDate').textContent=ord(d.getDate())+' '+mon[d.getMonth()]+' '+d.getFullYear();}
     tick(); setInterval(tick,1000);
+    window.addEventListener('pagehide', function () {
+      try {
+        fetch('/api/auth/session/end', { method: 'POST', keepalive: true, headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content } });
+      } catch (e) {}
+    });
     document.addEventListener('click', function (e) {
       if (!sidebar || window.innerWidth >= 1024 || !sidebar.classList.contains('is-open')) return;
       if (sidebar.contains(e.target) || (toggle && toggle.contains(e.target))) return;

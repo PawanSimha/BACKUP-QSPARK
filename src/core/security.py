@@ -1,6 +1,8 @@
 """Security helpers: password hashing, session auth, role guards."""
 
 from functools import wraps
+import time
+
 from flask import session, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from src.services.db import get_connection
@@ -88,7 +90,10 @@ def login_user(user_row) -> None:
     session["full_name"] = user_row["full_name"]
     session["role"] = user_row["role"]
     session["wallet_balance"] = float(user_row["wallet_balance"])
-    session.permanent = True
+    now = time.time()
+    session["session_created_at"] = now
+    session["last_activity_at"] = now
+    session.permanent = False
 
 
 def logout_user() -> None:

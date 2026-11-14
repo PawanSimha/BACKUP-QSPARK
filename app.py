@@ -87,6 +87,32 @@ def create_app():
         uid = session.get("user_id")
         if uid is None:
             return None
+        # Server-side session expiry enforcement
+        import time
+        now = time.time()
+        created = session.get("session_created_at")
+        last = session.get("last_activity_at")
+        absolute_max = 20 * 60
+        if created is None or now - float(created) > absolute_max:
+            session.clear()
+            return None
+        # idle timeout from system settings (default 20 min)
+        idle = 20 * 60
+        try:
+            from src.services.db import get_connection
+            _c = get_connection(app.config["DATABASE_PATH"])
+            try:
+                r = _c.execute("SELECT setting_value FROM system_settings WHERE setting_key='SESSION_IDLE_TIMEOUT'").fetchone()
+                if r:
+                    idle = int(r["setting_value"]) * 60
+            finally:
+                _c.close()
+        except Exception:
+            pass
+        if last is None or now - float(last) > idle:
+            session.clear()
+            return None
+        session["last_activity_at"] = now
         from src.services.db import get_connection
 
         conn = get_connection(app.config["DATABASE_PATH"])

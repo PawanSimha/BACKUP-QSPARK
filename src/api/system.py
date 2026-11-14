@@ -23,6 +23,43 @@ def status():
         conn.close()
 
 
+@system_bp.get("/super-admin/session")
+@require_role("SUPER_ADMIN")
+def get_session_policy():
+    conn = get_connection(current_app.config["DATABASE_PATH"])
+    try:
+        row = conn.execute("SELECT setting_value, updated_at FROM system_settings WHERE setting_key='SESSION_IDLE_TIMEOUT'").fetchone()
+        val = int(row["setting_value"]) if row else 20
+        updated = row["updated_at"] if row else None
+        return jsonify({"idle_timeout_minutes": val, "absolute_max_minutes": 20, "updated_at": updated})
+    finally:
+        conn.close()
+
+
+@system_bp.patch("/super-admin/session")
+@require_role("SUPER_ADMIN")
+def set_session_policy():
+    data = request.get_json(silent=True) or {}
+    try:
+        val = int(data.get("idle_timeout_minutes"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid value", "code": 400}), 400
+    if val not in (5, 10, 15, 20):
+        return jsonify({"error": "allowed: 5,10,15,20", "code": 400}), 400
+    actor = get_current_user()
+    try:
+        with transaction(current_app.config["DATABASE_PATH"]) as conn:
+            old = conn.execute("SELECT setting_value FROM system_settings WHERE setting_key='SESSION_IDLE_TIMEOUT'").fetchone()
+            oldv = old["setting_value"] if old else "20"
+            # upsert
+            conn.execute("INSERT OR IGNORE INTO system_settings (setting_key, setting_value, description) VALUES ('SESSION_IDLE_TIMEOUT','20','Idle session timeout in minutes')")
+            conn.execute("UPDATE system_settings SET setting_value=?, updated_by=?, updated_at=datetime('now') WHERE setting_key='SESSION_IDLE_TIMEOUT'", (str(val), actor["user_id"]))
+            conn.execute("INSERT INTO audit_logs (action_type, entity_type, old_values, new_values, created_by) VALUES ('SESSION_TIMEOUT_CHANGE','system_settings',?,?,?)", (oldv, str(val), actor["user_id"]))
+        return jsonify({"idle_timeout_minutes": val})
+    except Exception as e:
+        return jsonify({"error": str(e), "code": 500}), 500
+
+
 @system_bp.patch("/super-admin/system/status")
 @require_role("SUPER_ADMIN")
 def set_status():
