@@ -42,10 +42,10 @@
       <div class="field">
         <label class="label" for="vehicleFormat">Registration format</label>
         <select class="select" id="vehicleFormat">
-          <option value="std1">Standard — KA 04 A 2256</option>
-          <option value="std2">Compact — KA04A2256</option>
-          <option value="std3">BH series — 22 BH 1234 AA</option>
-          <option value="bhr">Bharat — BH 12 AB 3456</option>
+          <option value="std1" data-placeholder="KA 04 A 2256">std1 — KA 04 A 2256</option>
+          <option value="std2" data-placeholder="DL 03 CA 1234">std2 — DL 03 CA 1234</option>
+          <option value="std3" data-placeholder="ML 04 ASD 5256">std3 — ML 04 ASD 5256</option>
+          <option value="bhr" data-placeholder="26 BH 9876 AB">bhr — 26 BH 9876 AB</option>
         </select>
       </div>
       <div class="field">
@@ -445,6 +445,10 @@
     document.getElementById('confirmBtn').disabled = true;
     document.getElementById('confirmBtn').textContent = 'System offline';
   }
+  document.getElementById('vehicleFormat').addEventListener('change', function () {
+    var opt = this.options[this.selectedIndex];
+    document.getElementById('vehicleNumber').placeholder = opt.dataset.placeholder || '';
+  });
 })();
 </script>
 {% endblock %}
