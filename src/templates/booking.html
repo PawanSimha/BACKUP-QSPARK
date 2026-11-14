@@ -413,6 +413,13 @@
       var navWallet = document.getElementById('navWallet');
       if (navWallet) navWallet.textContent = Number(confirmed.new_wallet_balance).toFixed(2);
       U.toast('Booking confirmed.', 'success');
+      var dl = document.createElement('a');
+      dl.href = 'data:image/png;base64,' + qr.qr_base64;
+      dl.download = held.booking_reference + '.png';
+      dl.className = 'btn btn-secondary btn-sm';
+      dl.textContent = 'Download QR';
+      var result = document.getElementById('confirmResult');
+      if (result) result.appendChild(dl);
     } catch (err) {
       if (err.status === 402) {
         U.toast(err.message + ' Wallet: ' + U.money(err.payload && err.payload.wallet_balance) +
