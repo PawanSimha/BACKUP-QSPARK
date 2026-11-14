@@ -38,3 +38,4 @@ def calculate_overstay(
     overstay_hours = round(math.ceil(delta * 2) / 2, 2)  # 30-min granularity
     overstay_amount = round(overstay_hours * overstay_rate, 2)
     return overstay_hours, overstay_amount
+

@@ -108,3 +108,4 @@
 
   global.QSUI = { esc, money, dateTime, dateOnly, parseDate, debounce, toast, confirmDialog, setBusy, statusBadge, emptyRow };
 })(window);
+

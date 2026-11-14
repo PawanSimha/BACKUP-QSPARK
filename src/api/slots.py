@@ -134,3 +134,4 @@ def get_slot(slot_id):
         return jsonify(dict(row))
     finally:
         conn.close()
+

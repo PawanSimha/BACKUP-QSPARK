@@ -85,3 +85,4 @@
 
   global.QS = Object.assign(global.QS || {}, api);
 })(window);
+
