@@ -137,26 +137,27 @@
         var events = (b.events || []).map(function (ev) {
           return '<li>' + U.esc(ev.event_type) + ' · ' + U.dateTime(ev.created_at) + ' (' + U.esc(ev.scan_method) + ')</li>';
         }).join('') || '<li class="text-muted">No gate events yet.</li>';
+        var qrHtml = '';
+        if (b.booking_status === 'CONFIRMED') {
+          try {
+            var qr = await QS.post('/api/qr/generate', { booking_reference: b.booking_reference });
+            qrHtml = '<div class="mt-3 text-center"><img alt="Booking QR" src="data:image/png;base64,' + qr.qr_base64 + '" style="width:180px;height:180px;border:1px solid var(--border);border-radius:8px;background:#fff">' +
+              '<div class="mt-2"><a class="btn btn-secondary btn-sm" download="' + U.esc(b.booking_reference) + '.png" href="data:image/png;base64,' + qr.qr_base64 + '">Download PNG</a></div></div>';
+          } catch (e) { qrHtml = ''; }
+        }
         document.getElementById('detailBody').innerHTML =
-          '<h2 class="text-base font-semibold mb-2" id="detailTitle">' + U.esc(b.booking_reference) + '</h2>' +
-          '<dl class="text-sm" style="display:grid;gap:0.35rem">' +
-            '<div><span class="text-muted">Status:</span> ' + U.statusBadge(b.booking_status) + '</div>' +
-            '<div><span class="text-muted">Vehicle:</span> ' + U.esc(b.vehicle_number) + '</div>' +
-            '<div><span class="text-muted">Slot:</span> ' + U.esc(b.floor_code) + ' · ' + U.esc(b.slot_number) + ' · ' + U.esc(b.vehicle_type) + '</div>' +
-            '<div><span class="text-muted">Window:</span> ' + U.dateTime(b.booked_from) + ' → ' + U.dateTime(b.booked_until) + '</div>' +
-            '<div><span class="text-muted">Amount:</span> ' + U.money(b.estimated_amount) + '</div>' +
-          '</dl>' +
-          '<h3 class="text-sm font-semibold mt-3 mb-1">Gate events</h3><ul class="text-sm">' + events + '</ul>' +
-          (b.booking_status === 'CONFIRMED' ? '<button class="btn btn-secondary btn-sm mt-3" type="button" id="detailQr">Show QR code</button>' : '');
+          '<h2 class="text-base font-semibold mb-3" id="detailTitle">' + U.esc(b.booking_reference) + '</h2>' +
+          '<div class="card" style="padding:0.75rem"><dl class="text-sm" style="display:grid;gap:0.4rem">' +
+            '<div class="flex justify-between"><span class="text-muted">Status</span>' + U.statusBadge(b.booking_status) + '</div>' +
+            '<div class="flex justify-between"><span class="text-muted">Vehicle</span><span>' + U.esc(b.vehicle_number) + '</span></div>' +
+            '<div class="flex justify-between"><span class="text-muted">Slot</span><span>' + U.esc(b.floor_code) + ' · ' + U.esc(b.slot_number) + ' · ' + U.esc(b.vehicle_type) + '</span></div>' +
+            '<div class="flex justify-between"><span class="text-muted">Window</span><span>' + U.dateTime(b.booked_from) + ' → ' + U.dateTime(b.booked_until) + '</span></div>' +
+            '<div class="flex justify-between"><span class="text-muted">Amount</span><span>' + U.money(b.estimated_amount) + '</span></div>' +
+          '</dl></div>' +
+          qrHtml +
+          '<h3 class="text-sm font-semibold mt-3 mb-1">Gate events</h3><ul class="text-sm">' + events + '</ul>';
         var dlg = document.getElementById('detailDialog');
         dlg.showModal();
-        var qrBtn = document.getElementById('detailQr');
-        if (qrBtn) qrBtn.addEventListener('click', async function () {
-          var res = await QS.post('/api/qr/generate', { booking_reference: b.booking_reference });
-          var w = window.open('', '_blank');
-          if (w) w.document.write('<title>QSPARK QR</title><p style="font-family:system-ui">' + U.esc(b.booking_reference) + '</p>' +
-            '<img alt="Booking QR" src="data:image/png;base64,' + res.qr_base64 + '">');
-        });
       } catch (err) { U.toast(err.message, 'error'); }
       return;
     }
