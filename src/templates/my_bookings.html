@@ -157,8 +157,7 @@
             '<div class="flex justify-between"><span class="text-muted">Window</span><span>' + U.dateTime(b.booked_from) + ' → ' + U.dateTime(b.booked_until) + '</span></div>' +
             '<div class="flex justify-between"><span class="text-muted">Amount</span><span>' + U.money(b.estimated_amount) + '</span></div>' +
           '</dl></div>' +
-          qrHtml +
-          '<h3 class="text-sm font-semibold mt-3 mb-1 text-center">Gate events</h3><ul class="text-sm">' + events + '</ul>';
+           qrHtml;
         var dlg = document.getElementById('detailDialog');
         dlg.showModal();
       } catch (err) { U.toast(err.message, 'error'); }
