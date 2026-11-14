@@ -25,9 +25,10 @@
 {% if current_user %}
 <div class="app-shell" data-role="{{ current_user.role }}">
   <aside class="sidebar" id="sidebar" aria-label="Primary">
-    <div class="sidebar-brand">
-      <img src="{{ url_for('static', filename='images/logo-light.webp') }}" alt="QSPARK" style="height:28px;vertical-align:middle;" class="sidebar-logo">
-      <button class="btn btn-ghost btn-icon" id="sidebarCollapse" aria-label="Toggle sidebar" style="margin-left:auto;"><span class="material-symbols-outlined">chevron_left</span></button>
+    <div class="sidebar-brand" id="sidebarBrand">
+      <img src="{{ url_for('static', filename='images/logo-light.webp') }}" alt="QSPARK" style="height:28px;vertical-align:middle;" class="sidebar-logo-expanded">
+      <img src="{{ url_for('static', filename='images/sidebar_collapsed.webp') }}" alt="QSPARK" class="sidebar-logo-collapsed" style="width:36px;height:36px;object-fit:contain;">
+      <button class="btn btn-ghost btn-icon sidebar-expand-arrow" id="sidebarCollapse" aria-label="Toggle sidebar" style="margin-left:auto;"><span class="material-symbols-outlined">chevron_left</span></button>
     </div>
     <nav class="sidebar-nav">
       {{ section('Parking') }}

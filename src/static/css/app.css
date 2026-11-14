@@ -116,7 +116,11 @@ h1,h2,h3,.page-title,.card-title,.sidebar-brand,.sidebar-section { font-family: 
 .nav-ctrl-label { font-size: 0.7rem; color: var(--muted); }
 .sidebar.is-collapsed ~ .main-column { margin-left: 88px; }
 .sidebar.is-collapsed { width: 64px; }
-.sidebar.is-collapsed .nav-label, .sidebar.is-collapsed .sidebar-section, .sidebar.is-collapsed .sidebar-logo { display: none; }
+.sidebar.is-collapsed .nav-label, .sidebar.is-collapsed .sidebar-section, .sidebar.is-collapsed .sidebar-logo-expanded, .sidebar.is-collapsed .sidebar-expand-arrow { display: none; }
+.sidebar .sidebar-logo-collapsed { display: none; }
+.sidebar.is-collapsed .sidebar-logo-collapsed { display: block; margin: 0 auto; }
+.sidebar.is-collapsed #sidebarBrand:hover .sidebar-logo-collapsed { display: none; }
+.sidebar.is-collapsed #sidebarBrand:hover .sidebar-expand-arrow { display: inline-flex; }
 .sidebar.is-collapsed .sidebar-profile-text { display: none; }
 .sidebar.is-collapsed .sidebar-brand { justify-content: center; }
 .sidebar.is-collapsed .nav-item { justify-content: center; }
