@@ -44,7 +44,7 @@ def _overstay(overstay_rate, booked_until_iso, exit_iso):
 
 @qr_bp.post("/generate")
 def generate():
-    logger.info("QR generate requested ref=%r user=%s", request.get_json(silent=True), session.get('user_id'))
+    current_app.logger.info("QR generate requested ref=%r user=%s", request.get_json(silent=True), session.get('user_id'))
     user_id = session.get("user_id")
     if user_id is None:
         return jsonify({"error": "Authentication required", "code": 401}), 401
@@ -70,7 +70,7 @@ def generate():
         img.save(buf, format="PNG")
         buf.seek(0)
         qr_b64 = base64.b64encode(buf.read()).decode("utf-8")
-        logger.info("QR generated ref=%s", ref)
+        current_app.logger.info("QR generated ref=%s", ref)
         return jsonify({"booking_reference": ref, "qr_base64": qr_b64, "qr_data": ref})
     finally:
         conn.close()
@@ -82,7 +82,7 @@ def scan():
     data = request.get_json(silent=True) or {}
     ref = data.get("booking_reference")
     method = (data.get("scan_method") or "QR").upper()
-    logger.info("QR scan requested ref=%r method=%s user=%s", ref, method, session.get('user_id'))
+    current_app.logger.info("QR scan requested ref=%r method=%s user=%s", ref, method, session.get('user_id'))
     if method not in ("QR", "MANUAL"):
         method = "QR"
     if not ref:
@@ -215,5 +215,5 @@ def scan():
             "message": "Exit granted",
         })
     except Exception as e:
-        logger.exception("QR scan failed ref=%r: %s", ref, e)
+        current_app.logger.exception("QR scan failed ref=%r: %s", ref, e)
         return jsonify({"error": str(e), "code": 500}), 500
