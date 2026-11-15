@@ -329,6 +329,10 @@ Design that made this small enough to generate:
 1. `(TIMESTAMP - TIMESTAMP) * 24` is invalid — INTERVAL cannot be multiplied. All four duration calculations now cast to `DATE` first. This was the same class of error as the original `05_package.sql` compile failure.
 2. `PERFORM` is PL/pgSQL, not PL/SQL. Both wallet-adjustment handlers now assign to a dummy variable.
 
+Objects that embed an array (`FORMAT JSON`) keep the CLOB return, so long payloads still work.
+
+`template_count 55` is correct: 53 from 08a plus `health` and one leftover created earlier.
+
 ### Next action (single step)
 
 Run in SQL Developer, in order, as `NOV_2026_BATCH`:

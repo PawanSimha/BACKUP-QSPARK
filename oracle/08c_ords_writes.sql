@@ -149,7 +149,7 @@ BEGIN
     'booked_until' VALUE v_until_s, 'duration_hours' VALUE v_dur,
     'hourly_rate' VALUE v_hr, 'estimated_amount' VALUE v_est,
     'booking_status' VALUE 'HELD',
-    'message' VALUE 'Slot held. Confirm within 30 minutes.' RETURNING CLOB));
+    'message' VALUE 'Slot held. Confirm within 30 minutes.'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -198,7 +198,7 @@ BEGIN
 
   IF v_wallet < v_amt THEN
     qspark_json(JSON_OBJECT('code' VALUE 402, 'error' VALUE 'Insufficient wallet balance',
-      'wallet_balance' VALUE v_wallet, 'required' VALUE v_amt RETURNING CLOB)); RETURN;
+      'wallet_balance' VALUE v_wallet, 'required' VALUE v_amt)); RETURN;
   END IF;
 
   v_sa := qspark_sa_user;
@@ -306,7 +306,7 @@ BEGIN
   qspark_json(JSON_OBJECT('booking_reference' VALUE :ref, 'booking_status' VALUE 'CANCELLED',
     'refund_amount' VALUE v_refund, 'penalty_amount' VALUE v_penalty,
     'net_credit' VALUE v_net, 'new_wallet_balance' VALUE v_new,
-    'message' VALUE 'Booking cancelled.' RETURNING CLOB));
+    'message' VALUE 'Booking cancelled.'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -352,7 +352,7 @@ BEGIN
     qspark_json(JSON_OBJECT('action' VALUE 'ENTRY', 'booking_reference' VALUE v_ref,
       'user_name' VALUE v_name, 'vehicle_number' VALUE v_vnum, 'slot_number' VALUE v_slotno,
       'entry_time' VALUE TO_CHAR(v_now, 'YYYY-MM-DD"T"HH24:MI:SS'),
-      'message' VALUE 'Entry granted' RETURNING CLOB));
+      'message' VALUE 'Entry granted'));
     RETURN;
   END IF;
 
@@ -363,7 +363,7 @@ BEGIN
   END;
   IF v_exit IS NOT NULL THEN
     qspark_json(JSON_OBJECT('code' VALUE 409, 'error' VALUE 'Vehicle already exited',
-      'exit_time' VALUE v_exit RETURNING CLOB)); RETURN;
+      'exit_time' VALUE v_exit)); RETURN;
   END IF;
 
   IF v_now > v_until THEN
@@ -376,7 +376,7 @@ BEGIN
       qspark_json(JSON_OBJECT('code' VALUE 409, 'action' VALUE 'EXIT_BLOCKED',
         'booking_reference' VALUE v_ref, 'overstay_hours' VALUE v_hours,
         'overstay_amount' VALUE v_amt, 'wallet_balance' VALUE v_wallet,
-        'message' VALUE 'Overtime due Rs ' || v_amt || '. Pay to unblock exit.' RETURNING CLOB));
+        'message' VALUE 'Overtime due Rs ' || v_amt || '. Pay to unblock exit.'));
       RETURN;
     END IF;
     v_new := ROUND(v_wallet - v_amt, 2);
@@ -406,7 +406,7 @@ BEGIN
     'user_name' VALUE v_name, 'vehicle_number' VALUE v_vnum, 'slot_number' VALUE v_slotno,
     'exit_time' VALUE TO_CHAR(v_now, 'YYYY-MM-DD"T"HH24:MI:SS'),
     'overstay_hours' VALUE v_hours, 'overstay_amount' VALUE v_amt,
-    'message' VALUE 'Exit granted' RETURNING CLOB));
+    'message' VALUE 'Exit granted'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -450,7 +450,7 @@ BEGIN
     qspark_json(JSON_OBJECT('action' VALUE 'ENTRY', 'booking_reference' VALUE v_ref,
       'user_name' VALUE v_name, 'vehicle_number' VALUE v_vnum, 'slot_number' VALUE v_slotno,
       'entry_time' VALUE TO_CHAR(v_now, 'YYYY-MM-DD"T"HH24:MI:SS'),
-      'message' VALUE 'Entry granted' RETURNING CLOB));
+      'message' VALUE 'Entry granted'));
     RETURN;
   END IF;
   BEGIN
@@ -460,7 +460,7 @@ BEGIN
   END;
   IF v_exit IS NOT NULL THEN
     qspark_json(JSON_OBJECT('code' VALUE 409, 'error' VALUE 'Vehicle already exited',
-      'exit_time' VALUE v_exit RETURNING CLOB)); RETURN;
+      'exit_time' VALUE v_exit)); RETURN;
   END IF;
   IF v_now > v_until THEN
     v_hours := CEIL((CAST(v_now AS DATE) - CAST(v_until AS DATE)) * 48) / 2;
@@ -471,7 +471,7 @@ BEGIN
       qspark_json(JSON_OBJECT('code' VALUE 409, 'action' VALUE 'EXIT_BLOCKED',
         'booking_reference' VALUE v_ref, 'overstay_hours' VALUE v_hours,
         'overstay_amount' VALUE v_amt, 'wallet_balance' VALUE v_wallet,
-        'message' VALUE 'Overtime due Rs ' || v_amt || '. Pay to unblock exit.' RETURNING CLOB));
+        'message' VALUE 'Overtime due Rs ' || v_amt || '. Pay to unblock exit.'));
       RETURN;
     END IF;
     v_new := ROUND(v_wallet - v_amt, 2);
@@ -499,7 +499,7 @@ BEGIN
     'user_name' VALUE v_name, 'vehicle_number' VALUE v_vnum, 'slot_number' VALUE v_slotno,
     'exit_time' VALUE TO_CHAR(v_now, 'YYYY-MM-DD"T"HH24:MI:SS'),
     'overstay_hours' VALUE v_hours, 'overstay_amount' VALUE v_amt,
-    'message' VALUE 'Exit granted' RETURNING CLOB));
+    'message' VALUE 'Exit granted'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -542,7 +542,7 @@ BEGIN
   qspark_audit('CREATE_USER', 'users', v_id, NULL,
                '{"username":"' || v_user || '"}', v_actor);
   qspark_json(JSON_OBJECT('user_id' VALUE v_id, 'username' VALUE v_user,
-    'message' VALUE 'Customer created' RETURNING CLOB));
+    'message' VALUE 'Customer created'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -568,7 +568,7 @@ BEGIN
    WHERE user_id = v_id;
 
   qspark_audit('UPDATE_USER', 'users', v_id, NULL, :body, v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'User updated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'User updated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -587,7 +587,7 @@ BEGIN
   IF v_role = 'SUPER_ADMIN' THEN qspark_err(403, 'Cannot delete a Super Admin'); RETURN; END IF;
   UPDATE qspark_users SET account_status = 'DELETED', updated_by = v_actor WHERE user_id = v_id;
   qspark_audit('DELETE_USER', 'users', v_id, v_role, 'DELETED', v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'User deleted' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'User deleted'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -616,7 +616,7 @@ BEGIN
   qspark_audit('WALLET_ADJUSTMENT', 'users', v_id, TO_CHAR(v_before), TO_CHAR(v_after), v_actor);
 
   qspark_json(JSON_OBJECT('user_id' VALUE v_id, 'adjustment' VALUE v_amt,
-    'previous_balance' VALUE v_before, 'new_balance' VALUE v_after RETURNING CLOB));
+    'previous_balance' VALUE v_before, 'new_balance' VALUE v_after));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -643,7 +643,7 @@ BEGIN
   END IF;
   UPDATE qspark_parking_slots SET control_status = v_st, updated_by = v_actor WHERE slot_id = v_id;
   qspark_audit('SLOT_STATUS', 'parking_slots', v_id, v_old, v_st, v_actor);
-  qspark_json(JSON_OBJECT('slot_id' VALUE v_id, 'control_status' VALUE v_st RETURNING CLOB));
+  qspark_json(JSON_OBJECT('slot_id' VALUE v_id, 'control_status' VALUE v_st));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -661,7 +661,7 @@ BEGIN
   UPDATE qspark_floors SET floor_status = v_st, updated_by = v_actor WHERE floor_id = v_id;
   IF SQL%ROWCOUNT = 0 THEN qspark_err(404, 'Floor not found'); RETURN; END IF;
   qspark_audit('FLOOR_STATUS', 'floors', v_id, NULL, v_st, v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Floor updated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Floor updated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -688,7 +688,7 @@ BEGIN
   END IF;
   UPDATE qspark_parking_slots SET control_status = v_st, updated_by = v_actor WHERE slot_id = v_id;
   qspark_audit('SLOT_STATUS', 'parking_slots', v_id, v_old, v_st, v_actor);
-  qspark_json(JSON_OBJECT('slot_id' VALUE v_id, 'control_status' VALUE v_st RETURNING CLOB));
+  qspark_json(JSON_OBJECT('slot_id' VALUE v_id, 'control_status' VALUE v_st));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -713,7 +713,7 @@ BEGIN
           NVL(qspark_num(JSON_VALUE(:body, '$.is_active')), 1), v_actor)
   RETURNING rule_id INTO v_id;
   qspark_audit('CREATE_RULE', 'cancellation_rules', v_id, NULL, :body, v_actor);
-  qspark_json(JSON_OBJECT('rule_id' VALUE v_id, 'message' VALUE 'Rule created' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('rule_id' VALUE v_id, 'message' VALUE 'Rule created'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -737,7 +737,7 @@ BEGIN
    WHERE rule_id = v_id;
   IF SQL%ROWCOUNT = 0 THEN qspark_err(404, 'Rule not found'); RETURN; END IF;
   qspark_audit('UPDATE_RULE', 'cancellation_rules', v_id, NULL, :body, v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Rule updated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Rule updated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -751,7 +751,7 @@ BEGIN
   UPDATE qspark_cancellation_rules SET is_active = 0, updated_by = v_actor WHERE rule_id = v_id;
   IF SQL%ROWCOUNT = 0 THEN qspark_err(404, 'Rule not found'); RETURN; END IF;
   qspark_audit('DELETE_RULE', 'cancellation_rules', v_id, '1', '0', v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Rule deactivated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Rule deactivated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -790,7 +790,7 @@ BEGIN
 
   qspark_audit('CREATE_ADMIN', 'users', v_id, NULL, '{"admin_id":"' || v_aid || '"}', v_actor);
   qspark_json(JSON_OBJECT('user_id' VALUE v_id, 'admin_id' VALUE v_aid,
-    'message' VALUE 'Admin created' RETURNING CLOB));
+    'message' VALUE 'Admin created'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -816,7 +816,7 @@ BEGIN
     updated_by   = v_actor
    WHERE user_id = v_id;
   qspark_audit('UPDATE_ADMIN', 'users', v_id, NULL, :body, v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Admin updated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Admin updated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -835,7 +835,7 @@ BEGIN
   IF v_role <> 'ADMIN' THEN qspark_err(403, 'Only ADMIN accounts can be deleted'); RETURN; END IF;
   UPDATE qspark_users SET account_status = 'DELETED', updated_by = v_actor WHERE user_id = v_id;
   qspark_audit('DELETE_ADMIN', 'users', v_id, v_role, 'DELETED', v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Admin deleted' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Admin deleted'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -858,7 +858,7 @@ BEGIN
   IF v_role <> 'ADMIN' THEN qspark_err(403, 'Only ADMIN accounts can be changed'); RETURN; END IF;
   UPDATE qspark_users SET account_status = v_st, updated_by = v_actor WHERE user_id = v_id;
   qspark_audit('ADMIN_STATUS', 'users', v_id, v_role, v_st, v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Status updated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Status updated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -885,7 +885,7 @@ BEGIN
                             NVL(v_note, 'Admin adjustment'), v_actor);
   qspark_audit('WALLET_ADJUSTMENT', 'users', v_id, TO_CHAR(v_before), TO_CHAR(v_after), v_actor);
   qspark_json(JSON_OBJECT('user_id' VALUE v_id, 'adjustment' VALUE v_amt,
-    'previous_balance' VALUE v_before, 'new_balance' VALUE v_after RETURNING CLOB));
+    'previous_balance' VALUE v_before, 'new_balance' VALUE v_after));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -903,7 +903,7 @@ BEGIN
   INSERT INTO qspark_floors (floor_code, floor_status, created_by)
   VALUES (v_code, 'OPEN', v_actor) RETURNING floor_id INTO v_id;
   qspark_audit('CREATE_FLOOR', 'floors', v_id, NULL, v_code, v_actor);
-  qspark_json(JSON_OBJECT('floor_id' VALUE v_id, 'floor_code' VALUE v_code RETURNING CLOB));
+  qspark_json(JSON_OBJECT('floor_id' VALUE v_id, 'floor_code' VALUE v_code));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -926,7 +926,7 @@ BEGIN
    WHERE floor_id = v_id;
   IF SQL%ROWCOUNT = 0 THEN qspark_err(404, 'Floor not found'); RETURN; END IF;
   qspark_audit('UPDATE_FLOOR', 'floors', v_id, NULL, :body, v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Floor updated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Floor updated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -945,7 +945,7 @@ BEGIN
   UPDATE qspark_floors SET floor_status = 'INACTIVE', updated_by = v_actor WHERE floor_id = v_id;
   IF SQL%ROWCOUNT = 0 THEN qspark_err(404, 'Floor not found'); RETURN; END IF;
   qspark_audit('DELETE_FLOOR', 'floors', v_id, NULL, 'INACTIVE', v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Floor deactivated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Floor deactivated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -972,7 +972,7 @@ BEGIN
   INSERT INTO qspark_parking_slots (floor_id, vehicle_type_id, slot_number, control_status, created_by)
   VALUES (v_fid, v_vt, v_num, 'ACTIVE', v_actor) RETURNING slot_id INTO v_id;
   qspark_audit('CREATE_SLOT', 'parking_slots', v_id, NULL, v_num, v_actor);
-  qspark_json(JSON_OBJECT('slot_id' VALUE v_id, 'slot_number' VALUE v_num RETURNING CLOB));
+  qspark_json(JSON_OBJECT('slot_id' VALUE v_id, 'slot_number' VALUE v_num));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -1001,7 +1001,7 @@ BEGIN
     updated_by      = v_actor
    WHERE slot_id = v_id;
   qspark_audit('UPDATE_SLOT', 'parking_slots', v_id, NULL, :body, v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Slot updated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Slot updated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -1019,7 +1019,7 @@ BEGIN
   UPDATE qspark_parking_slots SET control_status = 'INACTIVE', updated_by = v_actor WHERE slot_id = v_id;
   IF SQL%ROWCOUNT = 0 THEN qspark_err(404, 'Slot not found'); RETURN; END IF;
   qspark_audit('DELETE_SLOT', 'parking_slots', v_id, NULL, 'INACTIVE', v_actor);
-  qspark_json(JSON_OBJECT('message' VALUE 'Slot deactivated' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('message' VALUE 'Slot deactivated'));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -1075,7 +1075,7 @@ BEGIN
    WHERE booking_id = v_bid;
   qspark_audit('BOOKING_CANCELLED', 'bookings', v_bid, v_status, 'CANCELLED', v_actor);
   qspark_json(JSON_OBJECT('booking_reference' VALUE :ref, 'booking_status' VALUE 'CANCELLED',
-    'refund_amount' VALUE v_refund RETURNING CLOB));
+    'refund_amount' VALUE v_refund));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -1109,7 +1109,7 @@ BEGIN
   UPDATE qspark_system_settings SET setting_value = TO_CHAR(v_val), updated_by = v_actor
    WHERE setting_key = 'SESSION_IDLE_TIMEOUT';
   qspark_audit('SESSION_TIMEOUT_CHANGE', 'system_settings', NULL, v_old, TO_CHAR(v_val), v_actor);
-  qspark_json(JSON_OBJECT('idle_timeout_minutes' VALUE v_val RETURNING CLOB));
+  qspark_json(JSON_OBJECT('idle_timeout_minutes' VALUE v_val));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -1136,7 +1136,7 @@ BEGIN
    WHERE setting_key = 'SYSTEM_STATUS';
   qspark_audit(CASE WHEN v_val = 'ONLINE' THEN 'SYSTEM_ONLINE' ELSE 'SYSTEM_OFFLINE' END,
                'system_settings', NULL, v_old, v_val, v_actor);
-  qspark_json(JSON_OBJECT('system_status' VALUE v_val RETURNING CLOB));
+  qspark_json(JSON_OBJECT('system_status' VALUE v_val));
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
@@ -1175,7 +1175,7 @@ BEGIN
     'full_name' VALUE full_name, 'email' VALUE email, 'phone' VALUE phone,
     'gender' VALUE gender, 'company_name' VALUE company_name, 'username' VALUE username,
     'role' VALUE role, 'wallet_balance' VALUE wallet_balance,
-    'account_status' VALUE account_status, 'created_at' VALUE created_at RETURNING CLOB)
+    'account_status' VALUE account_status, 'created_at' VALUE created_at)
     INTO v FROM qspark_users WHERE user_id = v_actor;
   qspark_json(v);
 EXCEPTION WHEN OTHERS THEN

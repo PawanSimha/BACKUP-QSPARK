@@ -16,6 +16,15 @@ BEGIN
 END;
 /
 
+-- Overload for short objects. JSON_OBJECT without RETURNING yields VARCHAR2(4000),
+-- which is the only form PL/SQL accepts when the object has no FORMAT JSON value.
+CREATE OR REPLACE PROCEDURE qspark_json(p_json VARCHAR2) IS
+BEGIN
+  OWA_UTIL.mime_header('application/json', TRUE);
+  HTP.p(p_json);
+END;
+/
+
 CREATE OR REPLACE PROCEDURE qspark_items(p_arr CLOB) IS
 BEGIN
   qspark_json(JSON_OBJECT('items' VALUE NVL(p_arr, '[]') FORMAT JSON RETURNING CLOB));
@@ -24,7 +33,7 @@ END;
 
 CREATE OR REPLACE PROCEDURE qspark_err(p_code NUMBER, p_msg VARCHAR2) IS
 BEGIN
-  qspark_json(JSON_OBJECT('code' VALUE p_code, 'error' VALUE p_msg RETURNING CLOB));
+  qspark_json(JSON_OBJECT('code' VALUE p_code, 'error' VALUE p_msg));
 END;
 /
 

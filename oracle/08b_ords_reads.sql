@@ -22,7 +22,7 @@ BEGIN
            'available_slots'   VALUE available_slots,
            'reserved_slots'    VALUE reserved_slots,
            'occupied_slots'    VALUE occupied_slots,
-           'maintenance_slots' VALUE maintenance_slots) RETURNING CLOB)
+           'maintenance_slots' VALUE maintenance_slots))
     INTO v
     FROM (SELECT f.floor_id, f.floor_code, f.floor_status,
                  COUNT(s.slot_id) AS total_slots,
@@ -46,7 +46,7 @@ BEGIN
            'type_name'       VALUE type_name,
            'hourly_rate'     VALUE hourly_rate,
            'overstay_rate'   VALUE overstay_rate,
-           'is_active'       VALUE is_active) RETURNING CLOB)
+           'is_active'       VALUE is_active))
     INTO v
     FROM (SELECT vehicle_type_id, type_name, hourly_rate, overstay_rate, is_active
             FROM qspark_vehicle_types
@@ -111,7 +111,7 @@ BEGIN
            'role'           VALUE role,
            'wallet_balance' VALUE wallet_balance,
            'account_status' VALUE account_status,
-           'created_at'     VALUE created_at) RETURNING CLOB)
+           'created_at'     VALUE created_at))
     INTO v
     FROM (SELECT user_id, admin_id, full_name, email, phone, gender, company_name,
                  username, role, wallet_balance, account_status, created_at
@@ -134,7 +134,7 @@ BEGIN
            'refund_percent'   VALUE refund_percent,
            'penalty_percent'  VALUE penalty_percent,
            'description'      VALUE description,
-           'is_active'        VALUE is_active) RETURNING CLOB)
+           'is_active'        VALUE is_active))
     INTO v
     FROM (SELECT rule_id, rule_code, rule_name, min_hours_before, max_hours_before,
                  is_no_show, refund_percent, penalty_percent, description, is_active
@@ -156,7 +156,7 @@ BEGIN
            'floor_id' VALUE floor_id, 'vehicle_type_id' VALUE vehicle_type_id,
            'control_status' VALUE control_status, 'status' VALUE status,
            'floor_code' VALUE floor_code, 'vehicle_type' VALUE type_name,
-           'hourly_rate' VALUE hourly_rate, 'overstay_rate' VALUE overstay_rate) RETURNING CLOB)
+           'hourly_rate' VALUE hourly_rate, 'overstay_rate' VALUE overstay_rate))
     INTO v FROM (SELECT * FROM qspark_v_slots_live ORDER BY floor_id, slot_number);
   qspark_json(NVL(v, '[]'));
 END;!');
@@ -169,7 +169,7 @@ BEGIN
            'floor_id' VALUE floor_id, 'vehicle_type_id' VALUE vehicle_type_id,
            'control_status' VALUE control_status, 'status' VALUE status,
            'floor_code' VALUE floor_code, 'vehicle_type' VALUE type_name,
-           'hourly_rate' VALUE hourly_rate, 'overstay_rate' VALUE overstay_rate) RETURNING CLOB)
+           'hourly_rate' VALUE hourly_rate, 'overstay_rate' VALUE overstay_rate))
     INTO v FROM (SELECT * FROM qspark_v_slots_live ORDER BY floor_id, slot_number);
   qspark_json(NVL(v, '[]'));
 END;!');
@@ -180,7 +180,7 @@ BEGIN
   SELECT JSON_ARRAYAGG(JSON_OBJECT(
            'floor_id' VALUE floor_id, 'floor_code' VALUE floor_code,
            'floor_status' VALUE floor_status, 'total_slots' VALUE total_slots,
-           'available_slots' VALUE available_slots) RETURNING CLOB)
+           'available_slots' VALUE available_slots))
     INTO v
     FROM (SELECT f.floor_id, f.floor_code, f.floor_status,
                  COUNT(s.slot_id) AS total_slots,
@@ -204,8 +204,7 @@ BEGIN
            'floor_id' VALUE floor_id, 'vehicle_type_id' VALUE vehicle_type_id,
            'control_status' VALUE control_status, 'status' VALUE status,
            'floor_code' VALUE floor_code, 'vehicle_type' VALUE type_name,
-           'hourly_rate' VALUE hourly_rate, 'overstay_rate' VALUE overstay_rate
-           RETURNING CLOB)
+           'hourly_rate' VALUE hourly_rate, 'overstay_rate' VALUE overstay_rate)
     INTO v FROM qspark_v_slots_live WHERE slot_id = qspark_num(:slot_id);
   IF v IS NULL THEN qspark_err(404, 'Slot not found'); ELSE qspark_json(v); END IF;
 EXCEPTION WHEN NO_DATA_FOUND THEN qspark_err(404, 'Slot not found');
@@ -229,7 +228,7 @@ BEGIN
            'estimated_amount' VALUE estimated_amount,
            'booking_status' VALUE booking_status,
            'floor_code' VALUE floor_code, 'slot_number' VALUE slot_number,
-           'vehicle_type' VALUE vehicle_type, 'has_entered' VALUE has_entered) RETURNING CLOB)
+           'vehicle_type' VALUE vehicle_type, 'has_entered' VALUE has_entered))
     INTO v
     FROM (SELECT b.booking_id, b.booking_reference, b.user_id, b.slot_id, b.vehicle_format,
                  b.vehicle_number, b.booked_from, b.booked_until, b.hold_expires_at,
@@ -275,7 +274,7 @@ BEGIN
            'events' VALUE (SELECT JSON_ARRAYAGG(JSON_OBJECT(
                                      'event_type' VALUE e.event_type,
                                      'scan_method' VALUE e.scan_method,
-                                     'created_at' VALUE e.created_at) RETURNING CLOB)
+                                     'created_at' VALUE e.created_at))
                              FROM qspark_booking_events e WHERE e.booking_id = b.booking_id)
            FORMAT JSON RETURNING CLOB)
     INTO v
@@ -298,7 +297,7 @@ BEGIN
            'transaction_reference' VALUE transaction_reference,
            'transaction_type' VALUE transaction_type, 'direction' VALUE direction,
            'amount' VALUE amount, 'balance_after' VALUE balance_after,
-           'description' VALUE description, 'created_at' VALUE created_at) RETURNING CLOB)
+           'description' VALUE description, 'created_at' VALUE created_at))
     INTO v
     FROM (SELECT transaction_reference, transaction_type, direction, amount,
                  balance_after, description, created_at
@@ -331,7 +330,7 @@ BEGIN
     'total_slots' VALUE v_total, 'available_slots' VALUE v_av,
     'reserved_slots' VALUE v_rs, 'occupied_slots' VALUE v_oc,
     'maintenance_slots' VALUE v_mt, 'total_revenue' VALUE ROUND(v_rev, 2),
-    'active_users' VALUE v_users RETURNING CLOB));
+    'active_users' VALUE v_users));
 END;!');
 
   qspark_h('api/admin/bookings', 'GET', q'!
@@ -344,7 +343,7 @@ BEGIN
            'vehicle_format' VALUE vehicle_format, 'username' VALUE username,
            'full_name' VALUE full_name, 'role' VALUE role, 'floor_code' VALUE floor_code,
            'slot_number' VALUE slot_number, 'vehicle_type' VALUE vehicle_type,
-           'entry_time' VALUE entry_time, 'exit_time' VALUE exit_time) RETURNING CLOB)
+           'entry_time' VALUE entry_time, 'exit_time' VALUE exit_time))
     INTO v
     FROM (SELECT b.booking_reference, b.booking_status, b.booked_from, b.booked_until,
                  b.estimated_amount, b.vehicle_number, b.vehicle_format,
@@ -383,7 +382,7 @@ BEGIN
            'gender' VALUE gender, 'company_name' VALUE company_name,
            'username' VALUE username, 'role' VALUE role,
            'wallet_balance' VALUE wallet_balance, 'account_status' VALUE account_status,
-           'created_at' VALUE created_at RETURNING CLOB)
+           'created_at' VALUE created_at)
     INTO v FROM qspark_users WHERE user_id = qspark_num(:user_id);
   IF v IS NULL THEN qspark_err(404, 'User not found'); ELSE qspark_json(v); END IF;
 EXCEPTION WHEN NO_DATA_FOUND THEN qspark_err(404, 'User not found');
@@ -397,7 +396,7 @@ BEGIN
            'transaction_reference' VALUE transaction_reference,
            'transaction_type' VALUE transaction_type, 'direction' VALUE direction,
            'amount' VALUE amount, 'balance_after' VALUE balance_after,
-           'description' VALUE description, 'created_at' VALUE created_at) RETURNING CLOB)
+           'description' VALUE description, 'created_at' VALUE created_at))
     INTO v
     FROM (SELECT transaction_reference, transaction_type, direction, amount,
                  balance_after, description, created_at
@@ -427,8 +426,7 @@ BEGIN
            'floor_code' VALUE floor_code, 'floor_status' VALUE floor_status,
            'total_slots' VALUE total_slots, 'occupied_slots' VALUE occupied_slots,
            'occupancy_percent' VALUE CASE WHEN total_slots = 0 THEN 0
-                                          ELSE ROUND(100 * occupied_slots / total_slots, 2) END
-           RETURNING CLOB)
+                                          ELSE ROUND(100 * occupied_slots / total_slots, 2) END)
     INTO v
     FROM (SELECT f.floor_code, f.floor_status,
                  COUNT(s.slot_id) AS total_slots,
@@ -452,7 +450,7 @@ DECLARE v CLOB; g NUMBER;
 BEGIN
   SELECT JSON_ARRAYAGG(JSON_OBJECT(
            'floor_code' VALUE floor_code, 'booking_count' VALUE booking_count,
-           'total_revenue' VALUE total_revenue, 'net_revenue' VALUE net_revenue) RETURNING CLOB)
+           'total_revenue' VALUE total_revenue, 'net_revenue' VALUE net_revenue))
     INTO v
     FROM (SELECT f.floor_code,
                  COUNT(DISTINCT b.booking_id) AS booking_count,
@@ -480,7 +478,7 @@ DECLARE v CLOB;
 BEGIN
   SELECT JSON_ARRAYAGG(JSON_OBJECT(
            'collection_type' VALUE collection_type, 'count' VALUE cnt,
-           'total_amount' VALUE total_amount) RETURNING CLOB)
+           'total_amount' VALUE total_amount))
     INTO v
     FROM (SELECT collection_type, COUNT(*) AS cnt, ROUND(SUM(amount), 2) AS total_amount
             FROM qspark_revenue_collections
@@ -501,7 +499,7 @@ BEGIN
            'phone' VALUE phone, 'email' VALUE email, 'gender' VALUE gender,
            'company_name' VALUE company_name, 'username' VALUE username,
            'account_status' VALUE account_status, 'wallet_balance' VALUE wallet_balance,
-           'created_at' VALUE created_at, 'role' VALUE role) RETURNING CLOB)
+           'created_at' VALUE created_at, 'role' VALUE role))
     INTO v
     FROM (SELECT user_id, admin_id, full_name, phone, email, gender, company_name,
                  username, account_status, wallet_balance, created_at, role
@@ -519,7 +517,7 @@ BEGIN
            'gender' VALUE gender, 'company_name' VALUE company_name,
            'username' VALUE username, 'account_status' VALUE account_status,
            'wallet_balance' VALUE wallet_balance, 'created_at' VALUE created_at,
-           'role' VALUE role RETURNING CLOB)
+           'role' VALUE role)
     INTO v FROM qspark_users
    WHERE user_id = qspark_num(:user_id) AND role IN ('ADMIN', 'SUPER_ADMIN');
   IF v IS NULL THEN qspark_err(404, 'Admin not found'); ELSE qspark_json(v); END IF;
@@ -535,7 +533,7 @@ BEGIN
            'transaction_reference' VALUE transaction_reference,
            'transaction_type' VALUE transaction_type, 'direction' VALUE direction,
            'amount' VALUE amount, 'balance_after' VALUE balance_after,
-           'description' VALUE description, 'created_at' VALUE created_at) RETURNING CLOB)
+           'description' VALUE description, 'created_at' VALUE created_at))
     INTO v
     FROM (SELECT transaction_id, transaction_reference, transaction_type, direction,
                  amount, balance_after, description, created_at
@@ -565,7 +563,7 @@ BEGIN
     'completed_bookings' VALUE v_done, 'net_revenue' VALUE ROUND(v_rev, 2),
     'total_slots' VALUE v_slots, 'occupied_slots' VALUE v_occ,
     'occupancy_percent' VALUE CASE WHEN v_slots = 0 THEN 0
-                                   ELSE ROUND(100 * v_occ / v_slots, 2) END RETURNING CLOB));
+                                   ELSE ROUND(100 * v_occ / v_slots, 2) END));
 END;!');
 
   qspark_h('api/super-admin/analytics/overtime', 'GET', q'!
@@ -573,7 +571,7 @@ DECLARE v CLOB;
 BEGIN
   SELECT JSON_ARRAYAGG(JSON_OBJECT(
            'day' VALUE TO_CHAR(created_at, 'YYYY-MM-DD'),
-           'count' VALUE cnt, 'amount' VALUE amount) RETURNING CLOB)
+           'count' VALUE cnt, 'amount' VALUE amount))
     INTO v
     FROM (SELECT TRUNC(created_at) AS created_at, COUNT(*) AS cnt, NVL(SUM(amount), 0) AS amount
             FROM qspark_wallet_transactions
@@ -591,8 +589,7 @@ BEGIN
            'floor_code' VALUE floor_code, 'floor_status' VALUE floor_status,
            'total_slots' VALUE total_slots, 'occupied_slots' VALUE occupied_slots,
            'occupancy_percent' VALUE CASE WHEN total_slots = 0 THEN 0
-                                          ELSE ROUND(100 * occupied_slots / total_slots, 2) END
-           RETURNING CLOB)
+                                          ELSE ROUND(100 * occupied_slots / total_slots, 2) END)
     INTO v
     FROM (SELECT f.floor_code, f.floor_status, COUNT(s.slot_id) AS total_slots,
                  NVL(SUM(CASE WHEN s.status IN ('RESERVED', 'OCCUPIED') THEN 1 ELSE 0 END), 0) AS occupied_slots
@@ -606,8 +603,7 @@ END;!');
   qspark_h('api/super-admin/analytics/revenue', 'GET', q'!
 DECLARE vf CLOB; vv CLOB; vd CLOB;
 BEGIN
-  SELECT JSON_ARRAYAGG(JSON_OBJECT('floor_code' VALUE floor_code, 'amount' VALUE amount)
-           RETURNING CLOB) INTO vf
+  SELECT JSON_ARRAYAGG(JSON_OBJECT('floor_code' VALUE floor_code, 'amount' VALUE amount)) INTO vf
     FROM (SELECT f.floor_code, NVL(SUM(rc.amount), 0) AS amount
             FROM qspark_revenue_collections rc
             JOIN qspark_bookings b ON b.booking_id = rc.booking_id
@@ -616,8 +612,7 @@ BEGIN
            WHERE (:date_from IS NULL OR b.booked_from >= TO_TIMESTAMP(:date_from, 'YYYY-MM-DD'))
              AND (:date_to IS NULL OR b.booked_from < TO_TIMESTAMP(:date_to, 'YYYY-MM-DD') + 1)
            GROUP BY f.floor_code ORDER BY f.floor_code);
-  SELECT JSON_ARRAYAGG(JSON_OBJECT('type_name' VALUE type_name, 'amount' VALUE amount)
-           RETURNING CLOB) INTO vv
+  SELECT JSON_ARRAYAGG(JSON_OBJECT('type_name' VALUE type_name, 'amount' VALUE amount)) INTO vv
     FROM (SELECT vt.type_name, NVL(SUM(rc.amount), 0) AS amount
             FROM qspark_revenue_collections rc
             JOIN qspark_bookings b ON b.booking_id = rc.booking_id
@@ -627,7 +622,7 @@ BEGIN
              AND (:date_to IS NULL OR b.booked_from < TO_TIMESTAMP(:date_to, 'YYYY-MM-DD') + 1)
            GROUP BY vt.type_name);
   SELECT JSON_ARRAYAGG(JSON_OBJECT('day' VALUE TO_CHAR(created_at, 'YYYY-MM-DD'),
-                                   'amount' VALUE amount) RETURNING CLOB) INTO vd
+                                   'amount' VALUE amount)) INTO vd
     FROM (SELECT TRUNC(rc.created_at) AS created_at, NVL(SUM(rc.amount), 0) AS amount
             FROM qspark_revenue_collections rc
             JOIN qspark_bookings b ON b.booking_id = rc.booking_id
@@ -646,9 +641,9 @@ END;!');
 DECLARE v VARCHAR2(500);
 BEGIN
   SELECT setting_value INTO v FROM qspark_system_settings WHERE setting_key = 'SYSTEM_STATUS';
-  qspark_json(JSON_OBJECT('system_status' VALUE v RETURNING CLOB));
+  qspark_json(JSON_OBJECT('system_status' VALUE v));
 EXCEPTION WHEN NO_DATA_FOUND THEN
-  qspark_json(JSON_OBJECT('system_status' VALUE 'ONLINE' RETURNING CLOB));
+  qspark_json(JSON_OBJECT('system_status' VALUE 'ONLINE'));
 END;!');
 
   qspark_h('api/system/super-admin/session', 'GET', q'!
@@ -661,7 +656,7 @@ BEGIN
   END;
   qspark_json(JSON_OBJECT('idle_timeout_minutes' VALUE v,
                           'absolute_max_minutes' VALUE 20,
-                          'updated_at' VALUE u RETURNING CLOB));
+                          'updated_at' VALUE u));
 END;!');
 
   COMMIT;
