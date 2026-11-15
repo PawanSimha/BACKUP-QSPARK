@@ -304,8 +304,9 @@ BEGIN
             FROM qspark_wallet_transactions
            WHERE user_id = qspark_num(:actor_user_id)
            ORDER BY created_at DESC);
-  qspark_json(JSON_OBJECT('wallet_balance' VALUE b,
-                          'transactions' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB));
+  SELECT JSON_OBJECT('wallet_balance' VALUE b,
+                          'transactions' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 EXCEPTION WHEN NO_DATA_FOUND THEN qspark_err(404, 'User not found');
 END;!');
 
@@ -367,8 +368,9 @@ BEGIN
                   OR LOWER(u.username) LIKE '%' || LOWER(:user_search) || '%'
                   OR LOWER(u.full_name) LIKE '%' || LOWER(:user_search) || '%')
            ORDER BY b.booked_from DESC);
-  qspark_json(JSON_OBJECT('items' VALUE NVL(v, '[]') FORMAT JSON,
-    'total' VALUE (SELECT COUNT(*) FROM qspark_bookings) RETURNING CLOB));
+  SELECT JSON_OBJECT('items' VALUE NVL(v, '[]') FORMAT JSON,
+    'total' VALUE (SELECT COUNT(*) FROM qspark_bookings) RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 END;!');
 
   qspark_h('api/admin/users', 'GET', q'!BEGIN qspark_r_users; END;!');
@@ -402,8 +404,9 @@ BEGIN
                  balance_after, description, created_at
             FROM qspark_wallet_transactions
            WHERE user_id = qspark_num(:user_id) ORDER BY created_at DESC);
-  qspark_json(JSON_OBJECT('user_id' VALUE qspark_num(:user_id), 'wallet_balance' VALUE b,
-                          'transactions' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB));
+  SELECT JSON_OBJECT('user_id' VALUE qspark_num(:user_id), 'wallet_balance' VALUE b,
+                          'transactions' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 EXCEPTION WHEN NO_DATA_FOUND THEN qspark_err(404, 'User not found');
 END;!');
 
@@ -440,9 +443,10 @@ BEGIN
                                                WHERE b.slot_id = s.slot_id
                                                  AND b.booked_from < TO_TIMESTAMP(:date_to, 'YYYY-MM-DD') + 1))
            GROUP BY f.floor_id, f.floor_code, f.floor_status
-           ORDER BY f.floor_code);
-  qspark_json(JSON_OBJECT('floor_heatmaps' VALUE NVL(v, '[]') FORMAT JSON,
-                          'date_from' VALUE :date_from, 'date_to' VALUE :date_to RETURNING CLOB));
+           ORDER BY f.floor_code));
+  SELECT JSON_OBJECT('floor_heatmaps' VALUE NVL(v, '[]') FORMAT JSON,
+                          'date_from' VALUE :date_from, 'date_to' VALUE :date_to RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 END;!');
 
   qspark_h('api/admin/reports/revenue', 'GET', q'!
@@ -468,9 +472,10 @@ BEGIN
   SELECT NVL(ROUND(SUM(amount), 2), 0) INTO g FROM qspark_revenue_collections
    WHERE (:date_from IS NULL OR created_at >= TO_TIMESTAMP(:date_from, 'YYYY-MM-DD'))
      AND (:date_to IS NULL OR created_at < TO_TIMESTAMP(:date_to, 'YYYY-MM-DD') + 1);
-  qspark_json(JSON_OBJECT('floor_revenue' VALUE NVL(v, '[]') FORMAT JSON,
+  SELECT JSON_OBJECT('floor_revenue' VALUE NVL(v, '[]') FORMAT JSON,
                           'grand_total' VALUE g,
-                          'date_from' VALUE :date_from, 'date_to' VALUE :date_to RETURNING CLOB));
+                          'date_from' VALUE :date_from, 'date_to' VALUE :date_to RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 END;!');
 
   qspark_h('api/admin/reports/revenue-summary', 'GET', q'!
@@ -485,7 +490,8 @@ BEGIN
            WHERE (:date_from IS NULL OR created_at >= TO_TIMESTAMP(:date_from, 'YYYY-MM-DD'))
              AND (:date_to IS NULL OR created_at < TO_TIMESTAMP(:date_to, 'YYYY-MM-DD') + 1)
            GROUP BY collection_type);
-  qspark_json(JSON_OBJECT('revenue_summary' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB));
+  SELECT JSON_OBJECT('revenue_summary' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 END;!');
 
   -- -------------------------------------------------------------------------
@@ -539,8 +545,9 @@ BEGIN
                  amount, balance_after, description, created_at
             FROM qspark_wallet_transactions
            WHERE user_id = qspark_num(:user_id) ORDER BY created_at DESC);
-  qspark_json(JSON_OBJECT('user_id' VALUE qspark_num(:user_id), 'wallet_balance' VALUE b,
-                          'transactions' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB));
+  SELECT JSON_OBJECT('user_id' VALUE qspark_num(:user_id), 'wallet_balance' VALUE b,
+                          'transactions' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 EXCEPTION WHEN NO_DATA_FOUND THEN qspark_err(404, 'User not found');
 END;!');
 
@@ -579,7 +586,8 @@ BEGIN
            GROUP BY TRUNC(created_at)
            ORDER BY TRUNC(created_at) DESC
            FETCH FIRST 30 ROWS ONLY);
-  qspark_json(JSON_OBJECT('overtime' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB));
+  SELECT JSON_OBJECT('overtime' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 END;!');
 
   qspark_h('api/super-admin/analytics/floor-heatmap', 'GET', q'!
@@ -596,8 +604,9 @@ BEGIN
             FROM qspark_floors f
             LEFT JOIN qspark_v_slots_live s ON s.floor_id = f.floor_id
            GROUP BY f.floor_id, f.floor_code, f.floor_status
-           ORDER BY f.floor_code);
-  qspark_json(JSON_OBJECT('floors' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB));
+           ORDER BY f.floor_code));
+  SELECT JSON_OBJECT('floors' VALUE NVL(v, '[]') FORMAT JSON RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 END;!');
 
   qspark_h('api/super-admin/analytics/revenue', 'GET', q'!
@@ -629,9 +638,10 @@ BEGIN
            WHERE (:date_from IS NULL OR b.booked_from >= TO_TIMESTAMP(:date_from, 'YYYY-MM-DD'))
              AND (:date_to IS NULL OR b.booked_from < TO_TIMESTAMP(:date_to, 'YYYY-MM-DD') + 1)
            GROUP BY TRUNC(rc.created_at) ORDER BY TRUNC(rc.created_at));
-  qspark_json(JSON_OBJECT('by_floor' VALUE NVL(vf, '[]') FORMAT JSON,
+  SELECT JSON_OBJECT('by_floor' VALUE NVL(vf, '[]') FORMAT JSON,
                           'by_vehicle_type' VALUE NVL(vv, '[]') FORMAT JSON,
-                          'by_day' VALUE NVL(vd, '[]') FORMAT JSON RETURNING CLOB));
+                          'by_day' VALUE NVL(vd, '[]') FORMAT JSON RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 END;!');
 
   -- -------------------------------------------------------------------------

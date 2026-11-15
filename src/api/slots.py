@@ -11,7 +11,6 @@ super_admin.py — keep it.
 
 from flask import Blueprint, jsonify, request, current_app
 from src.services.db import get_connection
-from src.services.ords import ords_get
 
 slots_bp = Blueprint("slots", __name__, url_prefix="/api/slots")
 
@@ -81,37 +80,48 @@ def availability():
     """Slots with live status.
 
     Query params: floor_id, vehicle_type_id (both optional).
-    Data comes from ORDS; filtering and colour mapping happen here so the
-    response shape stays identical to the SQLite version.
+    Data comes from direct SQLite; filtering and colour mapping happen here
+    so the response shape stays identical to the ORDS version.
     """
     floor_id = request.args.get("floor_id", type=int)
     vehicle_type_id = request.args.get("vehicle_type_id", type=int)
 
-    status, data = ords_get("/qsparking/api/v3/slots")
-    if status != 200 or not isinstance(data, list):
+    from src.services.db import get_connection as _get_conn
+    conn = _get_conn(current_app.config["DATABASE_PATH"])
+    try:
+        sql = """SELECT s.slot_id, s.slot_number, s.floor_id, s.vehicle_type_id,
+                         s.control_status AS status,
+                         f.floor_code, vt.type_name AS vehicle_type,
+                         vt.hourly_rate, vt.overstay_rate
+                  FROM parking_slots s
+                  JOIN floors f ON f.floor_id = s.floor_id
+                  JOIN vehicle_types vt ON vt.vehicle_type_id = s.vehicle_type_id
+                  WHERE 1=1"""
+        params = []
+        if floor_id is not None:
+            sql += " AND s.floor_id = ?"
+            params.append(floor_id)
+        if vehicle_type_id is not None:
+            sql += " AND s.vehicle_type_id = ?"
+            params.append(vehicle_type_id)
+        sql += " ORDER BY s.floor_id, s.slot_number"
+
+        items = []
+        for r in conn.execute(sql, params).fetchall():
+            item = dict(r)
+            item["hourly_rate"] = float(item.get("hourly_rate") or 0)
+            item["overstay_rate"] = float(item.get("overstay_rate") or 0)
+            item["color"] = _COLORS.get(item.get("status", ""), "grey")
+            items.append(item)
+
         return jsonify({
-            "error": "Slot data unavailable",
-            "code": 502,
-            "detail": str(data)[:200],
-        }), 502
-
-    items = data
-    if floor_id is not None:
-        items = [s for s in items if s.get("floor_id") == floor_id]
-    if vehicle_type_id is not None:
-        items = [s for s in items if s.get("vehicle_type_id") == vehicle_type_id]
-
-    for item in items:
-        item["hourly_rate"] = float(item.get("hourly_rate") or 0)
-        item["overstay_rate"] = float(item.get("overstay_rate") or 0)
-        item["color"] = _COLORS.get(item.get("status", ""), "grey")
-
-    return jsonify({
-        "items": items,
-        "floor_id": floor_id,
-        "vehicle_type_id": vehicle_type_id,
-        "total": len(items),
-    })
+            "items": items,
+            "floor_id": floor_id,
+            "vehicle_type_id": vehicle_type_id,
+            "total": len(items),
+        })
+    finally:
+        conn.close()
 
 
 @slots_bp.get("/<int:slot_id>")

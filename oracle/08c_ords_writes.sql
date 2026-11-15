@@ -156,6 +156,7 @@ END;!');
 
   qspark_h('api/bookings/:ref/confirm', 'POST', q'!
 DECLARE
+  v CLOB;
   v_uid NUMBER := qspark_num(:actor_user_id);
   v_role VARCHAR2(20) := NVL(:actor_role, 'CUSTOMER');
   v_bid NUMBER; v_owner NUMBER; v_slot NUMBER; v_amt NUMBER; v_status VARCHAR2(20);
@@ -223,10 +224,11 @@ BEGIN
   UPDATE qspark_bookings SET booking_status = 'CONFIRMED', updated_by = v_uid
    WHERE booking_id = v_bid;
 
-  qspark_json(JSON_OBJECT('booking_reference' VALUE :ref, 'booking_status' VALUE 'CONFIRMED',
+  SELECT JSON_OBJECT('booking_reference' VALUE :ref, 'booking_status' VALUE 'CONFIRMED',
     'amount_debited' VALUE v_amt, 'new_wallet_balance' VALUE v_new,
     'qr_generated' VALUE 'true' FORMAT JSON,
-    'message' VALUE 'Booking confirmed. QR generated.' RETURNING CLOB));
+    'message' VALUE 'Booking confirmed. QR generated.' RETURNING CLOB) INTO v FROM dual;
+  qspark_json(v);
 EXCEPTION WHEN OTHERS THEN
   ROLLBACK; qspark_err(500, SQLERRM);
 END;!');
