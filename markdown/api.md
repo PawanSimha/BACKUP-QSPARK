@@ -109,7 +109,7 @@ Available to CUSTOMER, ADMIN and SUPER_ADMIN.
 - 200: `{"items": [{vehicle_type_id, type_name, hourly_rate, overstay_rate, is_active}]}`
 
 ### GET /api/admin/slots?floor_id=
-- 200: `{"items": [{slot_id, slot_number, floor_id, vehicle_type_id, control_status, status, floor_code, vehicle_type}], total}`
+- 200: `{"items": [{slot_id, slot_number, floor_id, vehicle_type_id, control_status, status, floor_code, vehicle_type, occupant}], total}` where `occupant` is null for free slots, else `{booking_reference, full_name, username, vehicle_number, booked_from, booked_until, booking_status, entry_time}`
 - Compatibility aliases (same handlers, kept working):
   - `GET /api/admin/master/floors`
   - `GET /api/admin/master/vehicle-types`

@@ -131,3 +131,12 @@ Manual entry is convenience, not proof of a physical QR.
 ```
 
 Playwright is the Python package (`pip install playwright`, `python -m playwright install chromium firefox webkit`). Node is not required.
+
+---
+
+## New components (Nov 2026)
+
+- **Slot hover tooltip** (`admin_slots.html`): floating `#slotTooltip` positioned at cursor; shows occupant details (customer, vehicle, reference, entry, expected exit) for occupied/reserved slots; hidden on mouseout; follows cursor with viewport clamping.
+- **Floor status stacked bar** (`admin_dashboard.html`): 4-segment bar (available/reserved/occupied/maintenance) with color legend; replaces single occupied bar.
+- **Slot heat map** (`admin_analytics.html`, `super_admin_analytics.html`): per-floor colored slot grid with 4 floor selector buttons; clicking switches floors.
+- **SVG charts** (`admin_analytics.html`, `super_admin_analytics.html`): hand-rolled donut (slot status mix, revenue by vehicle type/floor) and line chart (daily collections trend); no external charting library.

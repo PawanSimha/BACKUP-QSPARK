@@ -1,5 +1,7 @@
 # QSPARK Smart Parking System - Database Design Documentation
 
+> Cross-reference: see `markdown/database_and_api_reference.md` for the consolidated DB + API reference (columns, constraints, query/template params, Oracle migration notes). Last refreshed 2026-11-15.
+
 ## Overview
 
 This document describes the complete database design for the QSPARK Smart Parking Slot Booking and Management System.

@@ -359,3 +359,5 @@ erDiagram
 
 Column-level detail is in `markdown/db.md`; the Mermaid block above is a summary and
 the per-table tables in this file are the accurate reference.
+
+> See `markdown/database_and_api_reference.md` for full column-level schema and Oracle migration notes.

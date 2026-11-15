@@ -281,3 +281,13 @@ Run commands are in `markdown/test_results.md`. No destructive browser test touc
 - **DOM wiring**: every `getElementById()` target in a page's inline script must exist in the rendered page. `tests/test_frontend_wiring.py` parses the rendered HTML of all 18 authenticated pages and fails on any missing element id, which prevents a null-reference error from silently killing the page's listeners.
 - Physical camera scanning on real hardware is **not tested** (no camera device available in this environment); see `markdown/test_results.md`.
 
+---
+
+## 7. Implemented analytics & reporting (Nov 2026)
+
+- Slot heat map per floor (4 floor selectors, colored by live status).
+- Donut charts: slot status mix; revenue by vehicle type; revenue by floor.
+- Line chart: daily collections trend.
+- Revenue report (`/api/admin/reports/revenue`) now driven by `revenue_collections` (date filter on `rc.created_at`), fixing the previously blank Net revenue column.
+- Slot hover tooltip on `/admin/slots` surfaces occupant details (booking reference, customer, vehicle, entry, expected exit).
+- Floor status 4-segment bars (available/reserved/occupied/maintenance) on admin dashboard.

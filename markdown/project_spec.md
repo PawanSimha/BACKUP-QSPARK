@@ -200,3 +200,14 @@ Known gaps are tracked in `open_questions.md` and `markdown/test_results.md`: th
 ## 11. Completion criteria
 
 The product is not complete until the Customer, Admin and Super Admin workflows work end-to-end against the same authoritative database, role permissions are enforced server-side, wallet/revenue records reconcile, QR entry/exit works, analytics are based on persisted data, and tests verify the main success and failure cases.
+
+---
+
+## 11. Implemented updates (Nov 2026)
+
+- **Slot hover tooltip** (admin + super admin `/admin/slots`): hovering an occupied/reserved slot shows customer, vehicle, booking reference, entry time, expected exit; disappears on mouse leave; follows cursor.
+- **Floor status breakdown** (admin dashboard): 4-segment stacked bar (available/reserved/occupied/maintenance) per floor with legend, reconciling with KPI cards.
+- **Analytics heat maps** (admin + super admin analytics): per-floor slot heat map with 4 floor selector buttons; clicking switches the heat map.
+- **Analytics charts** (donut + line): slot status mix donut, revenue-by-vehicle-type donut, revenue-by-floor donut, daily collections line chart.
+- **Revenue report fix**: `/api/admin/reports/revenue` now driven by `revenue_collections` (date filter on `rc.created_at`), fixing blank Net revenue column; `booking_count` = distinct bookings with collections.
+- **Comprehensive reference**: `markdown/database_and_api_reference.md` (DB schema + API contracts + Oracle migration notes).

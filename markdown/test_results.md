@@ -72,3 +72,9 @@ Initial axe audit found serious `color-contrast` on `.page-subtitle`, `link-in-t
 - Lighthouse was not run; axe-core was.
 - No load, soak or multi-instance concurrency test. SQLite is single-file; one app process is assumed.
 - Backup/restore procedure is documented and a hot backup command was exercised, but no full restore drill was performed against a production-sized database.
+
+---
+
+## Refresh notes (15 Nov 2026)
+
+No automated test suite exists in the repository (`tests/` directory is absent), so no pytest runs were executed during this refresh. The changes in this refresh (slot hover tooltip, floor status bars, analytics heat maps, donut/line charts, revenue report fix, comprehensive DB/API reference) were verified manually via browser inspection against the running dev server (`http://127.0.0.1:5000`) and via the Flask test client for endpoint responses. DB integrity check (`PRAGMA integrity_check`) returned `ok` and `PRAGMA foreign_key_check` returned no violations.
