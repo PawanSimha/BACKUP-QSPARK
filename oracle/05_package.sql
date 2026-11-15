@@ -68,7 +68,7 @@ CREATE OR REPLACE PACKAGE BODY QSPARK_API IS
     v_overstay_rate NUMBER;
     v_floor_status VARCHAR2(20);
     v_slot_status VARCHAR2(20);
-    v_duration_days NUMBER;
+    v_duration_hours NUMBER;
     v_count INTEGER;
   BEGIN
     -- Look up slot details and rates using schema-qualified names
@@ -103,9 +103,8 @@ CREATE OR REPLACE PACKAGE BODY QSPARK_API IS
     -- Generate booking reference
     v_booking_ref := 'QS' || TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS') || LPAD(TO_NUMBER(TO_CHAR(SYSDATE, 'SSSS')), 4, '0');
 
-    -- Calculate duration in hours: (booked_until - booked_from) * 24
-    -- Use NUMTODSINTERVAL to properly handle the interval
-    v_duration_days := TRUNC((p_booked_until - p_booked_from));
+    -- Calculate duration in hours: DATE subtraction gives fractional days; *24 converts to hours
+    v_duration_hours := (CAST(p_booked_until AS DATE) - CAST(p_booked_from AS DATE)) * 24;
 
     -- Create the booking with HELD status
     INSERT INTO NOV_2026_BATCH.QSPARK_BOOKINGS (
@@ -116,7 +115,7 @@ CREATE OR REPLACE PACKAGE BODY QSPARK_API IS
       v_booking_ref, p_user_id, p_slot_id, p_vehicle_format, p_vehicle_number,
       p_booked_from, p_booked_until, 'HELD',
       v_hourly_rate, v_overstay_rate,
-      ROUND(v_hourly_rate * v_duration_days, 2),
+      ROUND(v_hourly_rate * v_duration_hours, 2),
       p_user_id
     );
 
@@ -277,8 +276,9 @@ CREATE OR REPLACE PACKAGE BODY QSPARK_API IS
   ) RETURN VARCHAR2 IS
     v_booking NOV_2026_BATCH.QSPARK_BOOKINGS%ROWTYPE;
     v_entry_count INTEGER;
-    v_overstay_hours NUMERIC;
+    v_overstay_days NUMBER;
     v_overstay_amount NUMERIC;
+    v_entry_ts TIMESTAMP;
   BEGIN
     -- Look up the booking
     SELECT * INTO v_booking FROM NOV_2026_BATCH.QSPARK_BOOKINGS WHERE booking_reference = p_booking_reference;
@@ -320,11 +320,11 @@ CREATE OR REPLACE PACKAGE BODY QSPARK_API IS
       END IF;
 
       -- Get the entry event timestamp
-      SELECT created_at INTO v_overstay_hours FROM NOV_2026_BATCH.QSPARK_BOOKING_EVENTS
+      SELECT created_at INTO v_entry_ts FROM NOV_2026_BATCH.QSPARK_BOOKING_EVENTS
       WHERE booking_id = v_booking.booking_id AND event_type = 'ENTRY';
 
-      -- Calculate overstay hours from entry to now
-      v_overstay_hours := (SYSTIMESTAMP - v_overstay_hours) * 24;
+      -- Calculate overstay days from entry to now (DATE - DATE gives fractional days)
+      v_overstay_days := CAST(SYSTIMESTAMP AS DATE) - CAST(v_entry_ts AS DATE);
 
       -- Get the vehicle type's overstay rate via slot
       SELECT v.overstay_rate INTO v_overstay_amount
@@ -333,18 +333,18 @@ CREATE OR REPLACE PACKAGE BODY QSPARK_API IS
       WHERE s.slot_id = v_booking.slot_id;
 
       -- Calculate overstay amount
-      v_overstay_amount := GREATEST(0, v_overstay_amount * GREATEST(0, v_overstay_hours));
+      v_overstay_amount := GREATEST(0, v_overstay_amount * GREATEST(0, v_overstay_days));
 
       -- Record EXIT event
       INSERT INTO NOV_2026_BATCH.QSPARK_BOOKING_EVENTS (
         booking_id, event_type, scan_method, event_note, created_by
       ) VALUES (
         v_booking.booking_id, 'EXIT', p_scan_method,
-        'Overstay: ' || ROUND(v_overstay_hours, 2) || ' hours, amount: ' || v_overstay_amount,
+        'Overstay: ' || ROUND(v_overstay_days, 2) || ' days, amount: ' || v_overstay_amount,
         v_booking.user_id
       );
 
-      RETURN 'EXIT recorded successfully. Overstay: ' || ROUND(v_overstay_hours, 2) || ' hours, amount: ' || v_overstay_amount;
+      RETURN 'EXIT recorded successfully. Overstay: ' || ROUND(v_overstay_days, 2) || ' days, amount: ' || v_overstay_amount;
     END IF;
   END scan_qr;
 
