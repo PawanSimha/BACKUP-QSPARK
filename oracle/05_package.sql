@@ -128,24 +128,50 @@ CREATE OR REPLACE PACKAGE BODY QSPARK_API IS
   ) RETURN VARCHAR2 IS
     v_booking NOV_2026_BATCH.QSPARK_BOOKINGS%ROWTYPE;
     v_user NOV_2026_BATCH.QSPARK_USERS%ROWTYPE;
+    v_sa   NOV_2026_BATCH.QSPARK_USERS%ROWTYPE;
     v_slot NOV_2026_BATCH.QSPARK_PARKING_SLOTS%ROWTYPE;
+    v_floor NOV_2026_BATCH.QSPARK_FLOORS%ROWTYPE;
     v_cancellation NOV_2026_BATCH.QSPARK_CANCELLATION_RULES%ROWTYPE;
     v_new_wallet NUMERIC;
+    v_cust_txn_id NUMBER;
+    v_sa_txn_id NUMBER;
     v_refund_amount NUMERIC;
     v_penalty_amount NUMERIC;
-    v_msg VARCHAR2(200);
+    v_entry varchar2(1);
   BEGIN
-    -- Look up the booking
-    SELECT * INTO v_booking FROM NOV_2026_BATCH.QSPARK_BOOKINGS WHERE booking_reference = p_booking_reference;
+    -- Lock the booking row first
+    SELECT * INTO v_booking FROM NOV_2026_BATCH.QSPARK_BOOKINGS WHERE booking_reference = p_booking_reference FOR UPDATE;
 
     -- Check booking is in HELD status
     IF v_booking.booking_status != 'HELD' THEN
-      RETURN 'Booking is not in HELD status';
+      ROLLBACK;
+      RETURN 'ERR|409|Booking is ' || v_booking.booking_status || ', not HELD';
     END IF;
 
-    -- Look up user and slot details
-    SELECT * INTO v_user FROM NOV_2026_BATCH.QSPARK_USERS WHERE user_id = v_booking.user_id;
-    SELECT * INTO v_slot FROM NOV_2026_BATCH.QSPARK_PARKING_SLOTS WHERE slot_id = v_booking.slot_id;
+    -- Lock user row and revalidate slot/floor with row-level locks
+    SELECT * INTO v_user FROM NOV_2026_BATCH.QSPARK_USERS WHERE user_id = v_booking.user_id FOR UPDATE;
+    SELECT * INTO v_slot FROM NOV_2026_BATCH.QSPARK_PARKING_SLOTS WHERE slot_id = v_booking.slot_id FOR UPDATE;
+
+    -- Look up floor status
+    SELECT * INTO v_floor FROM NOV_2026_BATCH.QSPARK_FLOORS WHERE floor_id = v_slot.floor_id FOR UPDATE;
+
+    IF v_floor.floor_status != 'OPEN' THEN
+      ROLLBACK;
+      RETURN 'ERR|409|That floor is closed. Choose another slot.';
+    END IF;
+
+    -- Re-check overlap on the slot (exclude current booking)
+    SELECT COUNT(*) INTO v_entry FROM NOV_2026_BATCH.QSPARK_BOOKINGS b2
+    WHERE b2.slot_id = v_booking.slot_id
+      AND b2.booking_status IN ('HELD', 'CONFIRMED')
+      AND b2.booked_from < v_booking.booked_until
+      AND b2.booked_until > v_booking.booked_from
+      AND b2.booking_id != v_booking.booking_id;
+
+    IF v_entry > 0 THEN
+      ROLLBACK;
+      RETURN 'ERR|409|Another booking now overlaps this slot. Choose another slot.';
+    END IF;
 
     -- Look up cancellation rule
     IF v_booking.applied_cancellation_rule_id IS NOT NULL THEN
@@ -155,57 +181,80 @@ CREATE OR REPLACE PACKAGE BODY QSPARK_API IS
       v_cancellation.penalty_percent := 100;
     END IF;
 
-    -- Debit wallet
-    v_new_wallet := v_user.wallet_balance - v_booking.estimated_amount;
+    -- Resolve Super Admin account
+    BEGIN
+      SELECT * INTO v_sa FROM NOV_2026_BATCH.QSPARK_USERS WHERE role = 'SUPER_ADMIN' AND ROWNUM = 1 FOR UPDATE;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        ROLLBACK;
+        RETURN 'ERR|500|Super Admin account missing';
+    END;
 
-    -- Check sufficient funds
+    -- Funds check: customer wallet >= estimated_amount
+    v_new_wallet := v_user.wallet_balance - v_booking.estimated_amount;
     IF v_new_wallet < 0 THEN
-      RETURN 'Insufficient wallet balance';
+      ROLLBACK;
+      RETURN 'ERR|402|Insufficient wallet balance';
     END IF;
 
-    -- Update user wallet
+    -- Customer debit: UPDATE users + INSERT wallet_transaction RETURNING transaction_id
     UPDATE NOV_2026_BATCH.QSPARK_USERS SET wallet_balance = v_new_wallet WHERE user_id = v_user.user_id;
 
-    -- Record wallet transaction (DEBIT)
     INSERT INTO NOV_2026_BATCH.QSPARK_WALLET_TRANSACTIONS (
       transaction_reference, user_id, booking_id,
       transaction_type, direction, amount, balance_after,
       description
     ) VALUES (
-      'TXN' || TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS') || LPAD(TO_NUMBER(TO_CHAR(SYSDATE, 'SSSS')), 4, '0'),
+      'TXN-' || TO_CHAR(CAST(SYSTIMESTAMP AT TIME ZONE 'Asia/Kolkata' AS DATE), 'YYYYMMDD-HH24MISS')
+        || '-' || SUBSTR(RAWTOHEX(SYS_GUID()), 1, 8),
       v_user.user_id, v_booking.booking_id,
       'BOOKING_DEBIT', 'DEBIT', v_booking.estimated_amount, v_new_wallet,
       'Booking confirmation charge'
-    );
+    )
+    RETURNING transaction_id INTO v_cust_txn_id;
 
-    -- Record Super Admin revenue credit
+    -- Super Admin revenue credit: UPDATE real SA user + INSERT wallet_transaction RETURNING transaction_id
+    v_new_wallet := v_sa.wallet_balance + v_booking.estimated_amount;
+    UPDATE NOV_2026_BATCH.QSPARK_USERS SET wallet_balance = v_new_wallet WHERE user_id = v_sa.user_id;
+
     INSERT INTO NOV_2026_BATCH.QSPARK_WALLET_TRANSACTIONS (
       transaction_reference, user_id, booking_id,
       transaction_type, direction, amount, balance_after,
       description
     ) VALUES (
-      'TXN' || TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS') || LPAD(TO_NUMBER(TO_CHAR(SYSDATE, 'SSSS')), 4, '0'),
-      NULL, v_booking.booking_id,
-      'SUPER_ADMIN_REVENUE_CREDIT', 'CREDIT', v_booking.estimated_amount, v_booking.estimated_amount,
+      'TXN-' || TO_CHAR(CAST(SYSTIMESTAMP AT TIME ZONE 'Asia/Kolkata' AS DATE), 'YYYYMMDD-HH24MISS')
+        || '-' || SUBSTR(RAWTOHEX(SYS_GUID()), 1, 8),
+      v_sa.user_id, v_booking.booking_id,
+      'SUPER_ADMIN_REVENUE_CREDIT', 'CREDIT', v_booking.estimated_amount, v_new_wallet,
       'Revenue collection from booking'
-    );
+    )
+    RETURNING transaction_id INTO v_sa_txn_id;
 
-    -- Record revenue collection
+    -- Record revenue collection with REAL txn ids and REAL super_admin_user_id
     INSERT INTO NOV_2026_BATCH.QSPARK_REVENUE_COLLECTIONS (
       source_user_id, super_admin_user_id, booking_id,
       customer_wallet_transaction_id, super_admin_wallet_transaction_id,
       collection_type, amount, created_by
     ) VALUES (
-      v_user.user_id, NULL, v_booking.booking_id,
-      (SELECT transaction_id FROM NOV_2026_BATCH.QSPARK_WALLET_TRANSACTIONS WHERE user_id = v_user.user_id AND ROWNUM = 1),
-      (SELECT transaction_id FROM NOV_2026_BATCH.QSPARK_WALLET_TRANSACTIONS WHERE user_id IS NULL AND ROWNUM = 1),
+      v_user.user_id, v_sa.user_id, v_booking.booking_id,
+      v_cust_txn_id, v_sa_txn_id,
       'BOOKING_CHARGE', v_booking.estimated_amount, v_user.user_id
     );
 
     -- Update booking status to CONFIRMED
     UPDATE NOV_2026_BATCH.QSPARK_BOOKINGS SET booking_status = 'CONFIRMED' WHERE booking_reference = p_booking_reference;
 
-    RETURN 'CONFIRMED|' || v_booking.estimated_amount || '|' || v_new_wallet || '|true|Booking confirmed and QR generated';
+    -- Audit log
+    INSERT INTO NOV_2026_BATCH.QSPARK_AUDIT_LOGS (
+      action_type, entity_type, entity_id, old_values, new_values, created_by
+    ) VALUES (
+      'BOOKING_CONFIRM', 'bookings', v_booking.booking_id,
+      NULL,
+      '{"booking_status":"CONFIRMED","amount":' || v_booking.estimated_amount || ',"user_id":' || v_user.user_id || '}',
+      v_user.user_id
+    );
+
+    RETURN 'CONFIRMED|' || v_booking.estimated_amount || '|' || v_new_wallet || '|true|Booking confirmed. QR generated';
   END confirm_booking;
 
   -- Cancel a booking

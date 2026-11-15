@@ -2,11 +2,16 @@
 
 `control_status` is the stored state (ACTIVE / ADMIN_RESERVED / MAINTENANCE / INACTIVE).
 The live `status` (AVAILABLE / RESERVED / OCCUPIED / MAINTENANCE / INACTIVE) is computed
-here from bookings and booking_events and is never stored.
+from bookings and booking_events and is never stored.
+
+`/availability` is rewired to ORDS (`qsparking.api.v3/slots`). The other routes
+still read SQLite. `_LIVE_STATUS_SQL` is imported by admin.py, reports.py and
+super_admin.py — keep it.
 """
 
 from flask import Blueprint, jsonify, request, current_app
 from src.services.db import get_connection
+from src.services.ords import ords_get
 
 slots_bp = Blueprint("slots", __name__, url_prefix="/api/slots")
 
@@ -31,6 +36,11 @@ _LIVE_STATUS_SQL = """
         ELSE 'AVAILABLE'
     END
 """
+
+_COLORS = {
+    "AVAILABLE": "green", "RESERVED": "amber", "OCCUPIED": "red",
+    "MAINTENANCE": "grey", "INACTIVE": "grey",
+}
 
 
 @slots_bp.get("/floors")
@@ -71,49 +81,37 @@ def availability():
     """Slots with live status.
 
     Query params: floor_id, vehicle_type_id (both optional).
+    Data comes from ORDS; filtering and colour mapping happen here so the
+    response shape stays identical to the SQLite version.
     """
     floor_id = request.args.get("floor_id", type=int)
     vehicle_type_id = request.args.get("vehicle_type_id", type=int)
 
-    conn = get_connection(current_app.config["DATABASE_PATH"])
-    try:
-        sql = f"""
-            SELECT s.slot_id, s.slot_number, s.floor_id, s.vehicle_type_id,
-                   s.control_status, {_LIVE_STATUS_SQL} AS status,
-                   f.floor_code, f.floor_status,
-                   vt.type_name AS vehicle_type, vt.hourly_rate, vt.overstay_rate
-            FROM parking_slots s
-            JOIN floors f ON f.floor_id = s.floor_id
-            JOIN vehicle_types vt ON vt.vehicle_type_id = s.vehicle_type_id
-            WHERE 1=1
-        """
-        params = []
-        if floor_id is not None:
-            sql += " AND s.floor_id = ?"
-            params.append(floor_id)
-        if vehicle_type_id is not None:
-            sql += " AND s.vehicle_type_id = ?"
-            params.append(vehicle_type_id)
-        sql += " ORDER BY s.floor_id, s.slot_number"
-
-        items = []
-        for r in conn.execute(sql, params).fetchall():
-            item = dict(r)
-            item["hourly_rate"] = float(item["hourly_rate"])
-            item["overstay_rate"] = float(item["overstay_rate"])
-            item["color"] = {
-                "AVAILABLE": "green", "RESERVED": "amber", "OCCUPIED": "red",
-                "MAINTENANCE": "grey", "INACTIVE": "grey",
-            }.get(item["status"], "grey")
-            items.append(item)
+    status, data = ords_get("/qsparking/api/v3/slots")
+    if status != 200 or not isinstance(data, list):
         return jsonify({
-            "items": items,
-            "floor_id": floor_id,
-            "vehicle_type_id": vehicle_type_id,
-            "total": len(items),
-        })
-    finally:
-        conn.close()
+            "error": "Slot data unavailable",
+            "code": 502,
+            "detail": str(data)[:200],
+        }), 502
+
+    items = data
+    if floor_id is not None:
+        items = [s for s in items if s.get("floor_id") == floor_id]
+    if vehicle_type_id is not None:
+        items = [s for s in items if s.get("vehicle_type_id") == vehicle_type_id]
+
+    for item in items:
+        item["hourly_rate"] = float(item.get("hourly_rate") or 0)
+        item["overstay_rate"] = float(item.get("overstay_rate") or 0)
+        item["color"] = _COLORS.get(item.get("status", ""), "grey")
+
+    return jsonify({
+        "items": items,
+        "floor_id": floor_id,
+        "vehicle_type_id": vehicle_type_id,
+        "total": len(items),
+    })
 
 
 @slots_bp.get("/<int:slot_id>")
@@ -134,4 +132,3 @@ def get_slot(slot_id):
         return jsonify(dict(row))
     finally:
         conn.close()
-

@@ -265,4 +265,37 @@ These errors occur because `TRUNC()` and date subtraction between `TIMESTAMP` va
 
 ---
 
+## 17. Real ORDS handler count — audited from the live app, not from markdown
+
+`markdown/api.md` says 71 endpoints. `app.url_map` says **74 method+path pairs**. Eleven of those cannot live in ORDS, so **63 handlers** are required, spread across **52 templates**.
+
+| | Count |
+|---|---|
+| Method+path pairs | 74 |
+| Stay in Flask | 11 |
+| Must become ORDS handlers | **63** |
+| Distinct ORDS templates | **52** |
+| Reads (GET) | 33 |
+| Writes | 30 (13 POST, 7 PUT, 5 PATCH, 5 DELETE) |
+| Planned in `06_ords_module.sql` | 17 (27% coverage) |
+
+Stays in Flask: `auth/login`, `auth/setup-admin` (password hashing must not cross the wire), `auth/logout`, `auth/session/end`, `auth/me` (cookie only), the four CSV exports (byte streams), `qr/generate` (PNG bytes), `super-admin/db-tables/:table` (dynamic column list).
+
+The 17 planned templates are **not** a clean subset of the 63 — `admin/users` has no search/role/paging, `master-slots` returns `control_status` instead of live status, `system-status` returns a bare string, and `wallet-adjust` conflates two routes with different permission checks. `06_ords_module.sql` must be regenerated from the route list, not extended.
+
+Two blockers that survive the counting:
+1. **ORDS has no auth.** 63 open endpoints leak every phone and wallet balance, and anyone can cancel bookings. Either Flask proxies every ORDS call (keeps `require_role`) or ORDS OAuth2 goes in. Decide first.
+2. **`PATCH` may not be a legal `p_method`.** 5 write handlers need it; `probe7b` in `06b` tests it. If it fails, those routes become `POST` in Flask.
+
+### Next action (single step)
+
+**[YOU] Run `oracle/06b_probe_ords_api.sql` in SQL Developer and paste back:**
+- section 3 (`all_arguments` rows for `DEFINE_MODULE` / `DEFINE_TEMPLATE` / `DEFINE_HANDLER`) — this is what fixes `PLS-00306`
+- the `probe7` result: `GET .../qsparking/api/v3/probe7`
+- the `probe7b` result: `PATCH .../qsparking/api/v3/probe7b`
+
+Sections 1, 4, 5, 6 may fail with `ORA-00942` (`ORDS_METADATA` not granted to `NOV_2026_BATCH`). Skip them; 2, 3, 7, 7b are the ones that matter.
+
+---
+
 *End of file. Append new entries to §13; never rewrite history.*
