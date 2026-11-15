@@ -32,8 +32,19 @@ END;
 /
 
 CREATE OR REPLACE PROCEDURE qspark_err(p_code NUMBER, p_msg VARCHAR2) IS
+  v CLOB;
 BEGIN
-  qspark_json(JSON_OBJECT('code' VALUE p_code, 'error' VALUE p_msg));
+  SELECT JSON_OBJECT('code' VALUE p_code, 'error' VALUE p_msg RETURNING CLOB)
+    INTO v FROM dual;
+  qspark_json(v);
+END;
+/
+
+-- Probe: 08b/08c use this exact shape 66 times. If QSPARK_PROBE compiles,
+-- every one of them compiles too. If it fails, stop and tell me.
+CREATE OR REPLACE PROCEDURE qspark_probe IS
+BEGIN
+  qspark_json(JSON_OBJECT('probe' VALUE 1));
 END;
 /
 
