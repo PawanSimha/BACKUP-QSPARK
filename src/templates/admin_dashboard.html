@@ -14,18 +14,18 @@
 </div>
 
 <div class="grid grid-stats mb-4" id="kpiGrid">
-  <div class="stat"><div class="stat-label">Total slots</div><div class="stat-value" data-kpi="total_slots">—</div></div>
-  <div class="stat"><div class="stat-label">Available</div><div class="stat-value text-emerald-600" data-kpi="available_slots">—</div></div>
-  <div class="stat"><div class="stat-label">Reserved</div><div class="stat-value text-amber-600" data-kpi="reserved_slots">—</div></div>
-  <div class="stat"><div class="stat-label">Occupied</div><div class="stat-value text-red-600" data-kpi="occupied_slots">—</div></div>
-  <div class="stat"><div class="stat-label">Maintenance</div><div class="stat-value text-slate-500" data-kpi="maintenance_slots">—</div></div>
-  <div class="stat"><div class="stat-label">Active users</div><div class="stat-value" data-kpi="active_users">—</div></div>
-  <div class="stat"><div class="stat-label">Revenue collected</div><div class="stat-value" data-kpi="total_revenue">—</div></div>
+  <div class="stat"><div class="stat-label">Total slots</div><div class="stat-value" data-kpi="total_slots">â€”</div></div>
+  <div class="stat"><div class="stat-label">Available</div><div class="stat-value text-emerald-600" data-kpi="available_slots">â€”</div></div>
+  <div class="stat"><div class="stat-label">Reserved</div><div class="stat-value text-amber-600" data-kpi="reserved_slots">â€”</div></div>
+  <div class="stat"><div class="stat-label">Occupied</div><div class="stat-value text-red-600" data-kpi="occupied_slots">â€”</div></div>
+  <div class="stat"><div class="stat-label">Maintenance</div><div class="stat-value text-slate-500" data-kpi="maintenance_slots">â€”</div></div>
+  <div class="stat"><div class="stat-label">Active users</div><div class="stat-value" data-kpi="active_users">â€”</div></div>
+  <div class="stat"><div class="stat-label">Revenue collected</div><div class="stat-value" data-kpi="total_revenue">â€”</div></div>
 </div>
 
 <div class="grid grid-2">
   <section class="card">
-    <div class="card-header"><h2 class="card-title">Floor occupancy</h2><a class="btn btn-ghost btn-sm" href="/admin/slots">Manage slots</a></div>
+    <div class="card-header"><h2 class="card-title">Floor status</h2><a class="btn btn-ghost btn-sm" href="/admin/slots">Manage slots</a></div>
     <div class="card-body" id="floorBox"><div class="skeleton" style="width:55%"></div></div>
   </section>
 
@@ -34,7 +34,7 @@
     <div class="table-wrap" style="max-height:260px;overflow:auto;">
       <table class="table">
         <thead><tr><th>Reference</th><th>Customer</th><th>Slot</th><th>Status</th><th class="text-right">Amount</th></tr></thead>
-        <tbody id="recentBody"><tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+        <tbody id="recentBody"><tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">Loadingâ€¦</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -45,7 +45,7 @@
   <div class="table-wrap">
     <table class="table">
       <thead><tr><th>Reference</th><th>Customer</th><th>Vehicle</th><th>Slot</th><th>Entered</th><th>Expected exit</th></tr></thead>
-      <tbody id="insideBody"><tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
+      <tbody id="insideBody"><tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">Loadingâ€¦</td></tr></tbody>
     </table>
   </div>
 </section>
@@ -70,12 +70,35 @@
     try {
       var data = await QS.get('/api/admin/floors');
       var items = data.items || [];
-      document.getElementById('floorBox').innerHTML = items.length ? items.map(function (f) {
-        var pct = f.total_slots ? Math.round(100 * f.occupied_slots / f.total_slots) : 0;
-        return '<div class="bar-row"><span class="font-semibold">' + U.esc(f.floor_code) + ' ' + U.statusBadge(f.floor_status) + '</span>' +
-          '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%"></span></span>' +
-          '<span class="text-muted">' + f.occupied_slots + '/' + f.total_slots + '</span></div>';
-      }).join('') : '<p class="text-sm text-muted">No floors configured.</p>';
+      if (!items.length) { document.getElementById('floorBox').innerHTML = '<p class="text-sm text-muted">No floors configured.</p>'; return; }
+      var legend = '<div class="flex flex-wrap gap-3 text-xs text-muted mb-3">' +
+        '<span><span class="inline-block w-3 h-3 rounded" style="background:#10b981;vertical-align:middle"></span> Available</span>' +
+        '<span><span class="inline-block w-3 h-3 rounded" style="background:#f59e0b;vertical-align:middle"></span> Reserved</span>' +
+        '<span><span class="inline-block w-3 h-3 rounded" style="background:#ef4444;vertical-align:middle"></span> Occupied</span>' +
+        '<span><span class="inline-block w-3 h-3 rounded" style="background:#94a3b8;vertical-align:middle"></span> Maintenance</span></div>';
+      var rows = items.map(function (f) {
+        var total = Number(f.total_slots || 0) || 1;
+        var avail = Number(f.available_slots || 0);
+        var resv = Number(f.reserved_slots || 0);
+        var occ = Number(f.occupied_slots || 0);
+        var maint = Number(f.maintenance_slots || 0);
+        var aPct = Math.round(100 * avail / total);
+        var rPct = Math.round(100 * resv / total);
+        var oPct = Math.round(100 * occ / total);
+        var mPct = Math.round(100 * maint / total);
+        return '<div class="mb-3">' +
+          '<div class="flex items-center justify-between text-sm mb-1">' +
+            '<span class="font-semibold">' + U.esc(f.floor_code) + ' ' + U.statusBadge(f.floor_status) + '</span>' +
+            '<span class="text-muted text-xs">' + avail + ' avail | ' + resv + ' res | ' + occ + ' occ | ' + maint + ' maint / ' + f.total_slots + '</span>' +
+          '</div>' +
+          '<div class="bar-track" style="height:14px;display:flex;overflow:hidden;border-radius:999px;">' +
+            '<span style="width:' + aPct + '%;background:#10b981;display:block"></span>' +
+            '<span style="width:' + rPct + '%;background:#f59e0b;display:block"></span>' +
+            '<span style="width:' + oPct + '%;background:#ef4444;display:block"></span>' +
+            '<span style="width:' + mPct + '%;background:#94a3b8;display:block"></span>' +
+          '</div></div>';
+      }).join('');
+      document.getElementById('floorBox').innerHTML = legend + rows;
     } catch (err) { U.toast(err.message, 'error'); }
   }
 
@@ -96,7 +119,7 @@
         return '<tr><td class="mono">' + U.esc(b.booking_reference) + '</td>' +
           '<td>' + U.esc(b.full_name || b.username) + '</td>' +
           '<td>' + U.esc(b.vehicle_number) + '</td>' +
-          '<td>' + U.esc(b.floor_code) + ' · ' + U.esc(b.slot_number) + '</td>' +
+          '<td>' + U.esc(b.floor_code) + '  /  ' + U.esc(b.slot_number) + '</td>' +
           '<td>' + U.dateTime(b.entry_time) + '</td>' +
           '<td>' + U.dateTime(b.booked_until) + '</td></tr>';
       }).join('') : U.emptyRow(6, 'No vehicles are inside right now.');

@@ -36,7 +36,16 @@
       <span><i style="background:#fef2f2;border:1px solid #fecaca"></i>Occupied</span>
       <span><i style="background:#f1f5f9;border:1px solid #e2e8f0"></i>Maintenance / inactive</span>
     </div>
+    <style>
+      .slot-tooltip { position: fixed; z-index: 50; background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0);
+        border-radius: 8px; padding: 8px 10px; font-size: 0.78rem; box-shadow: 0 4px 12px rgba(0,0,0,.12);
+        max-width: 260px; pointer-events: none; }
+      .slot-tooltip .tt-title { font-weight: 600; margin-bottom: 4px; }
+      .slot-tooltip .tt-row { display: flex; justify-content: space-between; gap: 8px; }
+      .slot-tooltip .tt-key { color: var(--muted, #64748b); }
+    </style>
     <div class="slot-grid" id="slotGrid"></div>
+    <div id="slotTooltip" class="slot-tooltip" hidden></div>
     <p class="hint mt-3">Select a slot to change its stored state.</p>
   </div>
 </div>
@@ -117,6 +126,46 @@
             .map(function (o) { return '<button class="btn btn-secondary btn-sm" data-set="' + o[0] + '">' + o[1] + '</button>'; })
             .join('') + '</div>');
   }
+
+  var tooltip = document.getElementById('slotTooltip');
+  function positionTooltip(e) {
+    if (tooltip.hidden) return;
+    var x = e.clientX + 14;
+    var y = e.clientY + 14;
+    var tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+    if (x + tw > window.innerWidth - 8) x = e.clientX - tw - 14;
+    if (y + th > window.innerHeight - 8) y = e.clientY - th - 14;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  }
+  function showTooltip(btn, slot, e) {
+    if (!slot || !slot.occupant) { tooltip.hidden = true; return; }
+    var o = slot.occupant;
+    var entered = o.entry_time ? U.dateTime(o.entry_time) : 'not entered yet';
+    tooltip.innerHTML =
+      '<div class="tt-title">' + U.esc(slot.slot_number) + ' · ' + U.esc(o.booking_status) + '</div>' +
+      '<div class="tt-row"><span class="tt-key">Customer</span><span>' + U.esc(o.full_name || o.username) + '</span></div>' +
+      '<div class="tt-row"><span class="tt-key">Vehicle</span><span>' + U.esc(o.vehicle_number) + '</span></div>' +
+      '<div class="tt-row"><span class="tt-key">Reference</span><span class="mono">' + U.esc(o.booking_reference) + '</span></div>' +
+      '<div class="tt-row"><span class="tt-key">Entered</span><span>' + U.esc(entered) + '</span></div>' +
+      '<div class="tt-row"><span class="tt-key">Expected exit</span><span>' + U.esc(U.dateTime(o.booked_until)) + '</span></div>';
+    tooltip.hidden = false;
+    positionTooltip(e);
+  }
+  document.getElementById('slotGrid').addEventListener('mouseover', function (e) {
+    var btn = e.target.closest('[data-slot]');
+    if (!btn) return;
+    var slot = slots.find(function (s) { return String(s.slot_id) === btn.dataset.slot; });
+    showTooltip(btn, slot, e);
+  });
+  document.getElementById('slotGrid').addEventListener('mousemove', function (e) {
+    if (!tooltip.hidden) positionTooltip(e);
+  });
+  document.getElementById('slotGrid').addEventListener('mouseout', function (e) {
+    var btn = e.target.closest('[data-slot]');
+    if (!btn) return;
+    tooltip.hidden = true;
+  });
 
   document.getElementById('slotGrid').addEventListener('click', function (e) {
     var btn = e.target.closest('[data-slot]');

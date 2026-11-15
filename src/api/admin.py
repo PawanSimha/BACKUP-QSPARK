@@ -456,7 +456,9 @@ def list_floors():
             f"""SELECT f.floor_id, f.floor_code, f.floor_status,
                        COUNT(s.slot_id) AS total_slots,
                        SUM(CASE WHEN {_LIVE_STATUS_SQL} = 'AVAILABLE' THEN 1 ELSE 0 END) AS available_slots,
-                       SUM(CASE WHEN {_LIVE_STATUS_SQL} = 'OCCUPIED' THEN 1 ELSE 0 END) AS occupied_slots
+                       SUM(CASE WHEN {_LIVE_STATUS_SQL} = 'RESERVED' THEN 1 ELSE 0 END) AS reserved_slots,
+                       SUM(CASE WHEN {_LIVE_STATUS_SQL} = 'OCCUPIED' THEN 1 ELSE 0 END) AS occupied_slots,
+                       SUM(CASE WHEN {_LIVE_STATUS_SQL} = 'MAINTENANCE' THEN 1 ELSE 0 END) AS maintenance_slots
                 FROM floors f LEFT JOIN parking_slots s ON s.floor_id = f.floor_id
                 GROUP BY f.floor_id ORDER BY f.floor_code"""
         ).fetchall()
@@ -500,7 +502,46 @@ def list_slots():
             params.append(floor_id)
         sql += " ORDER BY s.floor_id, s.slot_number"
         rows = conn.execute(sql, params).fetchall()
-        return jsonify({"items": [dict(r) for r in rows], "total": len(rows)})
+        items = [dict(r) for r in rows]
+
+        # Enrich with the active booking (HELD/CONFIRMED) so the UI can show
+        # who occupies / has reserved each slot on hover.
+        slot_ids = [it["slot_id"] for it in items]
+        occupants = {}
+        if slot_ids:
+            placeholders = ",".join("?" for _ in slot_ids)
+            b_rows = conn.execute(
+                f"""SELECT b.booking_id, b.slot_id, b.booking_reference, b.vehicle_number,
+                           b.booked_from, b.booked_until, b.booking_status,
+                           u.full_name, u.username,
+                           (SELECT be.created_at FROM booking_events be
+                            WHERE be.booking_id = b.booking_id AND be.event_type = 'ENTRY'
+                            ORDER BY be.created_at DESC LIMIT 1) AS entry_time
+                    FROM bookings b JOIN users u ON u.user_id = b.user_id
+                    WHERE b.slot_id IN ({placeholders})
+                      AND b.booking_status IN ('HELD','CONFIRMED')
+                    ORDER BY b.booked_from DESC""",
+                slot_ids,
+            ).fetchall()
+            for br in b_rows:
+                sid = br["slot_id"]
+                if sid in occupants:
+                    continue
+                occupants[sid] = {
+                    "booking_reference": br["booking_reference"],
+                    "full_name": br["full_name"],
+                    "username": br["username"],
+                    "vehicle_number": br["vehicle_number"],
+                    "booked_from": br["booked_from"],
+                    "booked_until": br["booked_until"],
+                    "booking_status": br["booking_status"],
+                    "entry_time": br["entry_time"],
+                }
+
+        for it in items:
+            it["occupant"] = occupants.get(it["slot_id"])
+
+        return jsonify({"items": items, "total": len(items)})
     finally:
         conn.close()
 
