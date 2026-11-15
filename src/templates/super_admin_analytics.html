@@ -2,6 +2,13 @@
 {% block title %}Revenue &amp; reports{% endblock %}
 {% block breadcrumb %}Revenue &amp; reports{% endblock %}
 {% block content %}
+<style>
+  .heat-available { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+  .heat-reserved { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+  .heat-occupied { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+  .heat-maint, .heat-inactive { background: #f1f5f9; border-color: #e2e8f0; color: #475569; }
+  .heat-floor-btn.btn-primary { background: var(--brand-600, #2563eb); color: #fff; border-color: var(--brand-600, #2563eb); }
+</style>
 <div class="page-header">
   <h1 class="page-title">Revenue &amp; reports</h1>
   <p class="page-subtitle">Collections, overtime and floor performance. Report downloads stream real rows from the database.</p>
@@ -41,6 +48,21 @@
       <thead><tr><th>Day</th><th class="text-right">Amount</th></tr></thead>
       <tbody id="dayRows"><tr><td colspan="2" class="px-4 py-8 text-center text-sm text-slate-500">Loading…</td></tr></tbody>
     </table>
+  </div>
+</section>
+
+<section class="card mt-4">
+  <div class="card-header"><h2 class="card-title">Slot heat map</h2><span class="text-xs text-muted">Live slot states by floor. Click a floor to switch.</span></div>
+  <div class="card-body">
+    <div class="flex flex-wrap gap-2 mb-3" id="heatFloorBtns"></div>
+    <div class="legend mb-3">
+      <span><i style="background:#ecfdf5;border:1px solid #a7f3d0"></i>Available</span>
+      <span><i style="background:#fffbeb;border:1px solid #fde68a"></i>Reserved</span>
+      <span><i style="background:#fef2f2;border:1px solid #fecaca"></i>Occupied</span>
+      <span><i style="background:#f1f5f9;border:1px solid #e2e8f0"></i>Maintenance / inactive</span>
+    </div>
+    <div class="slot-grid" id="heatGrid"></div>
+    <p class="hint mt-3" id="heatSummary"></p>
   </div>
 </section>
 
@@ -165,7 +187,48 @@
     document.getElementById('filterForm').reset(); loadSummary(); loadRevenue();
   });
 
-  loadSummary(); loadRevenue(); loadHeatmap();
+  var heatFloors = [], heatSelected = null;
+  async function loadHeatFloors() {
+    try {
+      var d = await QS.get('/api/slots/floors');
+      heatFloors = d.items || [];
+      var box = document.getElementById('heatFloorBtns');
+      box.innerHTML = heatFloors.map(function (f) {
+        return '<button type="button" class="btn btn-secondary btn-sm heat-floor-btn" data-floor="' + f.floor_id + '">' +
+          U.esc(f.floor_code) + ' \u00b7 ' + (f.total_slots - f.available_slots) + '/' + f.total_slots + '</button>';
+      }).join('');
+      box.querySelectorAll('.heat-floor-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          heatSelected = btn.dataset.floor;
+          box.querySelectorAll('.heat-floor-btn').forEach(function (b) { b.classList.remove('btn-primary'); b.classList.add('btn-secondary'); });
+          btn.classList.remove('btn-secondary'); btn.classList.add('btn-primary');
+          loadHeatMap();
+        });
+      });
+      if (heatFloors.length) {
+        heatSelected = heatFloors[0].floor_id;
+        var first = box.querySelector('.heat-floor-btn');
+        if (first) { first.classList.remove('btn-secondary'); first.classList.add('btn-primary'); }
+        loadHeatMap();
+      }
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+  async function loadHeatMap() {
+    if (!heatSelected) return;
+    try {
+      var d = await QS.get('/api/slots/availability?floor_id=' + encodeURIComponent(heatSelected));
+      var items = d.items || [];
+      var grid = document.getElementById('heatGrid');
+      grid.innerHTML = items.length ? items.map(function (s) {
+        var color = { AVAILABLE: 'heat-available', RESERVED: 'heat-reserved', OCCUPIED: 'heat-occupied', MAINTENANCE: 'heat-maint', INACTIVE: 'heat-inactive' }[s.status] || 'heat-maint';
+        return '<button type="button" class="slot ' + color + '" title="' + U.esc(s.slot_number + ' \u00b7 ' + s.status + ' \u00b7 ' + s.vehicle_type) + '" aria-label="' + U.esc(s.slot_number) + ' ' + U.esc(s.status) + '">' + U.esc(s.slot_number) + '</button>';
+      }).join('') : '<p class="text-sm text-muted">No slots on this floor.</p>';
+      var occ = items.filter(function (s) { return s.status === 'OCCUPIED'; }).length;
+      document.getElementById('heatSummary').textContent = items.length + ' slots \u00b7 ' + occ + ' occupied \u00b7 ' + items.filter(function(s){return s.status==='AVAILABLE';}).length + ' available';
+    } catch (err) { U.toast(err.message, 'error'); }
+  }
+
+  loadSummary(); loadRevenue(); loadHeatmap(); loadHeatFloors();
 })();
 </script>
 {% endblock %}

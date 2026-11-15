@@ -66,21 +66,21 @@ def revenue():
 
         sql = """
             SELECT f.floor_code,
-                   COUNT(b.booking_id) AS booking_count,
+                   COUNT(DISTINCT b.booking_id) AS booking_count,
                    COALESCE(SUM(rc.amount), 0) AS total_revenue,
                    COALESCE(SUM(CASE WHEN rc.collection_type = 'REFUND_REVERSAL' THEN -rc.amount ELSE rc.amount END), 0) AS net_revenue
-            FROM bookings b
+            FROM revenue_collections rc
+            JOIN bookings b ON b.booking_id = rc.booking_id
             JOIN parking_slots s ON s.slot_id = b.slot_id
             JOIN floors f ON f.floor_id = s.floor_id
-            LEFT JOIN revenue_collections rc ON rc.booking_id = b.booking_id
-            WHERE b.booking_status = 'COMPLETED'
+            WHERE 1=1
         """
         params = []
         if date_from:
-            sql += " AND DATE(b.booked_from) >= ?"
+            sql += " AND DATE(rc.created_at) >= ?"
             params.append(date_from)
         if date_to:
-            sql += " AND DATE(b.booked_from) <= ?"
+            sql += " AND DATE(rc.created_at) <= ?"
             params.append(date_to)
         sql += " GROUP BY f.floor_id, f.floor_code ORDER BY f.floor_code"
 
@@ -224,14 +224,14 @@ def revenue_csv():
             JOIN bookings b ON rc.booking_id = b.booking_id
             JOIN parking_slots s ON s.slot_id = b.slot_id
             JOIN floors f ON f.floor_id = s.floor_id
-            WHERE b.booking_status = 'COMPLETED'
+            WHERE 1=1
         """
         params = []
         if date_from:
-            sql += " AND DATE(b.booked_from) >= ?"
+            sql += " AND DATE(rc.created_at) >= ?"
             params.append(date_from)
         if date_to:
-            sql += " AND DATE(b.booked_from) <= ?"
+            sql += " AND DATE(rc.created_at) <= ?"
             params.append(date_to)
         sql += " GROUP BY f.floor_code, rc.collection_type ORDER BY f.floor_code, rc.collection_type"
 
