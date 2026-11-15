@@ -1,4 +1,8 @@
 -- oracle/06_ords_module.sql
+-- SUPERSEDED. Do not run. This defines 17 templates that do not match the real
+-- route contracts. Use 08a_ords_helpers.sql, 08b_ords_reads.sql and
+-- 08c_ords_writes.sql instead (53 templates, 64 handlers).
+--
 -- QSPARK ORDS module: qsparking.api.v3
 -- Run in APEX REST workshop UI (not SQL Developer PL/SQL)
 -- The user already built qsparking.api.v2 via this exact same UI

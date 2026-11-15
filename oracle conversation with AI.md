@@ -298,4 +298,55 @@ Sections 1, 4, 5, 6 may fail with `ORA-00942` (`ORDS_METADATA` not granted to `N
 
 ---
 
+## 18. All 63 handlers generated (SQL Developer, no APEX clicking)
+
+Three scripts replace APEX screen-by-screen work. They are idempotent: re-running overwrites by (module, pattern, method).
+
+| File | Creates |
+|---|---|
+| `oracle/08a_ords_helpers.sql` | 7 helper procs/functions + **53 templates** |
+| `oracle/08b_ords_reads.sql` | 5 reusable readers + **34 GET handlers** |
+| `oracle/08c_ords_writes.sql` | 3 write helpers + **30 write handlers** |
+
+64 handlers total = 63 routes + the legacy `slots` alias. `06_ords_module.sql` is now marked SUPERSEDED at the top.
+
+Design that made this small enough to generate:
+- `qspark_h(pattern, method, source)` and `qspark_tpl(pattern, priority)` wrap `ORDS.DEFINE_*`. No 12-line boilerplate per handler.
+- `qspark_json` / `qspark_items` / `qspark_err` own the `mime_header(..., TRUE)` + `HTP.p` pair.
+- **Every response is HTTP 200**; the JSON body carries `code`. The Flask proxy maps `code` to the real status. This removes all `:status` juggling.
+- Request bodies are read from the implicit `:body` bind with `JSON_VALUE`, so there are **no** `DEFINE_PARAMETER` calls at all.
+- Identity arrives as `?actor_user_id=` / `?actor_role=` query params, injected by the Flask proxy from the session.
+- Priority 1 on `api/slots/:slot_id` and `api/bookings/:ref` so the literal siblings (`/floors`, `/my`, ...) win the match.
+
+### Answers to the two standing questions
+
+**Can auth be added later in APEX?** Yes, module-level Authorization can be set after the fact — but basic auth is a browser popup credential, not a session, and the app's real guard (`require_role`) lives in Flask. Keep Flask as the only public surface and inject identity; add ORDS auth as defence in depth, not as the primary control.
+
+**Why the handlers still need Flask.** 63 open ORDS endpoints with `?actor_user_id=` are trivially forged. Until ORDS auth exists, Flask must proxy every call.
+
+### Two known defects fixed in this pass
+
+1. `(TIMESTAMP - TIMESTAMP) * 24` is invalid — INTERVAL cannot be multiplied. All four duration calculations now cast to `DATE` first. This was the same class of error as the original `05_package.sql` compile failure.
+2. `PERFORM` is PL/pgSQL, not PL/SQL. Both wallet-adjustment handlers now assign to a dummy variable.
+
+### Next action (single step)
+
+Run in SQL Developer, in order, as `NOV_2026_BATCH`:
+
+```
+@oracle/08a_ords_helpers.sql     -- expect: template_count 53
+@oracle/08b_ords_reads.sql       -- expect: no errors
+@oracle/08c_ords_writes.sql      -- expect: handler_count 64
+```
+
+Then one smoke test in a browser:
+
+```
+GET .../ords/nov_2026_batch/qsparking/api/v3/api/slots/floors
+```
+
+A JSON `{"items":[...]}` means templates, handlers, the view and the JSON helpers all work.
+
+---
+
 *End of file. Append new entries to §13; never rewrite history.*
