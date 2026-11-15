@@ -50,6 +50,17 @@
   </section>
 </div>
 
+<div class="grid grid-2 mt-4">
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Slot status mix</h2></div>
+    <div class="card-body" id="donutStatus"><div class="skeleton" style="width:60%"></div></div>
+  </section>
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Revenue by floor</h2></div>
+    <div class="card-body" id="donutRevenue"><div class="skeleton" style="width:60%"></div></div>
+  </section>
+</div>
+
 <section class="card mt-4">
   <div class="card-header"><h2 class="card-title">Occupancy detail</h2></div>
   <div class="table-wrap">
@@ -76,6 +87,27 @@
 (function () {
   var U = QSUI;
 
+  function donutChart(container, segments, centerText) {
+    var total = segments.reduce(function (s, x) { return s + (Number(x.value) || 0); }, 0);
+    var r = 52, cx = 70, cy = 70, stroke = 20;
+    var circ = 2 * Math.PI * r;
+    var svg = '<svg width="140" height="140" viewBox="0 0 140 140" style="flex-shrink:0">';
+    var offset = 0;
+    segments.forEach(function (seg) {
+      var frac = total ? (Number(seg.value) || 0) / total : 0;
+      var dash = frac * circ;
+      svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + seg.color + '" stroke-width="' + stroke + '" stroke-dasharray="' + dash + ' ' + (circ - dash) + '" stroke-dashoffset="' + (-offset * circ) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')" />';
+      offset += frac;
+    });
+    svg += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#0f172a">' + U.esc(centerText) + '</text>';
+    svg += '</svg>';
+    var legend = segments.map(function (seg) {
+      var pct = total ? Math.round(100 * (Number(seg.value) || 0) / total) : 0;
+      return '<div class="flex items-center gap-2 text-xs"><span class="inline-block w-3 h-3 rounded" style="background:' + seg.color + '"></span>' + U.esc(seg.label) + ' <span class="text-muted">' + pct + '%</span></div>';
+    }).join('');
+    container.innerHTML = '<div class="flex items-center gap-4 flex-wrap">' + svg + '<div class="flex flex-col gap-1">' + legend + '</div></div>';
+  }
+
   function bars(items, labelKey, valueKey, totalKey) {
     if (!items.length) return '<p class="text-sm text-muted">No data for this period.</p>';
     return items.map(function (i) {
@@ -84,6 +116,19 @@
         '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%"></span></span>' +
         '<span class="text-muted text-right">' + U.esc(i[valueKey]) + '</span></div>';
     }).join('');
+  }
+
+  async function loadStatusDonut() {
+    try {
+      var k = await QS.get('/api/admin/dashboard');
+      var segs = [
+        { label: 'Available', value: k.available_slots, color: '#10b981' },
+        { label: 'Reserved', value: k.reserved_slots, color: '#f59e0b' },
+        { label: 'Occupied', value: k.occupied_slots, color: '#ef4444' },
+        { label: 'Maintenance', value: k.maintenance_slots, color: '#94a3b8' },
+      ];
+      donutChart(document.getElementById('donutStatus'), segs, k.occupied_slots + '/' + k.total_slots);
+    } catch (err) { /* supplemental */ }
   }
 
   async function load() {
@@ -120,6 +165,9 @@
           '<td class="text-right">' + U.money(r.total_revenue) + '</td>' +
           '<td class="text-right">' + U.money(r.net_revenue) + '</td></tr>';
       }).join('') : U.emptyRow(4, 'No revenue collections for this period.');
+      var rcols = ['#2563eb', '#10b981', '#f59e0b', '#ef4444'];
+      var rsegs = rows.map(function (r, i) { return { label: r.floor_code, value: r.net_revenue, color: rcols[i % rcols.length] }; });
+      donutChart(document.getElementById('donutRevenue'), rsegs, U.money(rev.grand_total));
     } catch (err) {
       document.getElementById('revenueBox').innerHTML = '<p class="text-sm text-red-600">' + U.esc(err.message) + '</p>';
       U.toast(err.message, 'error');
@@ -174,6 +222,7 @@
 
   load();
   loadHeatFloors();
+  loadStatusDonut();
 })();
 </script>
 {% endblock %}
