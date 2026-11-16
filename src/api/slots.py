@@ -89,8 +89,9 @@ def availability():
     from src.services.db import get_connection as _get_conn
     conn = _get_conn(current_app.config["DATABASE_PATH"])
     try:
-        sql = """SELECT s.slot_id, s.slot_number, s.floor_id, s.vehicle_type_id,
-                         s.control_status AS status,
+        sql = f"""SELECT s.slot_id, s.slot_number, s.floor_id, s.vehicle_type_id,
+                         s.control_status,
+                         {_LIVE_STATUS_SQL} AS status,
                          f.floor_code, vt.type_name AS vehicle_type,
                          vt.hourly_rate, vt.overstay_rate
                   FROM parking_slots s
