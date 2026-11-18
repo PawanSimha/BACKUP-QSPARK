@@ -60,6 +60,13 @@ Copy-Item .env.example .env      # set SECRET_KEY before any real use
 
 Production uses waitress behind HTTPS — see `docs/deployment.md`.
 
+## Status
+
+Verified 18 Nov 2026: app imports and registers 98 routes, the seed guard skips an already
+populated database, `scripts\start_qspark.bat` serves `/login` with HTTP 200, and the SRS
+rebuilds and passes its validator. No test suite is present in this repository — see
+`docs/test_results.md` for exactly what was and was not run.
+
 ## Documentation
 
 Start with `docs/project_spec.md`, then `docs/technical_spec.md`, `docs/api.md`, `docs/db.md`.

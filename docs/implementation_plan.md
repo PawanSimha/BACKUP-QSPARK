@@ -4,6 +4,17 @@ Single implementation checklist. Do not maintain competing plan/roadmap/todo doc
 
 Legend: `[x]` implemented and verified by the command in `docs/test_results.md`; `[~]` implemented with a documented gap; `[ ]` not started.
 
+## Current state — 18 Nov 2026
+
+- Repository reorganised: code at the root, `src/` unchanged, helper scripts in `scripts/`,
+  all documentation and diagrams under `docs/`, generated SRS under `docs/srs/`.
+- Oracle/ORDS material removed: `oracle/`, `tools/export_sqlite_to_oracle.py`,
+  `src/services/ords.py`, the archived v2 REST notes and the Oracle-era `Media.jpg` ERD.
+  The project is SQLite-only.
+- `.venv` is incomplete (`dotenv` missing) — reinstall from `requirements.txt` before using it.
+- `tests/` is **not present**. Every `[x]` below that names a `tests/…` file records a run from
+  12 Nov 2026, not something reproducible today; see `docs/test_results.md`.
+
 ## Phase 0 — Repository and documentation audit
 
 - [x] Inspect repository, application, database, routes, templates, JavaScript, tests.

@@ -5,7 +5,7 @@ This file prevents the AI from inventing business rules. **Confirmed** requires 
 ## Resolved technical questions
 
 ### Q1. CSRF protection scheme — RESOLVED (12 Nov 2026)
-Implemented with Flask-WTF `CSRFProtect`. Every non-GET request requires a token, delivered as `<meta name="csrf-token">` and sent by `QS` as `X-CSRFToken` (or as the `csrf_token` form field for HTML posts). No route is exempt. Missing/invalid tokens return HTTP 400 with `csrf: true`; the attempt is logged. Tokens last for the session (`WTF_CSRF_TIME_LIMIT = None`). Verified by `tests/test_security.py`.
+Implemented with Flask-WTF `CSRFProtect`. Every non-GET request requires a token, delivered as `<meta name="csrf-token">` and sent by `QS` as `X-CSRFToken` (or as the `csrf_token` form field for HTML posts). No route is exempt. Missing/invalid tokens return HTTP 400 with `csrf: true`; the attempt is logged. Tokens last for the session (`WTF_CSRF_TIME_LIMIT = None`). Verified against the historical suite (`tests/test_security.py`, not in the current tree).
 
 ### Q2. Tailwind delivery for production — RESOLVED (12 Nov 2026)
 The CDN script was removed. Tailwind v3.4.17 is compiled by the standalone `tools/tailwindcss.exe` into `src/static/css/tailwind.css`, which `base.html` links before `app.css`. Content paths: `src/templates/**/*.html`, `src/static/js/**/*.js`. Rebuild with:

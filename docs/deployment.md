@@ -59,7 +59,7 @@ SESSION_COOKIE_SECURE=1
 - `scripts/seed_direct.py` calls `init_db()`, which runs `schema.sql` (the 11-table schema) against `DATABASE_PATH`, then inserts the Super Admin and two default admins.
 - If the file already contains an incompatible legacy schema, `init_db()` renames it to `<name>.legacy_<timestamp>.db` and creates a fresh schema. It never deletes the file.
 - Seeding is skipped when `users` already has rows (`Database already seeded. Skipping.`). Re-running is safe.
-- Store the printed seed passwords in your secret manager immediately; they are not recoverable from the database (only PBKDF2 hashes are stored).
+- Store the seeded credentials in your secret manager immediately. They are only recoverable as PBKDF2 hashes in the database, so a lost password means creating a new account.
 
 ## 5. CSS build (only after template/JS changes)
 
@@ -127,7 +127,7 @@ Rules:
 3. Run `PRAGMA integrity_check;` on the backup you intend to restore.
 4. Replace `DATABASE_PATH` with the backup file (copy, do not move, so a second attempt is possible).
 5. Start the app and verify: `/health` returns `ok`, sign in as Super Admin, check `GET /api/super-admin/reports/revenue-summary` and the wallet ledger.
-6. Re-run `.\tools\...` nothing; the CSS is static. Re-run `scripts\seed_direct.py` only if you intentionally restored an empty database.
+6. Restart the app; the compiled CSS is static and needs no rebuild. Re-run `scripts\seed_direct.py` only if you intentionally restored an empty database.
 
 ## 10. Logging and operations
 
@@ -147,4 +147,4 @@ Rules:
 | `database is locked` | Another process holds a write lock; ensure a single app instance and no long-running external `sqlite3` shell |
 | Unstyled page | `src/static/css/tailwind.css` missing/empty — rebuild it (step 5) |
 | `qrcode`/Pillow import error | `pip install -r requirements.txt` in the active venv |
-| Seeded passwords lost | They are only printed once. Create a new Admin via the Super Admin UI, or reset with a controlled script; do not hand-edit password hashes |
+| Seeded passwords lost | They exist only as PBKDF2 hashes. Create a new Admin via the Super Admin UI, or reset with a controlled script; do not hand-edit password hashes |

@@ -1,7 +1,8 @@
 # SRS Analysis Report — QSPARK
 
 **Analysis date:** 18 November 2026
-**Scope:** `BACKUP-QSPARK/` (the only project directory present)
+**Repository state:** flat layout (`app.py`, `src/`, `scripts/`, `docs/`, `docs/srs/`); Oracle/ORDS material removed; SQLite only
+**Scope:** the QSPARK project root
 **Method:** Direct inspection of source, schema and project documentation; no application code was modified.
 
 ## 1. Resources Inspected
