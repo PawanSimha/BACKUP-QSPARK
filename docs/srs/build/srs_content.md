@@ -133,7 +133,7 @@ The implementation is a four-layer monolith. The presentation layer renders Jinj
 
 Eight blueprints are registered: `auth` (`/api/auth`), `slots` (`/api/slots`), `bookings` (`/api/bookings`), `qr` (`/api/qr`), `admin` (`/api/admin`), `reports` (`/api/admin/reports`), `super_admin` (`/api/super-admin`) and `system` (`/api/system`). Page routes live directly on the application object.
 
-[[FIGURE:Technical Architecture Diagram.png|QSPARK technical architecture as documented in the project repository]]
+[[FIGURE:architecture.png|QSPARK technical architecture as documented in the project repository]]
 
 [[DIAGRAM:DIA-001|System context: actors, QSPARK process and the SQLite data store]]
 
@@ -927,7 +927,7 @@ Single-process deployment is a known single point of failure. No failover or rep
 9. At exit the operator scans again. Decision: if overtime is due and unaffordable, exit is blocked until the wallet is funded.
 10. On successful exit the booking becomes COMPLETED and the slot returns to general availability.
 
-[[FIGURE:User Process Flow Diagrm.png|Customer process flow supplied with the project; the verified flow is shown in the next figure]]
+[[FIGURE:flow-user.png|Customer process flow supplied with the project; the verified flow is shown in the next figure]]
 
 [[DIAGRAM:DIA-004|Customer booking to gate exit activity flow]]
 
@@ -960,7 +960,7 @@ The database is a normalised SQLite file generated from `schema.sql`. It contain
 
 Identity is unified: one `users` row represents a customer, an admin or the super admin. Parking capacity is modelled as floors containing slots, each slot bound to a vehicle type that carries the rates. Bookings connect a user to a slot for a time interval. Money is modelled twice: `wallet_transactions` is the immutable ledger, `users.wallet_balance` is the fast current value, and `revenue_collections` pairs the two ledger legs of a charge. Gate activity is modelled as `booking_events`. Administrative actions are captured in `audit_logs`, and global switches in `system_settings`.
 
-[[FIGURE:Entity Relationship Diagram.png|Entity-relationship diagram provided with the project]]
+[[FIGURE:erd.png|Entity-relationship diagram provided with the project]]
 
 ## 7.2 Database Table Inventory
 

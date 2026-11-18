@@ -21,6 +21,8 @@ so it was not used.
 | `python docs\srs\build\build_srs.py` | **OK** — `docs/srs/SRS_Document.docx` written |
 | `python docs\srs\build\validate.py` | **PASS** — 786 paragraphs, 40 tables, 190 headings, 12 diagram specs, ERD attributes equal to `schema.sql`, no unconsumed markers |
 | SRS figure check | 12 figure captions, 0 `Image unavailable` runs |
+| Route inventory check (`app.url_map` vs `docs/api.md`) | 62 `/api` paths and 23 page routes; appendix added, no route missing |
+| Column coverage check (`schema.sql` → `docs/db.md`, `docs/erd.md`) | 11 tables, every column named, no gaps |
 
 Not executed: any pytest suite, Playwright, axe-core. There is no `tests/` directory in this
 repository, so no automated test can run. Nothing was claimed as passing that was not run.
@@ -63,6 +65,6 @@ routes per role and endpoint contracts; DOM-wiring guard; Playwright end-to-end 
 ## 4. Manual checks after the documentation/cleanup passes
 
 - Every page shell in `src/templates/` still extends `base.html`; no template was moved.
-- `schema.sql` is untouched and remains the only schema source; `docs/db.md` and `docs/ERD.md` still
+- `schema.sql` is untouched and remains the only schema source; `docs/db.md` and `docs/erd.md` still
   match it table-for-table (validated via the SRS ERD check).
 - Seeding path used by `docs/deployment.md` is `scripts\seed_direct.py` and was executed above.

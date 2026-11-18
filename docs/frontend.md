@@ -10,7 +10,6 @@ Flask + Jinja2 templates, **compiled Tailwind CSS** (standalone binary, no Node/
 
 ```
 src/templates/base.html            layout: sidebar, topbar, mobile nav, toast region, confirm <dialog>, blocks title|breadcrumb|content|scripts
-src/templates/landing.html         public landing page (GET /landing) — static, no API calls
 src/templates/login.html           public sign-in
 src/templates/dashboard.html       customer dashboard
 src/templates/booking.html         5-step booking wizard

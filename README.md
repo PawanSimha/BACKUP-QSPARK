@@ -31,7 +31,7 @@ docs/
   technical_spec.md     architecture, data rules, security
   api.md                routes, permissions, request/response contracts
   db.md                 human-readable schema reference
-  ERD.md                entity relationship diagram (Mermaid + tables)
+  erd.md                entity relationship diagram (Mermaid + tables)
   frontend.md           page inventory, design tokens, JS conventions
   deployment.md         production procedure, backup/restore, troubleshooting
   implementation_plan.md, open_questions.md, test_results.md

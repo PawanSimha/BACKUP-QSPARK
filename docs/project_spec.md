@@ -185,7 +185,7 @@ Validate both client-side for usability and server-side for correctness. Normali
 
 All three roles use the same Flask application and one design system. Every page is a Jinja2 shell that reads real JSON APIs; there are no hardcoded KPIs.
 
-**Public landing** — `GET /landing` is a static marketing page for signed-out visitors (features, how it works, architecture, roles, FAQ); `GET /` redirects there. It reads no API and links to the sign-in page.
+**Public landing (planned, not implemented)** - the stylesheet layer exists in `src/static/css/app.css`, but there is no `/landing` route and no `landing.html` template. `GET /` redirects signed-out visitors to `/login`.
 
 **Customer** — login; dashboard (wallet, live available slots per floor, active bookings, recent ledger); 5-step booking wizard (vehicle type → registration → floor/slot grid with live states → schedule with server-side 05:00–23:00 / ≤18 h rules → review) with hold + confirm, wallet debit and QR display; My bookings with status filter, search, paging, detail dialog, QR and rule-checked cancellation; wallet ledger with credit/debit breakdown; profile self-service edit of name, mobile, gender and company.
 

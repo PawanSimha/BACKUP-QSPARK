@@ -279,7 +279,6 @@ Every page route below requires a signed-in session. Unknown roles receive `erro
 
 | Route | Template | Roles |
 |---|---|---|
-| `/landing` | `landing.html` | public |
 | `/login` | `login.html` | public |
 | `/dashboard` | `dashboard.html` | any authenticated |
 | `/booking` | `booking.html` | any authenticated |
@@ -301,8 +300,88 @@ Every page route below requires a signed-in session. Unknown roles receive `erro
 | `/super-admin/data` | `super_admin_data.html` | SUPER_ADMIN |
 | `/super-admin/system` | `super_admin_system.html` | SUPER_ADMIN |
 
-`GET /health` and `GET /` (redirect to `/landing` when signed out, `/dashboard` when signed in) are also public. HTML 404/500/400 render `error.html`; API paths receive JSON errors.
+`GET /health` is public; `GET /` redirects to `/login` when signed out and to `/dashboard` when signed in. There is no `/landing` route. HTML 404/500/400 render `error.html`; API paths receive JSON errors.
 
 ## HTTP status codes used
 - 200 OK, 201 Created, 400 Bad Request (validation or CSRF), 401 Unauthenticated, 402 Payment Required,
 - 403 Forbidden, 404 Not Found, 409 Conflict, 413 Payload Too Large, 500 Server Error, 503 Service Unavailable
+## Appendix - complete /api route inventory (generated from app.url_map, 18 Nov 2026)
+
+Methods shown exclude HEAD and OPTIONS. Contracts for the routes below are described in the sections above; routes listed here without a section are covered by the compatibility aliases and the Super Admin / master-data groups.
+
+| Method | Path |
+|---|---|
+| GET | `/api/admin/bookings` |
+| GET | `/api/admin/cancellation-rules` |
+| POST | `/api/admin/cancellation-rules` |
+| DELETE | `/api/admin/cancellation-rules/<int:rule_id>` |
+| PUT | `/api/admin/cancellation-rules/<int:rule_id>` |
+| GET | `/api/admin/dashboard` |
+| GET | `/api/admin/floors` |
+| GET | `/api/admin/master/cancellation-rules` |
+| GET | `/api/admin/master/floors` |
+| PUT | `/api/admin/master/floors/<int:floor_id>` |
+| GET | `/api/admin/master/slots` |
+| PUT | `/api/admin/master/slots/<int:slot_id>/status` |
+| GET | `/api/admin/master/users` |
+| GET | `/api/admin/master/vehicle-types` |
+| POST | `/api/admin/qr/scan` |
+| GET | `/api/admin/reports/occupancy` |
+| GET | `/api/admin/reports/occupancy-csv` |
+| GET | `/api/admin/reports/revenue` |
+| GET | `/api/admin/reports/revenue-csv` |
+| GET | `/api/admin/reports/revenue-summary` |
+| GET | `/api/admin/slots` |
+| PATCH | `/api/admin/slots/<int:slot_id>/control-status` |
+| GET | `/api/admin/users` |
+| POST | `/api/admin/users` |
+| DELETE | `/api/admin/users/<int:user_id>` |
+| GET | `/api/admin/users/<int:user_id>` |
+| PUT | `/api/admin/users/<int:user_id>` |
+| GET | `/api/admin/users/<int:user_id>/wallet` |
+| POST | `/api/admin/users/<int:user_id>/wallet-adjustments` |
+| GET | `/api/admin/vehicle-types` |
+| POST | `/api/auth/login` |
+| POST | `/api/auth/logout` |
+| GET | `/api/auth/me` |
+| PATCH | `/api/auth/me` |
+| POST | `/api/auth/session/end` |
+| POST | `/api/auth/setup-admin` |
+| GET | `/api/bookings/<string:ref>` |
+| POST | `/api/bookings/<string:ref>/cancel` |
+| POST | `/api/bookings/<string:ref>/confirm` |
+| POST | `/api/bookings/hold` |
+| GET | `/api/bookings/my` |
+| GET | `/api/bookings/wallet/transactions/me` |
+| POST | `/api/qr/generate` |
+| POST | `/api/qr/scan` |
+| GET | `/api/slots/<int:slot_id>` |
+| GET | `/api/slots/availability` |
+| GET | `/api/slots/floors` |
+| GET | `/api/slots/vehicle-types` |
+| GET | `/api/super-admin/admins` |
+| POST | `/api/super-admin/admins` |
+| DELETE | `/api/super-admin/admins/<int:user_id>` |
+| GET | `/api/super-admin/admins/<int:user_id>` |
+| PUT | `/api/super-admin/admins/<int:user_id>` |
+| PATCH | `/api/super-admin/admins/<int:user_id>/status` |
+| GET | `/api/super-admin/analytics/floor-heatmap` |
+| GET | `/api/super-admin/analytics/overtime` |
+| GET | `/api/super-admin/analytics/overview` |
+| GET | `/api/super-admin/analytics/revenue` |
+| POST | `/api/super-admin/bookings/<string:ref>/cancel` |
+| GET | `/api/super-admin/db-tables/<table_name>` |
+| POST | `/api/super-admin/floors` |
+| DELETE | `/api/super-admin/floors/<int:floor_id>` |
+| PUT | `/api/super-admin/floors/<int:floor_id>` |
+| POST | `/api/super-admin/floors/<int:floor_id>/slots` |
+| GET | `/api/super-admin/reports/occupancy.csv` |
+| GET | `/api/super-admin/reports/revenue.csv` |
+| DELETE | `/api/super-admin/slots/<int:slot_id>` |
+| PUT | `/api/super-admin/slots/<int:slot_id>` |
+| GET | `/api/super-admin/users/<int:user_id>/wallet` |
+| POST | `/api/super-admin/users/<int:user_id>/wallet-adjustments` |
+| GET | `/api/system/status` |
+| GET | `/api/system/super-admin/session` |
+| PATCH | `/api/system/super-admin/session` |
+| PATCH | `/api/system/super-admin/system/status` |
