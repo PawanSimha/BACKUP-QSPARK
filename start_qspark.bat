@@ -1,18 +1,16 @@
 @echo off
 title QSPARK Smart Parking System
 
-:: Change to project directory
-cd /D "C:\Users\PawanSimha\Conneqtion\Internship\FDE - Projects\SQLITE - QSPARK\BACKUP-QSPARK"
+:: Change to this script's directory
+cd /D "%~dp0"
 
-:: Start Flask in background (no console window)
-:: Note: "Input redirection is not supported" message may appear but server starts anyway
-start "QSPARK_Background" /B python run.py
+:: Start the dev server in a background window
+start "QSPARK_Server" /B python run.py < nul
 
-:: Wait for server to initialize
-timeout /t 3
+:: Wait for the server to bind port 8000
+ping -n 4 127.0.0.1 > nul
 
 :: Open in default web browser
 start "" http://localhost:8000
 
-:: Close this batch window
 exit

@@ -210,4 +210,3 @@ The product is not complete until the Customer, Admin and Super Admin workflows 
 - **Analytics heat maps** (admin + super admin analytics): per-floor slot heat map with 4 floor selector buttons; clicking switches the heat map.
 - **Analytics charts** (donut + line): slot status mix donut, revenue-by-vehicle-type donut, revenue-by-floor donut, daily collections line chart.
 - **Revenue report fix**: `/api/admin/reports/revenue` now driven by `revenue_collections` (date filter on `rc.created_at`), fixing blank Net revenue column; `booking_count` = distinct bookings with collections.
-- **Comprehensive reference**: `markdown/database_and_api_reference.md` (DB schema + API contracts + Oracle migration notes).

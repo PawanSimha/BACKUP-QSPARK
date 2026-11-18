@@ -1,0 +1,743 @@
+{
+  "document": {
+    "project_name": "QSPARK",
+    "document_name": "Software Requirements Specification",
+    "diagram_prompt_version": "1.0"
+  },
+  "diagrams": [
+    {
+      "diagram_id": "DIA-001",
+      "diagram_title": "QSPARK System Context",
+      "diagram_type": "system_context",
+      "document_section": "2.7",
+      "document_insertion_point": "After the System Architecture Overview",
+      "purpose": "Show the three user roles, the QSPARK web application and the SQLite data store, plus the optional browser camera.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "hub_and_spoke",
+      "visual_style": {
+        "style": "professional_technical_architecture",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "standard_architecture_shapes",
+        "connector_style": "directional_arrows",
+        "line_style": "clean_and_consistent",
+        "color_usage": "subtle_professional_colors",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "CUSTOMER", "type": "actor", "description": "Books parking, pays from wallet, presents QR", "position_group": "external_actors"},
+        {"id": "NODE-002", "label": "ADMIN", "type": "actor", "description": "Operational staff: customers, slots, scanning, analytics", "position_group": "external_actors"},
+        {"id": "NODE-003", "label": "SUPER_ADMIN", "type": "actor", "description": "Full system authority and system online/offline control", "position_group": "external_actors"},
+        {"id": "NODE-004", "label": "Web Browser", "type": "client", "description": "Renders Jinja2 pages and runs the QS/QSUI JavaScript", "position_group": "presentation"},
+        {"id": "NODE-005", "label": "QSPARK Flask Application", "type": "application", "description": "Page routes, JSON APIs, session auth, CSRF, business logic", "position_group": "core"},
+        {"id": "NODE-006", "label": "SQLite parking_local.db", "type": "data_store", "description": "11 application tables, triggers and indexes", "position_group": "data"},
+        {"id": "NODE-007", "label": "Device Camera", "type": "external_device", "description": "Optional getUserMedia stream for QR capture", "position_group": "external_actors"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "NODE-004", "label": "HTTPS", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-004", "label": "HTTPS", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-004", "label": "HTTPS", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-005", "label": "HTML and JSON over HTTP", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-005", "to": "NODE-006", "label": "Parameterised SQL", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-004", "label": "Camera stream", "direction": "one_way", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Place actors on the left, browser and application in the centre, database on the right.",
+        "Show the camera as an optional dashed connection to the browser.",
+        "Use directional arrows with readable labels."
+      ],
+      "accuracy_constraints": [
+        "Use only the three implemented roles.",
+        "Do not add payment gateways, SMS, email or gate controllers.",
+        "Do not show Oracle or ORDS in the active context."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    },
+    {
+      "diagram_id": "DIA-002",
+      "diagram_title": "High-Level System Architecture",
+      "diagram_type": "system_architecture",
+      "document_section": "2.7",
+      "document_insertion_point": "After the context diagram",
+      "purpose": "Show the layered Flask monolith, the eight API blueprints and the shared data layer.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "layered",
+      "visual_style": {
+        "style": "professional_technical_architecture",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "standard_architecture_shapes",
+        "connector_style": "directional_arrows",
+        "line_style": "clean_and_consistent",
+        "color_usage": "subtle_professional_colors",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "Jinja2 Templates and Vanilla JS", "type": "presentation", "description": "base.html shells, page scripts, QS and QSUI helpers", "position_group": "presentation_layer"},
+        {"id": "NODE-002", "label": "app.py Page Routes", "type": "routing", "description": "Page guards, error handlers, session validation, security headers", "position_group": "routing_layer"},
+        {"id": "NODE-003", "label": "Auth Blueprint", "type": "api", "description": "/api/auth login, me, logout, setup", "position_group": "api_layer"},
+        {"id": "NODE-004", "label": "Slots Blueprint", "type": "api", "description": "/api/slots live availability", "position_group": "api_layer"},
+        {"id": "NODE-005", "label": "Bookings Blueprint", "type": "api", "description": "/api/bookings hold, confirm, cancel, ledger", "position_group": "api_layer"},
+        {"id": "NODE-006", "label": "QR Blueprint", "type": "api", "description": "/api/qr generate and scan", "position_group": "api_layer"},
+        {"id": "NODE-007", "label": "Admin Blueprint", "type": "api", "description": "/api/admin customers, slots, master data", "position_group": "api_layer"},
+        {"id": "NODE-008", "label": "Reports Blueprint", "type": "api", "description": "/api/admin/reports occupancy and revenue", "position_group": "api_layer"},
+        {"id": "NODE-009", "label": "Super Admin Blueprint", "type": "api", "description": "/api/super-admin admins, floors, slots, analytics, data browser", "position_group": "api_layer"},
+        {"id": "NODE-010", "label": "System Blueprint", "type": "api", "description": "/api/system status and session policy", "position_group": "api_layer"},
+        {"id": "NODE-011", "label": "Core Services", "type": "service", "description": "security.py guards and hashing, pricing.py fare and overstay", "position_group": "domain_layer"},
+        {"id": "NODE-012", "label": "db.py Data Access", "type": "service", "description": "Connections, foreign keys, transaction(), init_db()", "position_group": "data_layer"},
+        {"id": "NODE-013", "label": "SQLite Schema", "type": "database", "description": "11 tables, indexes, partial unique indexes, 4 triggers", "position_group": "data_layer"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "NODE-002", "label": "Page requests", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-001", "to": "NODE-003", "label": "JSON", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-001", "to": "NODE-005", "label": "JSON", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-011", "label": "Role checks", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-011", "label": "Hashing and guards", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-005", "to": "NODE-011", "label": "calculate_fare", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-012", "label": "Queries", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-005", "to": "NODE-012", "label": "Transactions", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-006", "to": "NODE-012", "label": "Transactions", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-012", "label": "Queries", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-008", "to": "NODE-012", "label": "Aggregates", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-009", "to": "NODE-012", "label": "Queries", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-010", "to": "NODE-012", "label": "Settings", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-012", "to": "NODE-013", "label": "SQL", "direction": "bidirectional", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Stack layers vertically: presentation, routing, API, domain, data.",
+        "Place the eight blueprints side by side in the API layer.",
+        "Route all data access through db.py."
+      ],
+      "accuracy_constraints": [
+        "Use exactly the eight implemented blueprints.",
+        "Do not invent a service framework, cache or queue.",
+        "Do not show Phase 2 ORDS as active."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    },
+    {
+      "diagram_id": "DIA-003",
+      "diagram_title": "Use Case Overview",
+      "diagram_type": "use_case",
+      "document_section": "3",
+      "document_insertion_point": "Before section 3.1",
+      "purpose": "Map the implemented use cases to CUSTOMER, ADMIN and SUPER_ADMIN actors.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "uml_use_case",
+      "visual_style": {
+        "style": "uml_standard",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "uml_actors_and_ellipses",
+        "connector_style": "association_lines",
+        "line_style": "clean_and_consistent",
+        "color_usage": "minimal",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "CUSTOMER", "type": "actor", "description": "Primary end user", "position_group": "actors"},
+        {"id": "NODE-002", "label": "ADMIN", "type": "actor", "description": "Operational staff", "position_group": "actors"},
+        {"id": "NODE-003", "label": "SUPER_ADMIN", "type": "actor", "description": "System owner", "position_group": "actors"},
+        {"id": "NODE-004", "label": "Log in", "type": "use_case", "description": "Session authentication", "position_group": "system"},
+        {"id": "NODE-005", "label": "Book and pay for a slot", "type": "use_case", "description": "Hold, confirm, wallet debit, QR", "position_group": "system"},
+        {"id": "NODE-006", "label": "Cancel a booking", "type": "use_case", "description": "Rule-driven refund", "position_group": "system"},
+        {"id": "NODE-007", "label": "Present QR at gate", "type": "use_case", "description": "Entry and exit events", "position_group": "system"},
+        {"id": "NODE-008", "label": "Manage customers and wallets", "type": "use_case", "description": "Walk-in registration, updates, adjustments", "position_group": "system"},
+        {"id": "NODE-009", "label": "Control slots and view bookings", "type": "use_case", "description": "Maintenance, admin reservation, release", "position_group": "system"},
+        {"id": "NODE-010", "label": "Scan gate QR or reference", "type": "use_case", "description": "Entry, exit, overtime settlement", "position_group": "system"},
+        {"id": "NODE-011", "label": "Manage administrators", "type": "use_case", "description": "Create, edit, block, deactivate", "position_group": "system"},
+        {"id": "NODE-012", "label": "Manage floors and slots", "type": "use_case", "description": "Capacity and status control", "position_group": "system"},
+        {"id": "NODE-013", "label": "View analytics and download reports", "type": "use_case", "description": "Occupancy, revenue, overtime, CSV", "position_group": "system"},
+        {"id": "NODE-014", "label": "Switch system ONLINE or OFFLINE", "type": "use_case", "description": "Global booking block with audit", "position_group": "system"},
+        {"id": "NODE-015", "label": "Inspect whitelisted tables", "type": "use_case", "description": "Read-only paginated data browser", "position_group": "system"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "NODE-004", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-001", "to": "NODE-005", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-001", "to": "NODE-006", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-001", "to": "NODE-007", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-004", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-005", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-008", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-009", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-010", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-011", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-012", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-013", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-014", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-015", "label": "association", "direction": "none", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-005", "label": "association", "direction": "none", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Draw a system boundary rectangle labelled QSPARK.",
+        "Place actors outside the boundary and use cases inside.",
+        "Do not use include or extend relationships that the code does not implement."
+      ],
+      "accuracy_constraints": [
+        "Use only implemented use cases.",
+        "Do not add registration self-service, notifications or payment gateway use cases."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": false}
+    },
+    {
+      "diagram_id": "DIA-004",
+      "diagram_title": "Customer Booking to Gate Exit",
+      "diagram_type": "activity_diagram",
+      "document_section": "6.1",
+      "document_insertion_point": "After the customer workflow steps",
+      "purpose": "Show the end-to-end customer path including wallet and overtime decisions.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "swimlane",
+      "visual_style": {
+        "style": "uml_activity",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "rounded_actions_and_diamonds",
+        "connector_style": "directional_arrows",
+        "line_style": "clean_and_consistent",
+        "color_usage": "minimal",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "Start", "type": "start", "description": "Customer signed in", "position_group": "customer_lane"},
+        {"id": "NODE-002", "label": "Select vehicle, plate and slot", "type": "action", "description": "Wizard steps 1 to 3", "position_group": "customer_lane"},
+        {"id": "NODE-003", "label": "Select date, start time and duration", "type": "action", "description": "05:00 to 23:00, maximum 18 hours", "position_group": "customer_lane"},
+        {"id": "NODE-004", "label": "Slot or vehicle conflict?", "type": "decision", "description": "Overlap or duplicate active vehicle", "position_group": "customer_lane"},
+        {"id": "NODE-005", "label": "Create HELD booking", "type": "action", "description": "30-minute hold expiry", "position_group": "system_lane"},
+        {"id": "NODE-006", "label": "Confirm booking", "type": "action", "description": "Customer reviews summary", "position_group": "customer_lane"},
+        {"id": "NODE-007", "label": "Wallet sufficient?", "type": "decision", "description": "Compared inside the transaction", "position_group": "system_lane"},
+        {"id": "NODE-008", "label": "Debit customer, credit Super Admin, record collection", "type": "action", "description": "Atomic settlement and CONFIRMED status", "position_group": "system_lane"},
+        {"id": "NODE-009", "label": "Display QR", "type": "action", "description": "QR for the booking reference", "position_group": "customer_lane"},
+        {"id": "NODE-010", "label": "Scan at entry", "type": "action", "description": "ENTRY event", "position_group": "gate_lane"},
+        {"id": "NODE-011", "label": "Scan at exit", "type": "action", "description": "Overtime calculated", "position_group": "gate_lane"},
+        {"id": "NODE-012", "label": "Overtime affordable?", "type": "decision", "description": "Wallet covers the overtime amount", "position_group": "system_lane"},
+        {"id": "NODE-013", "label": "Settle overtime and record EXIT", "type": "action", "description": "COMPLETED and slot released", "position_group": "system_lane"},
+        {"id": "NODE-014", "label": "Exit blocked", "type": "action", "description": "HTTP 409 EXIT_BLOCKED, no charge", "position_group": "system_lane"},
+        {"id": "NODE-015", "label": "Re-select slot", "type": "action", "description": "Customer corrects the request", "position_group": "customer_lane"},
+        {"id": "NODE-016", "label": "Top up or abandon", "type": "action", "description": "Booking remains HELD", "position_group": "customer_lane"},
+        {"id": "NODE-017", "label": "End", "type": "end", "description": "Booking completed", "position_group": "system_lane"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "NODE-002", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-003", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-004", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-015", "label": "yes", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-015", "to": "NODE-002", "label": "retry", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-005", "label": "no", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-005", "to": "NODE-006", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-006", "to": "NODE-007", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-016", "label": "no", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-008", "label": "yes", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-008", "to": "NODE-009", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-009", "to": "NODE-010", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-010", "to": "NODE-011", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-011", "to": "NODE-012", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-012", "to": "NODE-014", "label": "no", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-012", "to": "NODE-013", "label": "yes", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-013", "to": "NODE-017", "label": "", "direction": "one_way", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Use swimlanes Customer, QSPARK System and Gate Operator.",
+        "Route the conflict and insufficient-funds branches back to the left.",
+        "Keep the happy path on the top row."
+      ],
+      "accuracy_constraints": [
+        "Reflect the 30-minute hold, 05:00 to 23:00 window and 18-hour cap.",
+        "Do not show a refund in the happy path.",
+        "Do not add a payment gateway step."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    },
+    {
+      "diagram_id": "DIA-005",
+      "diagram_title": "Administrative Operations Flow",
+      "diagram_type": "activity_diagram",
+      "document_section": "6.2",
+      "document_insertion_point": "After the administrative workflow steps",
+      "purpose": "Show walk-in registration, slot control, cancellation and wallet adjustment decisions.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "swimlane",
+      "visual_style": {
+        "style": "uml_activity",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "rounded_actions_and_diamonds",
+        "connector_style": "directional_arrows",
+        "line_style": "clean_and_consistent",
+        "color_usage": "minimal",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "Start", "type": "start", "description": "Admin signed in", "position_group": "admin_lane"},
+        {"id": "NODE-002", "label": "Register walk-in customer", "type": "action", "description": "Name, phone, gender, company, optional email", "position_group": "admin_lane"},
+        {"id": "NODE-003", "label": "Duplicate identity?", "type": "decision", "description": "Phone, email or username already exists", "position_group": "system_lane"},
+        {"id": "NODE-004", "label": "Create PENDING customer", "type": "action", "description": "No password, default balance", "position_group": "system_lane"},
+        {"id": "NODE-005", "label": "Select slot action", "type": "action", "description": "Maintenance, admin reserved or active", "position_group": "admin_lane"},
+        {"id": "NODE-006", "label": "Slot booked or occupied?", "type": "decision", "description": "Active booking or open entry", "position_group": "system_lane"},
+        {"id": "NODE-007", "label": "Apply control status", "type": "action", "description": "Persist and audit", "position_group": "system_lane"},
+        {"id": "NODE-008", "label": "Reject change", "type": "action", "description": "HTTP 409 conflict", "position_group": "system_lane"},
+        {"id": "NODE-009", "label": "Adjust customer wallet", "type": "action", "description": "Signed amount with reason", "position_group": "admin_lane"},
+        {"id": "NODE-010", "label": "Balance would go negative?", "type": "decision", "description": "Validated inside transaction", "position_group": "system_lane"},
+        {"id": "NODE-011", "label": "Write balance and ledger", "type": "action", "description": "ADMIN_ADJUSTMENT plus audit", "position_group": "system_lane"},
+        {"id": "NODE-012", "label": "Cancel booking", "type": "action", "description": "Super Admin only for other users", "position_group": "admin_lane"},
+        {"id": "NODE-013", "label": "Vehicle inside?", "type": "decision", "description": "ENTRY without EXIT", "position_group": "system_lane"},
+        {"id": "NODE-014", "label": "Apply refund rule and reversal", "type": "action", "description": "Wallet legs plus REFUND_REVERSAL", "position_group": "system_lane"},
+        {"id": "NODE-015", "label": "End", "type": "end", "description": "Operation recorded", "position_group": "system_lane"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "NODE-002", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-003", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-008", "label": "yes", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-004", "label": "no", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-005", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-005", "to": "NODE-006", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-006", "to": "NODE-008", "label": "yes", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-006", "to": "NODE-007", "label": "no", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-009", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-009", "to": "NODE-010", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-010", "to": "NODE-008", "label": "yes", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-010", "to": "NODE-011", "label": "no", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-011", "to": "NODE-012", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-012", "to": "NODE-013", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-013", "to": "NODE-008", "label": "yes", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-013", "to": "NODE-014", "label": "no", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-014", "to": "NODE-015", "label": "", "direction": "one_way", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Use lanes Admin and QSPARK System.",
+        "Keep conflict paths short and clearly labelled.",
+        "Group the three operations with separators."
+      ],
+      "accuracy_constraints": [
+        "Admin may adjust only customer wallets.",
+        "Cancellation by staff other than the owner requires SUPER_ADMIN.",
+        "Do not show physical deletion of customers."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    },
+    {
+      "diagram_id": "DIA-006",
+      "diagram_title": "Super Admin Infrastructure and System Control",
+      "diagram_type": "activity_diagram",
+      "document_section": "6.3",
+      "document_insertion_point": "After the Super Admin workflow steps",
+      "purpose": "Show capacity changes and the ONLINE/OFFLINE switch with their safety checks.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "swimlane",
+      "visual_style": {
+        "style": "uml_activity",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "rounded_actions_and_diamonds",
+        "connector_style": "directional_arrows",
+        "line_style": "clean_and_consistent",
+        "color_usage": "minimal",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "Start", "type": "start", "description": "Super Admin signed in", "position_group": "super_admin_lane"},
+        {"id": "NODE-002", "label": "Choose infrastructure action", "type": "action", "description": "Add floor, change floor status, add slot, change slot, remove slot", "position_group": "super_admin_lane"},
+        {"id": "NODE-003", "label": "Impact check", "type": "action", "description": "Active bookings and occupants", "position_group": "system_lane"},
+        {"id": "NODE-004", "label": "Unsafe change?", "type": "decision", "description": "Would orphan a booking or occupant", "position_group": "system_lane"},
+        {"id": "NODE-005", "label": "Refuse with 409", "type": "action", "description": "Change not applied", "position_group": "system_lane"},
+        {"id": "NODE-006", "label": "Apply change and audit", "type": "action", "description": "Persist floor or slot state", "position_group": "system_lane"},
+        {"id": "NODE-007", "label": "Open system control", "type": "action", "description": "Confirm consequences", "position_group": "super_admin_lane"},
+        {"id": "NODE-008", "label": "Set ONLINE or OFFLINE", "type": "action", "description": "system_settings SYSTEM_STATUS", "position_group": "system_lane"},
+        {"id": "NODE-009", "label": "Customer booking attempts", "type": "decision", "description": "Hold and confirm requests", "position_group": "system_lane"},
+        {"id": "NODE-010", "label": "Return 503 while OFFLINE", "type": "action", "description": "Customer bookings blocked", "position_group": "system_lane"},
+        {"id": "NODE-011", "label": "Keep Super Admin controls available", "type": "action", "description": "Restore ONLINE at any time", "position_group": "system_lane"},
+        {"id": "NODE-012", "label": "End", "type": "end", "description": "State persisted and audited", "position_group": "system_lane"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "NODE-002", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-003", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-004", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-005", "label": "yes", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-006", "label": "no", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-006", "to": "NODE-007", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-008", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-008", "to": "NODE-009", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-009", "to": "NODE-010", "label": "OFFLINE", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-009", "to": "NODE-011", "label": "ONLINE", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-010", "to": "NODE-012", "label": "", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-011", "to": "NODE-012", "label": "", "direction": "one_way", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Use lanes Super Admin and QSPARK System.",
+        "Draw the impact check before every capacity change.",
+        "Show the system switch as a clearly separate subflow."
+      ],
+      "accuracy_constraints": [
+        "OFFLINE blocks customer holds and confirmations only.",
+        "Do not show multi-instance or Oracle operations."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    },
+    {
+      "diagram_id": "DIA-007",
+      "diagram_title": "Data Flow Diagram Level 0",
+      "diagram_type": "dfd_level_0",
+      "document_section": "7.1",
+      "document_insertion_point": "After the data model overview",
+      "purpose": "Show the system as one process with external actors and the principal data stores.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "dfd_context",
+      "visual_style": {
+        "style": "dfd_standard",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "dfd_rectangles_circles_and_open_rectangles",
+        "connector_style": "labelled_data_flow_arrows",
+        "line_style": "clean_and_consistent",
+        "color_usage": "minimal",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "CUSTOMER", "type": "external_entity", "description": "Supplies credentials, booking requests and payment", "position_group": "external"},
+        {"id": "NODE-002", "label": "ADMIN", "type": "external_entity", "description": "Supplies customer data, slot commands and scans", "position_group": "external"},
+        {"id": "NODE-003", "label": "SUPER_ADMIN", "type": "external_entity", "description": "Supplies infrastructure and system commands", "position_group": "external"},
+        {"id": "NODE-004", "label": "0. QSPARK", "type": "process", "description": "Validates, prices, settles and records parking activity", "position_group": "core"},
+        {"id": "D1", "label": "D1 users", "type": "data_store", "description": "Accounts, roles and wallet balances", "position_group": "stores"},
+        {"id": "D2", "label": "D2 floors and parking_slots", "type": "data_store", "description": "Capacity and control states", "position_group": "stores"},
+        {"id": "D3", "label": "D3 bookings", "type": "data_store", "description": "Reservations and lifecycle state", "position_group": "stores"},
+        {"id": "D4", "label": "D4 wallet_transactions and revenue_collections", "type": "data_store", "description": "Ledger and revenue pairings", "position_group": "stores"},
+        {"id": "D5", "label": "D5 booking_events", "type": "data_store", "description": "Entry and exit history", "position_group": "stores"},
+        {"id": "D6", "label": "D6 cancellation_rules and system_settings", "type": "data_store", "description": "Policy configuration", "position_group": "stores"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "NODE-004", "label": "credentials, booking request", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-001", "label": "availability, QR, balance", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-004", "label": "customer data, slot command, scan", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-002", "label": "operational views, scan result", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-004", "label": "admin, floor, slot and system commands", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "NODE-003", "label": "analytics, reports, table views", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-004", "to": "D1", "label": "account and balance reads and writes", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-004", "to": "D2", "label": "slot state reads and writes", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-004", "to": "D3", "label": "booking reads and writes", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-004", "to": "D4", "label": "ledger and collection writes", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-004", "to": "D5", "label": "event writes and reads", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-004", "to": "D6", "label": "policy reads and writes", "direction": "bidirectional", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Place process 0 in the centre.",
+        "Place the three actors on the left and the data stores on the right.",
+        "Label every flow with the data it carries."
+      ],
+      "accuracy_constraints": [
+        "Use the real store names.",
+        "Do not add an external payment process.",
+        "Do not draw CRUD matrix detail at this level."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    },
+    {
+      "diagram_id": "DIA-008",
+      "diagram_title": "Data Flow Diagram Level 1 - Booking and Settlement",
+      "diagram_type": "dfd_level_1",
+      "document_section": "8.3",
+      "document_insertion_point": "After the transaction boundaries table",
+      "purpose": "Decompose hold, confirm, cancel and exit into numbered processes and their stores.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "dfd_level_1",
+      "visual_style": {
+        "style": "dfd_standard",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "dfd_rectangles_circles_and_open_rectangles",
+        "connector_style": "labelled_data_flow_arrows",
+        "line_style": "clean_and_consistent",
+        "color_usage": "minimal",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "CUSTOMER", "type": "external_entity", "description": "Booking owner and payer", "position_group": "external"},
+        {"id": "NODE-002", "label": "ADMIN / SUPER_ADMIN", "type": "external_entity", "description": "Scanner and operator", "position_group": "external"},
+        {"id": "P1", "label": "1. Validate and hold", "type": "process", "description": "Plate, window, slot, overlap and vehicle checks", "position_group": "processes"},
+        {"id": "P2", "label": "2. Confirm and settle", "type": "process", "description": "Revalidate, debit, credit, collection, status", "position_group": "processes"},
+        {"id": "P3", "label": "3. Cancel and refund", "type": "process", "description": "Rule matching, refund legs, reversal", "position_group": "processes"},
+        {"id": "P4", "label": "4. Scan entry or exit", "type": "process", "description": "Event recording and overtime settlement", "position_group": "processes"},
+        {"id": "D3", "label": "D3 bookings", "type": "data_store", "description": "Lifecycle state and applied rates", "position_group": "stores"},
+        {"id": "D4", "label": "D4 wallet_transactions and revenue_collections", "type": "data_store", "description": "Money legs", "position_group": "stores"},
+        {"id": "D5", "label": "D5 booking_events", "type": "data_store", "description": "Entry and exit", "position_group": "stores"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "P1", "label": "slot, vehicle, interval", "direction": "one_way", "relationship": "verified"},
+        {"from": "P1", "to": "D3", "label": "HELD booking", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-001", "to": "P2", "label": "confirm request", "direction": "one_way", "relationship": "verified"},
+        {"from": "P2", "to": "D3", "label": "CONFIRMED status", "direction": "one_way", "relationship": "verified"},
+        {"from": "P2", "to": "D4", "label": "debit, credit, collection", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-001", "to": "P3", "label": "cancel request", "direction": "one_way", "relationship": "verified"},
+        {"from": "P3", "to": "D3", "label": "CANCELLED status", "direction": "one_way", "relationship": "verified"},
+        {"from": "P3", "to": "D4", "label": "refund and reversal", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "P4", "label": "booking reference and method", "direction": "one_way", "relationship": "verified"},
+        {"from": "P4", "to": "D5", "label": "ENTRY or EXIT event", "direction": "one_way", "relationship": "verified"},
+        {"from": "P4", "to": "D3", "label": "COMPLETED status", "direction": "one_way", "relationship": "verified"},
+        {"from": "P4", "to": "D4", "label": "overtime charge", "direction": "one_way", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Number the processes 1 to 4.",
+        "Keep money stores on the lower right.",
+        "Label every flow with the record or amount it carries."
+      ],
+      "accuracy_constraints": [
+        "Show collection and ledger as one store group; the tables are linked 1:1 per charge.",
+        "Do not show a separate payment gateway.",
+        "Do not omit the cancellation reversal."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    },
+    {
+      "diagram_id": "DIA-009",
+      "diagram_title": "Entity-Relationship Diagram",
+      "diagram_type": "erd",
+      "document_section": "7.3",
+      "document_insertion_point": "After the ERD explanation",
+      "purpose": "Model all eleven tables with keys, principal attributes and cardinality.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "erd_crow_foot",
+      "visual_style": {
+        "style": "professional_erd",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "entity_boxes_with_attribute_rows",
+        "connector_style": "crow_foot_lines",
+        "line_style": "clean_and_consistent",
+        "color_usage": "subtle_professional_colors",
+        "text_alignment": "left",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "users", "label": "users", "type": "entity", "attributes": ["user_id PK", "admin_id UQ", "full_name", "email UQ", "phone", "gender", "company_name", "username UQ", "password_hash", "role", "wallet_balance", "account_status", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "All accounts and wallets", "position_group": "core"},
+        {"id": "floors", "label": "floors", "type": "entity", "attributes": ["floor_id PK", "floor_code UQ", "floor_status", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Parking floors", "position_group": "core"},
+        {"id": "vehicle_types", "label": "vehicle_types", "type": "entity", "attributes": ["vehicle_type_id PK", "type_name UQ", "hourly_rate", "overstay_rate", "is_active", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Categories and rates", "position_group": "core"},
+        {"id": "parking_slots", "label": "parking_slots", "type": "entity", "attributes": ["slot_id PK", "floor_id FK", "vehicle_type_id FK", "slot_number", "control_status", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Individual spaces", "position_group": "core"},
+        {"id": "bookings", "label": "bookings", "type": "entity", "attributes": ["booking_id PK", "booking_reference UQ", "user_id FK", "slot_id FK", "vehicle_format", "vehicle_number", "booked_from", "booked_until", "hold_expires_at", "hourly_rate_applied", "overstay_rate_applied", "estimated_amount", "booking_status", "applied_cancellation_rule_id FK", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Reservations", "position_group": "core"},
+        {"id": "cancellation_rules", "label": "cancellation_rules", "type": "entity", "attributes": ["rule_id PK", "rule_code UQ", "rule_name", "min_hours_before", "max_hours_before", "is_no_show", "refund_percent", "penalty_percent", "description", "is_active", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Refund policy", "position_group": "policy"},
+        {"id": "wallet_transactions", "label": "wallet_transactions", "type": "entity", "attributes": ["transaction_id PK", "transaction_reference UQ", "user_id FK", "booking_id FK", "transaction_type", "direction", "amount", "balance_after", "description", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Immutable ledger", "position_group": "money"},
+        {"id": "booking_events", "label": "booking_events", "type": "entity", "attributes": ["event_id PK", "booking_id FK", "event_type", "scan_method", "event_note", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Entry and exit events", "position_group": "core"},
+        {"id": "audit_logs", "label": "audit_logs", "type": "entity", "attributes": ["audit_log_id PK", "action_type", "entity_type", "entity_id", "old_values", "new_values", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Change history", "position_group": "policy"},
+        {"id": "revenue_collections", "label": "revenue_collections", "type": "entity", "attributes": ["collection_id PK", "source_user_id FK", "super_admin_user_id FK", "booking_id FK", "customer_wallet_transaction_id FK UQ", "super_admin_wallet_transaction_id FK UQ", "collection_type", "amount", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Charge pairings", "position_group": "money"},
+        {"id": "system_settings", "label": "system_settings", "type": "entity", "attributes": ["setting_id PK", "setting_key UQ", "setting_value", "description", "created_by FK", "created_at", "updated_by FK", "updated_at", "reserved1", "reserved2"], "description": "Operational settings", "position_group": "policy"}
+      ],
+      "connections": [
+        {"from": "floors", "to": "parking_slots", "label": "1 to many", "direction": "one_way", "relationship": "verified"},
+        {"from": "vehicle_types", "to": "parking_slots", "label": "1 to many", "direction": "one_way", "relationship": "verified"},
+        {"from": "users", "to": "bookings", "label": "1 to many", "direction": "one_way", "relationship": "verified"},
+        {"from": "parking_slots", "to": "bookings", "label": "1 to many over time", "direction": "one_way", "relationship": "verified"},
+        {"from": "cancellation_rules", "to": "bookings", "label": "1 to many applied rule", "direction": "one_way", "relationship": "verified"},
+        {"from": "bookings", "to": "wallet_transactions", "label": "1 to many", "direction": "one_way", "relationship": "verified"},
+        {"from": "users", "to": "wallet_transactions", "label": "1 to many", "direction": "one_way", "relationship": "verified"},
+        {"from": "bookings", "to": "booking_events", "label": "1 to 0..2 (one ENTRY, one EXIT)", "direction": "one_way", "relationship": "verified"},
+        {"from": "bookings", "to": "revenue_collections", "label": "1 to many", "direction": "one_way", "relationship": "verified"},
+        {"from": "users", "to": "revenue_collections", "label": "1 to many as source", "direction": "one_way", "relationship": "verified"},
+        {"from": "wallet_transactions", "to": "revenue_collections", "label": "1 to 1 customer leg", "direction": "one_way", "relationship": "verified"},
+        {"from": "wallet_transactions", "to": "revenue_collections", "label": "1 to 1 admin leg", "direction": "one_way", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Place users, floors, vehicle_types, parking_slots and bookings in a central cluster.",
+        "Place money tables on the right and policy tables on the left.",
+        "Use crow-foot notation and label cardinality.",
+        "Show all eleven tables, not a subset."
+      ],
+      "accuracy_constraints": [
+        "Use only the columns listed in schema.sql.",
+        "Mark PK, UQ and FK correctly.",
+        "Do not add customer, admin, wallet, vehicle or payment tables.",
+        "Keep the mandatory audit columns visible."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    },
+    {
+      "diagram_id": "DIA-010",
+      "diagram_title": "Booking State Machine",
+      "diagram_type": "state_machine",
+      "document_section": "8.1",
+      "document_insertion_point": "After the booking state table",
+      "purpose": "Show the five booking states and the only legal transitions.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "state_machine",
+      "visual_style": {
+        "style": "uml_state",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "rounded_state_boxes",
+        "connector_style": "labelled_transition_arrows",
+        "line_style": "clean_and_consistent",
+        "color_usage": "minimal",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "START", "label": "Initial", "type": "initial_pseudostate", "description": "Hold request accepted", "position_group": "states"},
+        {"id": "HELD", "label": "HELD", "type": "state", "description": "Unpaid reservation, 30-minute expiry", "position_group": "states"},
+        {"id": "CONFIRMED", "label": "CONFIRMED", "type": "state", "description": "Paid, QR issued", "position_group": "states"},
+        {"id": "COMPLETED", "label": "COMPLETED", "type": "state", "description": "Vehicle exited", "position_group": "terminal"},
+        {"id": "CANCELLED", "label": "CANCELLED", "type": "state", "description": "Cancelled with rule-based refund", "position_group": "terminal"},
+        {"id": "EXPIRED", "label": "EXPIRED", "type": "state", "description": "Hold lapsed", "position_group": "terminal"}
+      ],
+      "connections": [
+        {"from": "START", "to": "HELD", "label": "POST /api/bookings/hold", "direction": "one_way", "relationship": "verified"},
+        {"from": "HELD", "to": "CONFIRMED", "label": "confirm with sufficient wallet", "direction": "one_way", "relationship": "verified"},
+        {"from": "HELD", "to": "CANCELLED", "label": "cancel", "direction": "one_way", "relationship": "verified"},
+        {"from": "HELD", "to": "EXPIRED", "label": "hold_expires_at elapsed", "direction": "one_way", "relationship": "verified"},
+        {"from": "CONFIRMED", "to": "COMPLETED", "label": "EXIT scan", "direction": "one_way", "relationship": "verified"},
+        {"from": "CONFIRMED", "to": "CANCELLED", "label": "cancel before entry", "direction": "one_way", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Place HELD on the left and CONFIRMED to its right.",
+        "Place COMPLETED, CANCELLED and EXPIRED as terminal states on the right and bottom.",
+        "Show no outgoing transitions from terminal states."
+      ],
+      "accuracy_constraints": [
+        "Only these eight transitions are legal.",
+        "Do not add a REFUNDED or ENTERED state.",
+        "Do not allow CONFIRMED to EXPIRED."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": false}
+    },
+    {
+      "diagram_id": "DIA-011",
+      "diagram_title": "Deployment Architecture",
+      "diagram_type": "deployment",
+      "document_section": "10.1",
+      "document_insertion_point": "After the deployment architecture paragraph",
+      "purpose": "Show the client, TLS proxy, Waitress process, SQLite file and backup destination.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "deployment",
+      "visual_style": {
+        "style": "professional_deployment",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "deployment_nodes",
+        "connector_style": "directional_arrows",
+        "line_style": "clean_and_consistent",
+        "color_usage": "subtle_professional_colors",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "User Browser", "type": "client", "description": "Chromium, Firefox or WebKit on desktop or mobile", "position_group": "client_zone"},
+        {"id": "NODE-002", "label": "HTTPS Reverse Proxy", "type": "network", "description": "TLS termination, forwards Host and X-Forwarded-Proto", "position_group": "edge_zone"},
+        {"id": "NODE-003", "label": "waitress-serve :8000", "type": "server", "description": "Single Flask application process, app:create_app", "position_group": "server_zone"},
+        {"id": "NODE-004", "label": "Static Assets", "type": "filesystem", "description": "src/static CSS, JS and images served by Flask", "position_group": "server_zone"},
+        {"id": "NODE-005", "label": "SQLite parking_local.db", "type": "database", "description": "Writable local volume configured by DATABASE_PATH", "position_group": "data_zone"},
+        {"id": "NODE-006", "label": "Backup Store", "type": "storage", "description": "Verified timestamped copies copied off the host", "position_group": "data_zone"},
+        {"id": "NODE-007", "label": "Process Supervisor and stdout logs", "type": "operations", "description": "NSSM, systemd or Task Scheduler captures logs", "position_group": "ops_zone"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "NODE-002", "label": "HTTPS", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-003", "label": "HTTP on private interface", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-004", "label": "Reads assets", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-003", "to": "NODE-005", "label": "SQL over the file system", "direction": "bidirectional", "relationship": "verified"},
+        {"from": "NODE-005", "to": "NODE-006", "label": "Hot backup", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-003", "label": "Starts and supervises", "direction": "one_way", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Draw zones from left to right: client, edge, server, data, operations.",
+        "Keep the database inside the server host boundary.",
+        "Show no database server or cluster."
+      ],
+      "accuracy_constraints": [
+        "Single process and single SQLite file only.",
+        "Do not show load balancers, replicas or containers unless verified.",
+        "Show the proxy as the only public entry point."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    },
+    {
+      "diagram_id": "DIA-012",
+      "diagram_title": "UI Navigation Map",
+      "diagram_type": "ui_navigation",
+      "document_section": "4.1",
+      "document_insertion_point": "After the page inventory paragraph",
+      "purpose": "Map the verified page routes and role guards.",
+      "generation_target": ["Excalidraw", "ChatGPT Image Generation"],
+      "orientation": "landscape",
+      "layout": "sitemap",
+      "visual_style": {
+        "style": "professional_sitemap",
+        "background": "white",
+        "font": "Arial",
+        "node_shapes": "page_boxes",
+        "connector_style": "tree_lines",
+        "line_style": "clean_and_consistent",
+        "color_usage": "subtle_professional_colors",
+        "text_alignment": "center",
+        "avoid_visual_clutter": true
+      },
+      "elements": [
+        {"id": "NODE-001", "label": "/login", "type": "page", "description": "Public sign-in", "position_group": "public"},
+        {"id": "NODE-002", "label": "/dashboard", "type": "page", "description": "Customer home, any authenticated role", "position_group": "customer"},
+        {"id": "NODE-003", "label": "/booking", "type": "page", "description": "Five-step wizard", "position_group": "customer"},
+        {"id": "NODE-004", "label": "/bookings/my", "type": "page", "description": "Own bookings, cancel, QR", "position_group": "customer"},
+        {"id": "NODE-005", "label": "/wallet", "type": "page", "description": "Ledger and balance", "position_group": "customer"},
+        {"id": "NODE-006", "label": "/profile", "type": "page", "description": "Self-service profile", "position_group": "customer"},
+        {"id": "NODE-007", "label": "/admin/dashboard", "type": "page", "description": "Operational KPIs", "position_group": "admin"},
+        {"id": "NODE-008", "label": "/admin/bookings", "type": "page", "description": "All bookings and filters", "position_group": "admin"},
+        {"id": "NODE-009", "label": "/admin/customers", "type": "page", "description": "Walk-in and customer admin", "position_group": "admin"},
+        {"id": "NODE-010", "label": "/admin/slots", "type": "page", "description": "Slot control and occupancy", "position_group": "admin"},
+        {"id": "NODE-011", "label": "/admin/qr-scan", "type": "page", "description": "Camera or manual reference", "position_group": "admin"},
+        {"id": "NODE-012", "label": "/admin/analytics", "type": "page", "description": "Occupancy and revenue", "position_group": "admin"},
+        {"id": "NODE-013", "label": "/admin/master", "type": "page", "description": "Read-only rates and cancellation rules", "position_group": "admin"},
+        {"id": "NODE-014", "label": "/super-admin/dashboard", "type": "page", "description": "System overview", "position_group": "super_admin"},
+        {"id": "NODE-015", "label": "/super-admin/admins", "type": "page", "description": "Administrator management", "position_group": "super_admin"},
+        {"id": "NODE-016", "label": "/super-admin/infrastructure", "type": "page", "description": "Floors and slots", "position_group": "super_admin"},
+        {"id": "NODE-017", "label": "/super-admin/analytics", "type": "page", "description": "Deep analytics and CSV", "position_group": "super_admin"},
+        {"id": "NODE-018", "label": "/super-admin/data", "type": "page", "description": "Whitelisted table browser", "position_group": "super_admin"},
+        {"id": "NODE-019", "label": "/super-admin/system", "type": "page", "description": "ONLINE/OFFLINE and session policy", "position_group": "super_admin"},
+        {"id": "NODE-020", "label": "error.html", "type": "page", "description": "400, 403, 404, 413 and 500", "position_group": "public"}
+      ],
+      "connections": [
+        {"from": "NODE-001", "to": "NODE-002", "label": "CUSTOMER, ADMIN, SUPER_ADMIN", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-003", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-004", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-005", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-006", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-001", "to": "NODE-007", "label": "ADMIN, SUPER_ADMIN", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-008", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-009", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-010", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-011", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-012", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-007", "to": "NODE-013", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-001", "to": "NODE-014", "label": "SUPER_ADMIN", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-014", "to": "NODE-015", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-014", "to": "NODE-016", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-014", "to": "NODE-017", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-014", "to": "NODE-018", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-014", "to": "NODE-019", "label": "nav", "direction": "one_way", "relationship": "verified"},
+        {"from": "NODE-002", "to": "NODE-020", "label": "role failure", "direction": "one_way", "relationship": "verified"}
+      ],
+      "layout_instructions": [
+        "Group public, customer, admin and super-admin pages into four columns.",
+        "Mark role guards on the edges from login.",
+        "Do not show a landing page; it is not implemented."
+      ],
+      "accuracy_constraints": [
+        "Only the twenty verified routes and error page.",
+        "No /landing route exists.",
+        "Admin pages are also available to SUPER_ADMIN."
+      ],
+      "output_requirements": {"editable": true, "high_resolution": true, "aspect_ratio": "16:9", "transparent_background": false, "include_title": true, "include_legend": true}
+    }
+  ]
+}

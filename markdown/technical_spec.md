@@ -11,9 +11,8 @@
 - QR generation: retain or adopt a maintained Python QR-code library compatible with the repository.
 - QR scanning: browser camera scanner on the Admin operational interface, with a manual reference fallback.
 
-### Phase 2 (future only)
-- Oracle APEX database accessed through ORDS REST endpoints.
-- Do not build or switch to Phase 2 while Phase 1 requirements remain incomplete unless explicitly requested.
+### Phase 2
+- Not started; no Phase 2 code, scripts or endpoints exist in this repository.
 
 ## 2. Logical architecture
 
@@ -29,8 +28,6 @@ flowchart TB
     L --> Q[QR Generation / Scan Processing]
     L --> W[Wallet and Revenue Transactions]
     L --> R[Analytics and Report Queries]
-    DB -. future Phase 2 .-> O[ORDS]
-    O --> OA[(Oracle APEX Database)]
 ```
 
 ### Layer responsibilities

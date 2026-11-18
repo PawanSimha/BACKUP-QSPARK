@@ -1,5 +1,0 @@
-rule_id,rule_code,rule_name,min_hours_before,max_hours_before,is_no_show,refund_percent,penalty_percent,description,is_active,created_by,created_at,updated_by,updated_at,reserved1,reserved2
-1,MORE_24H,More than 24 hours before start,24,,0,100,0,,1,1,2026-11-13 04:52:45,1,2026-11-13 04:52:45,,
-2,BETWEEN_1_24H,Between 1 and 24 hours,1,24,0,50,0,,1,1,2026-11-13 04:52:45,1,2026-11-13 04:52:45,,
-3,LESS_1H,Less than 1 hour,0,1,0,0,100,,1,1,2026-11-13 04:52:45,1,2026-11-13 04:52:45,,
-4,NOSHOW,No-show / cancel after start,0,,1,0,100,,1,1,2026-11-13 04:52:45,1,2026-11-13 04:52:45,,

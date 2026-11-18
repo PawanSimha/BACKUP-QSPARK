@@ -122,11 +122,7 @@ Legend: `[x]` implemented and verified by the command in `markdown/test_results.
 - [ ] Hero image asset `src/static/images/parking-hero.webp` is referenced by `landing.html` but not present in the repository.
 - [ ] Landing page included in the axe-core audit (`tests/test_a11y.py`) and the responsive overflow check.
 
-## Phase 9 — Future Phase 2 (Oracle APEX/ORDS) — not started
+## Phase 9 - Removed
 
-- [ ] Plan schema migration.
-- [ ] Define ORDS APIs and auth model.
-- [ ] Data-access abstraction for SQLite/ORDS.
-- [ ] Migration parity tests.
-
-Do not start Phase 9 during Phase 1 unless explicitly requested.
+The former Phase 2 migration scripts (`oracle/`, `tools/export_sqlite_to_oracle.py`,
+`src/services/ords.py`) were deleted. This project is SQLite-only.

@@ -22,6 +22,11 @@ pip-delete-this-directory.txt
 database/*.db
 database/*.sqlite
 database/*.sqlite3
+database/*.db.backup
+database/*.db.bak2
+
+# Local database snapshots (contain real user data - never publish)
+database_backups/
 
 # Testing
 .pytest_cache/

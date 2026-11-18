@@ -81,7 +81,7 @@ If the user's requirements conflict with the existing code, report the conflict 
 ## Technology baseline
 The intended Phase 1 stack is Python, Flask, SQLite, Jinja2, HTML, Tailwind CSS and vanilla JavaScript, with session-based authentication. Use the existing repository's working structure where reasonable. QR generation/scanning may use the project's existing compatible libraries. Do not introduce a real payment gateway; the wallet is an internal simulated balance.
 
-Phase 2 Oracle APEX/ORDS integration is future work. Do not implement the cutover as part of Phase 1 unless explicitly requested.
+The project is SQLite-only. The former Phase 2 Oracle migration material was removed from this repository; do not reintroduce it.
 
 ## Completion expectations
 For each substantial task:

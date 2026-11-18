@@ -1,6 +1,0 @@
-============================= test session starts =============================
-platform win32 -- Python 3.14.10, pytest-9.2.0, pluggy-1.7.0
-rootdir: C:\Users\PawanSimha\Conneqtion\Internship\FDE - Projects\QSPARK - Parking Management System
-collected 0 items
-
-========================= no tests collected in 0.21s =========================

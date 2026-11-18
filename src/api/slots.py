@@ -4,7 +4,7 @@
 The live `status` (AVAILABLE / RESERVED / OCCUPIED / MAINTENANCE / INACTIVE) is computed
 from bookings and booking_events and is never stored.
 
-`/availability` is rewired to ORDS (`qsparking.api.v3/slots`). The other routes
+`/availability` reads SQLite directly. The other routes
 still read SQLite. `_LIVE_STATUS_SQL` is imported by admin.py, reports.py and
 super_admin.py — keep it.
 """
@@ -80,8 +80,7 @@ def availability():
     """Slots with live status.
 
     Query params: floor_id, vehicle_type_id (both optional).
-    Data comes from direct SQLite; filtering and colour mapping happen here
-    so the response shape stays identical to the ORDS version.
+    Data comes from direct SQLite; filtering and colour mapping happen here.
     """
     floor_id = request.args.get("floor_id", type=int)
     vehicle_type_id = request.args.get("vehicle_type_id", type=int)
