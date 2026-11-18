@@ -45,7 +45,7 @@ Authentication and session control; profile self-service; public floor, vehicle-
 | Item | Classification | Note |
 |---|---|---|
 | Automated test suite | Absent | `tests/` does not exist; the historical `test_results.txt` recorded the failure to find it |
-| Landing page | Absent | `docs/api.md` and `project_spec.md` claim `/landing`; no route or template exists |
+| Landing page | Absent | `/landing` route and `landing.html` do not exist; the docs now mark it planned |
 | Walk-in customer login | Partial | Accounts are created PENDING with no password; no activation flow |
 | QR decoding across browsers | Partial | Depends on `BarcodeDetector`; manual entry is the fallback |
 | Physical camera scanning | Unverified | No device available |
@@ -57,7 +57,7 @@ Authentication and session control; profile self-service; public floor, vehicle-
 ## 5. Conflicts Discovered
 
 1. **Test evidence.** `AGENTS.md`, `docs/api.md` and `docs/test_results.md` describe 109+ pytest tests, Playwright suites and axe runs. The `tests/` directory is absent and the historical `test_results.txt` showed the suite could not be found. All test-based claims are therefore marked Unverified.
-2. **Landing page.** Documentation describes `GET /landing` and `landing.html`. The code has neither; `/` redirects to `/login` or `/dashboard`.
+2. **Landing page (resolved).** Documentation described `GET /landing` and `landing.html`; the code has neither, so the docs now record the page as planned. `/` redirects to `/login` or `/dashboard`.
 3. **Revenue report.** `docs/api.md` still says revenue is filtered to COMPLETED bookings and dates on `bookings.booked_from`. `reports.py` reads `revenue_collections` and filters on `rc.created_at`. The code is authoritative.
 4. **Overtime granularity.** `docs/project_spec.md` says overtime is charged per started hour. `pricing.py` and `qr.py` round up to 30-minute units. Recorded as TBD-06.
 5. **Admin cancellation.** The product notes imply Admin can cancel; the customer endpoint allows only the owner, and cross-user cancellation is a Super Admin endpoint. Documented as implemented.
