@@ -6,24 +6,24 @@ Build and maintain QSPARK, a web-based smart parking slot booking and management
 ## Read these documents first
 Before planning or changing code, read:
 
-1. `markdown/project_spec.md` — confirmed product scope and role workflows.
-2. `markdown/technical_spec.md` — architecture, data rules, security and integration requirements.
-3. `markdown/open_questions.md` — decisions that are not yet confirmed; do not silently invent answers.
-4. `markdown/implementation_plan.md` — recommended order of work and acceptance checks.
+1. `docs/project_spec.md` — confirmed product scope and role workflows.
+2. `docs/technical_spec.md` — architecture, data rules, security and integration requirements.
+3. `docs/open_questions.md` — decisions that are not yet confirmed; do not silently invent answers.
+4. `docs/implementation_plan.md` — recommended order of work and acceptance checks.
 
 After implementation begins, also keep these generated technical documents accurate:
 
 - `schema.sql` — executable SQLite schema; authoritative for the actual database structure.
-- `markdown/db.md` — human-readable explanation of the exact schema in `schema.sql`.
-- `markdown/api.md` — actual routes, permissions, request and response contracts.
-- `markdown/test_results.md` — test cases actually run and their real results.
+- `docs/db.md` — human-readable explanation of the exact schema in `schema.sql`.
+- `docs/api.md` — actual routes, permissions, request and response contracts.
+- `docs/test_results.md` — test cases actually run and their real results.
 
 ## Source-of-truth precedence
 When sources conflict, use this order:
 
-1. The user's latest explicit requirements recorded in `markdown/project_spec.md`.
-2. Confirmed technical decisions in `markdown/technical_spec.md`.
-3. Decisions explicitly marked confirmed in `markdown/open_questions.md`.
+1. The user's latest explicit requirements recorded in `docs/project_spec.md`.
+2. Confirmed technical decisions in `docs/technical_spec.md`.
+3. Decisions explicitly marked confirmed in `docs/open_questions.md`.
 4. The running code and database, after validating that they implement the requirements.
 5. Older project Markdown files, which are historical references only.
 
@@ -47,9 +47,9 @@ If the user's requirements conflict with the existing code, report the conflict 
 - Use database transactions and concurrency controls for bookings and wallet changes.
 - Prefer soft deletion/deactivation where records have financial, booking or audit history.
 - Do not add tables, columns, endpoints, roles or features that are not supported by the confirmed specification or an approved decision.
-- If a material behavior is unresolved, document it in `markdown/open_questions.md` and choose a safe, reversible implementation only when necessary to keep moving.
+- If a material behavior is unresolved, document it in `docs/open_questions.md` and choose a safe, reversible implementation only when necessary to keep moving.
 - Keep UI, API, database schema and documentation in sync.
-- Update `markdown/db.md` from the real schema, not from memory. Update `markdown/api.md` from the actual registered routes. Never claim tests passed unless they were run.
+- Update `docs/db.md` from the real schema, not from memory. Update `docs/api.md` from the actual registered routes. Never claim tests passed unless they were run.
 
 ## Security requirements (implemented)
 
@@ -76,7 +76,7 @@ If the user's requirements conflict with the existing code, report the conflict 
 
 - Development: `python run.py` (`debug=True`, HTTP, no `Secure` cookie). Never use this server in production.
 - Production entry point: `waitress-serve --listen=0.0.0.0:8000 --call app:create_app` behind an HTTPS reverse proxy, with `APP_ENV=production`, a real `SECRET_KEY`, `SESSION_COOKIE_SECURE=1` and an absolute `DATABASE_PATH`.
-- Full procedure (dependencies, seed, CSS build, backup/restore, troubleshooting) is in `markdown/deployment.md`. Keep it accurate when config changes.
+- Full procedure (dependencies, seed, CSS build, backup/restore, troubleshooting) is in `docs/deployment.md`. Keep it accurate when config changes.
 
 ## Technology baseline
 The intended Phase 1 stack is Python, Flask, SQLite, Jinja2, HTML, Tailwind CSS and vanilla JavaScript, with session-based authentication. Use the existing repository's working structure where reasonable. QR generation/scanning may use the project's existing compatible libraries. Do not introduce a real payment gateway; the wallet is an internal simulated balance.
@@ -104,7 +104,7 @@ Stack in use: Jinja2 templates, compiled Tailwind CSS (standalone binary; no CDN
 - **Server authority**: page routes render shells only; no KPI maths in Jinja. The client never computes financial results, availability or booking state — it displays server responses.
 - **Roles**: sidebar blocks are cosmetic. Page routes re-check the role and return `error.html` with 403; APIs enforce `require_admin` / `require_role`. Add new pages to both the sidebar and the route guard.
 - **States**: each data view handles loading (skeleton), empty, validation error, business error and network error. Do not leave an endpoint's response unused or a button unwired.
-- **Routes**: use only registered routes (see `markdown/api.md`). Compatibility aliases (`/api/admin/master/*`, `/api/admin/qr/scan`, `/api/super-admin/reports/*.csv`) must keep working.
+- **Routes**: use only registered routes (see `docs/api.md`). Compatibility aliases (`/api/admin/master/*`, `/api/admin/qr/scan`, `/api/super-admin/reports/*.csv`) must keep working.
 
 ## Testing
 
@@ -129,4 +129,4 @@ Rebuild Tailwind after changing templates or JS utility classes:
 
 `beinghuman`, `modern-web-guidance`, `ui-ux-pro-max` are installed globally under `~/.config/opencode/skills/`. Load `modern-web-guidance` before writing browser-side HTML/CSS/JS and `ui-ux-pro-max` before visual or UX decisions.
 
-See `markdown/frontend.md` for the page inventory, tokens, JS conventions and responsive/accessibility rules.
+See `docs/frontend.md` for the page inventory, tokens, JS conventions and responsive/accessibility rules.

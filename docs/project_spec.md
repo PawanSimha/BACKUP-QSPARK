@@ -195,7 +195,7 @@ All three roles use the same Flask application and one design system. Every page
 
 Booking and overtime money movement stays atomic and server-side: debit customer → credit Super Admin → write `revenue_collections`, all in one transaction. The UI never deducts, credits or overwrites a balance. Admins and Super Admins can also book on behalf of a registered customer.
 
-Known gaps are tracked in `open_questions.md` and `markdown/test_results.md`: the CSRF token scheme is resolved (Q1), physical camera QR capture is not testable in this environment (Q7), automatic QR decoding needs the native `BarcodeDetector` API so manual reference entry is the fallback in other browsers (Q8), and no Safari/real-mobile run has been performed.
+Known gaps are tracked in `open_questions.md` and `docs/test_results.md`: the CSRF token scheme is resolved (Q1), physical camera QR capture is not testable in this environment (Q7), automatic QR decoding needs the native `BarcodeDetector` API so manual reference entry is the fallback in other browsers (Q8), and no Safari/real-mobile run has been performed.
 
 ## 11. Completion criteria
 

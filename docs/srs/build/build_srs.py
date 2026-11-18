@@ -14,10 +14,11 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 BUILD = Path(__file__).resolve().parent
 OUT = BUILD.parent
 DOCS = ROOT / "docs"
+DIAGRAMS = DOCS / "diagrams"
 FONT = "Times New Roman"
 
 PROJECT = "QSPARK"
@@ -450,7 +451,7 @@ def build():
         if stripped.startswith("[[FIGURE:"):
             m = re.match(r"\[\[FIGURE:([^|]+)\|(.+)\]\]", stripped)
             fname, caption = m.group(1), m.group(2)
-            path = DOCS / fname
+            path = DIAGRAMS / fname
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             try:

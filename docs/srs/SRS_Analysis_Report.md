@@ -16,7 +16,7 @@
 | `src/templates/*.html` (22 files) | Page inventory, role-specific UI, form behaviour |
 | `src/static/js/**`, `src/static/css/app.css` | Client conventions, design tokens, request wrapper |
 | `requirements.txt` | Runtime and test dependencies |
-| `markdown/project_spec.md`, `technical_spec.md`, `api.md`, `db.md`, `open_questions.md`, `deployment.md`, `frontend.md`, `test_results.md` | Stated requirements, decisions, known gaps and historical test claims |
+| `docs/project_spec.md`, `technical_spec.md`, `api.md`, `db.md`, `open_questions.md`, `deployment.md`, `frontend.md`, `test_results.md` | Stated requirements, decisions, known gaps and historical test claims |
 | `AI TESTING/00_*` through `07_*` | Architecture evaluation and QA reports |
 | `docs/*.png`, `docs/*.excalidraw` | Existing architecture, ERD and process-flow diagrams |
 | `seed_init.py`, `seed_direct.py` | Seeding behaviour |
@@ -45,7 +45,7 @@ Authentication and session control; profile self-service; public floor, vehicle-
 | Item | Classification | Note |
 |---|---|---|
 | Automated test suite | Absent | `tests/` does not exist; `test_results.txt` records the failure to find it |
-| Landing page | Absent | `markdown/api.md` and `project_spec.md` claim `/landing`; no route or template exists |
+| Landing page | Absent | `docs/api.md` and `project_spec.md` claim `/landing`; no route or template exists |
 | Walk-in customer login | Partial | Accounts are created PENDING with no password; no activation flow |
 | QR decoding across browsers | Partial | Depends on `BarcodeDetector`; manual entry is the fallback |
 | Physical camera scanning | Unverified | No device available |
@@ -56,12 +56,12 @@ Authentication and session control; profile self-service; public floor, vehicle-
 
 ## 5. Conflicts Discovered
 
-1. **Test evidence.** `AGENTS.md`, `markdown/api.md` and `markdown/test_results.md` describe 109+ pytest tests, Playwright suites and axe runs. The `tests/` directory is absent and `test_results.txt` shows the suite could not be found. All test-based claims are therefore marked Unverified.
+1. **Test evidence.** `AGENTS.md`, `docs/api.md` and `docs/test_results.md` describe 109+ pytest tests, Playwright suites and axe runs. The `tests/` directory is absent and `test_results.txt` shows the suite could not be found. All test-based claims are therefore marked Unverified.
 2. **Landing page.** Documentation describes `GET /landing` and `landing.html`. The code has neither; `/` redirects to `/login` or `/dashboard`.
-3. **Revenue report.** `markdown/api.md` still says revenue is filtered to COMPLETED bookings and dates on `bookings.booked_from`. `reports.py` reads `revenue_collections` and filters on `rc.created_at`. The code is authoritative.
-4. **Overtime granularity.** `markdown/project_spec.md` says overtime is charged per started hour. `pricing.py` and `qr.py` round up to 30-minute units. Recorded as TBD-06.
+3. **Revenue report.** `docs/api.md` still says revenue is filtered to COMPLETED bookings and dates on `bookings.booked_from`. `reports.py` reads `revenue_collections` and filters on `rc.created_at`. The code is authoritative.
+4. **Overtime granularity.** `docs/project_spec.md` says overtime is charged per started hour. `pricing.py` and `qr.py` round up to 30-minute units. Recorded as TBD-06.
 5. **Admin cancellation.** The product notes imply Admin can cancel; the customer endpoint allows only the owner, and cross-user cancellation is a Super Admin endpoint. Documented as implemented.
-6. **Seeding command.** `markdown/deployment.md` instructs `python seed.py`. No `seed.py` exists; `seed_init.py` and `seed_direct.py` are present.
+6. **Seeding command.** `docs/deployment.md` instructs `python seed.py`. No `seed.py` exists; `seed_init.py` and `seed_direct.py` are present.
 7. **Environment file.** `.env.example` is referenced in documentation but was not among the visible root files.
 8. **Session timeout wording.** `SESSION_TIMEOUT` sets the Flask cookie lifetime, while application code enforces a 20-minute absolute limit and a configurable idle limit. The document describes the effective behaviour, not the variable name alone.
 9. **Hard-coded seed credential.** `seed_init.py` sets a Super Admin password in source. The value is not reproduced in the SRS. It must not be used in any deployed environment and should be rotated or removed.

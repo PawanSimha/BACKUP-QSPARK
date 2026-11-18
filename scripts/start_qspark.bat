@@ -1,8 +1,8 @@
 @echo off
 title QSPARK Smart Parking System
 
-:: Change to this script's directory
-cd /D "%~dp0"
+:: Change to the project root (this script lives in scripts\)
+cd /D "%~dp0.."
 
 :: Start the dev server in a background window
 start "QSPARK_Server" /B python run.py < nul

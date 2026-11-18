@@ -2,13 +2,13 @@
 
 Single implementation checklist. Do not maintain competing plan/roadmap/todo documents.
 
-Legend: `[x]` implemented and verified by the command in `markdown/test_results.md`; `[~]` implemented with a documented gap; `[ ]` not started.
+Legend: `[x]` implemented and verified by the command in `docs/test_results.md`; `[~]` implemented with a documented gap; `[ ]` not started.
 
 ## Phase 0 — Repository and documentation audit
 
 - [x] Inspect repository, application, database, routes, templates, JavaScript, tests.
 - [x] Compare implementation to `project_spec.md` / `technical_spec.md`.
-- [x] Identify obsolete endpoints, duplicated logic, unused pages (`admin_reports.html` removed; canonical `markdown/api.md`).
+- [x] Identify obsolete endpoints, duplicated logic, unused pages (`admin_reports.html` removed; canonical `docs/api.md`).
 - [x] Back up SQLite database before schema work (schema unchanged during frontend phase).
 - [x] Record migration risks and unresolved decisions (`open_questions.md`).
 
@@ -21,7 +21,7 @@ Legend: `[x]` implemented and verified by the command in `markdown/test_results.
 - [x] Safe initialization + repeatable seeding; env-driven seed passwords.
 - [x] Floor/slot and vehicle-type seed data.
 - [x] Secure bootstrap for Super Admin and three Admins (generated passwords printed once).
-- [x] Schema tests; `markdown/db.md` generated from the executable schema.
+- [x] Schema tests; `docs/db.md` generated from the executable schema.
 
 ## Phase 2 — Authentication and permissions
 
@@ -103,12 +103,12 @@ Legend: `[x]` implemented and verified by the command in `markdown/test_results.
 - [x] axe-core accessibility audit across all authenticated pages, zero violations (`tests/test_a11y.py`).
 - [x] Cross-engine Playwright checks: Chromium, Firefox, WebKit (`tests/test_browsers.py`).
 - [x] Session/security hardening: HttpOnly, SameSite, optional Secure, security headers, `MAX_CONTENT_LENGTH`, production secret guard, failed-login and 500 logging.
-- [x] Deployment, backup and restore guide (`markdown/deployment.md`); `requirements.txt` and `.env.example` updated.
+- [x] Deployment, backup and restore guide (`docs/deployment.md`); `requirements.txt` and `.env.example` updated.
 - [x] **Password rotation for exposed privileged accounts** (`admin1` ADMIN and `superadmin` SUPER_ADMIN): old credentials rejected, new credentials verified; customer accounts unaffected; audit events recorded; schema unchanged.
 - [x] QR scanner camera lifecycle: preview independent of QR-decoder availability, `BarcodeDetector` feature-detected, per-error camera messages, tracks stopped on exit (`src/templates/qr_scan.html`).
 - [x] Frontend DOM wiring guard: `tests/test_frontend_wiring.py` fails if an inline script references an element the page never renders (26 tests).
 - [ ] Physical QR scanning on a real camera device — blocked, no hardware available.
-- [ ] Bundled JS QR decoder for browsers without `BarcodeDetector` (Firefox) — not started; manual reference entry is the current fallback (`markdown/test_results.md`).
+- [ ] Bundled JS QR decoder for browsers without `BarcodeDetector` (Firefox) — not started; manual reference entry is the current fallback (`docs/test_results.md`).
 - [ ] Safari/real mobile browser verification — not performed (WebKit only).
 - [ ] Report business definitions confirmed by owner (`open_questions.md` Q3).
 - [ ] Walk-in activation model approved (`open_questions.md` Q4).

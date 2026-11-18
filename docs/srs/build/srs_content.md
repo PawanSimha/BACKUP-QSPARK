@@ -49,7 +49,7 @@ Out of scope: real payment gateway integration, native mobile applications, SMS 
 | Flask 3.x, Werkzeug 3.x, Flask-WTF 1.x documentation | Framework behaviour |
 | SQLite 3 documentation | Constraints, triggers, transaction behaviour |
 | Tailwind CSS 3.4 documentation | Styling build |
-| Project files: `schema.sql`, `markdown/project_spec.md`, `markdown/technical_spec.md`, `markdown/api.md`, `markdown/db.md`, `markdown/test_results.md`, `markdown/open_questions.md` | Primary project evidence |
+| Project files: `schema.sql`, `docs/project_spec.md`, `docs/technical_spec.md`, `docs/api.md`, `docs/db.md`, `docs/test_results.md`, `docs/open_questions.md` | Primary project evidence |
 | Repository source under `app.py` and `src/` | Authoritative implementation evidence |
 
 No claim of formal certification or standards compliance is made. The references informed the document's structure only.
@@ -791,7 +791,7 @@ Verified pages: `/login`, `/dashboard`, `/booking`, `/bookings/my`, `/wallet`, `
 
 The booking wizard is a five-step flow: vehicle type, plate format and number, floor and slot grid, schedule and duration, review and confirm. Data tables use server-side filtering with pagination, skeleton loading states, empty states and inline error messages. Slot states use a consistent colour system. Destructive actions use a confirmation dialog and surface a toast on completion.
 
-Accessibility expectations: semantic landmarks, visible focus, form labels, keyboard-operable dialogs, `tabindex="0"` on scrollable table regions, and a contrast-compliant muted colour. Current evidence is an axe-core run recorded in `markdown/test_results.md`; the test artifacts are not present in the repository, so this remains Unverified.
+Accessibility expectations: semantic landmarks, visible focus, form labels, keyboard-operable dialogs, `tabindex="0"` on scrollable table regions, and a contrast-compliant muted colour. Current evidence is an axe-core run recorded in `docs/test_results.md`; the test artifacts are not present in the repository, so this remains Unverified.
 
 ## 4.2 Hardware Interface Requirements
 
@@ -1215,7 +1215,7 @@ Python runtime and pinned requirements, a writable disk, a reverse proxy with TL
 
 Status values: **Implemented** means observable in current source. **Partially** means the behaviour exists with a known limitation. **Unverified** means documentation or reports assert it but no runnable test artifact exists in the repository. **Planned** means future phase only.
 
-The `tests/` directory referenced by project documentation is absent from this repository. `test_results.txt` records `ERROR: file or directory not found: tests/`. Consequently, no requirement is marked verified by an executable test suite; historical pytest results in `markdown/test_results.md` are treated as claims.
+The `tests/` directory referenced by project documentation is absent from this repository. `test_results.txt` records `ERROR: file or directory not found: tests/`. Consequently, no requirement is marked verified by an executable test suite; historical pytest results in `docs/test_results.md` are treated as claims.
 
 [[TABLE:Requirement traceability matrix]]
 
@@ -1263,8 +1263,8 @@ The `tests/` directory referenced by project documentation is absent from this r
 | NFR-DATA-002 | Overlap trigger | Data | schema.sql | tests/ absent | Implemented |
 | NFR-DATA-004 | Transition trigger | Data | schema.sql | tests/ absent | Implemented |
 | NFR-DATA-006 | EXIT requires ENTRY | Data | schema.sql | tests/ absent | Implemented |
-| NFR-USE-006 | WCAG AA evidence | Usability | markdown/test_results.md claim | artifacts absent | Unverified |
-| NFR-COMP-002 | Cross-browser support | Compatibility | markdown/test_results.md claim | artifacts absent | Unverified |
+| NFR-USE-006 | WCAG AA evidence | Usability | docs/test_results.md claim | artifacts absent | Unverified |
+| NFR-COMP-002 | Cross-browser support | Compatibility | docs/test_results.md claim | artifacts absent | Unverified |
 | NFR-PERF-001 | Response within 2 s | Performance | no benchmark | none | Unverified |
 | NFR-SCALE-003 | Multi-instance support | Scalability | single SQLite file | none | Planned |
 

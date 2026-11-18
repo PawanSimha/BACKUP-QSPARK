@@ -3,8 +3,8 @@
 > **Snapshot, not current state.** This report captures the assessment made on
 > 12 Nov 2026. For the live schema, routes, frontend architecture and the most recent
 > test results, use the canonical documents:
-> `markdown/db.md`, `markdown/ERD.md`, `markdown/api.md`, `markdown/frontend.md`,
-> `markdown/technical_spec.md` and `markdown/test_results.md`.
+> `docs/db.md`, `docs/ERD.md`, `docs/api.md`, `docs/frontend.md`,
+> `docs/technical_spec.md` and `docs/test_results.md`.
 >
 > Changes made after this report was written:
 > - **Privileged-account password rotation** — `admin1` and `superadmin` hashes were
@@ -16,7 +16,7 @@
 > - **New suite** — `tests/test_frontend_wiring.py` (26 tests) fails if an inline
 >   script references an element the page does not render.
 > - **Documentation layout** — the specification files moved from `docs/` to
->   `markdown/`; `docs/` now holds this report and the diagrams.
+>   `docs/`; `docs/` now holds this report and the diagrams.
 
 **Report date:** 12 Nov 2026 (local time)
 **Assessment window:** Full suite + smoke tests against a fresh temp DB
@@ -128,10 +128,10 @@ QSPARK is a Flask+Jinja2 smart parking slot booking and management system with t
 - **requirements.txt:** updated to include Flask-WTF, waitress, axe-playwright-python, playwright (test); `flask-wtf` needed for CSRF.
 - **.env.example:** documents `APP_ENV`, `SECRET_KEY`, `DATABASE_PATH`, `SESSION_TIMEOUT`, `MAX_CONTENT_LENGTH`, `SESSION_COOKIE_SECURE`, seed credentials. No real secrets; gitignored.
 - **.gitignore:** added `tools/tailwindcss.exe`, `.sa_dump.txt`, `a11y_audit.py`, `dbg_overflow.py`.
-- **Deployment guide (`markdown/deployment.md`):** full procedure — install venv, configure `.env`, seed database, rebuild Tailwind, run dev (`python run.py`) or production (`waitress-serve --listen=0.0.0.0:8000 --call app:create_app`), HTTPS/reverse proxy considerations, backup (hot SQLite backup), restore (procedure with integrity check), troubleshooting table.
+- **Deployment guide (`docs/deployment.md`):** full procedure — install venv, configure `.env`, seed database, rebuild Tailwind, run dev (`python run.py`) or production (`waitress-serve --listen=0.0.0.0:8000 --call app:create_app`), HTTPS/reverse proxy considerations, backup (hot SQLite backup), restore (procedure with integrity check), troubleshooting table.
 - **Waitress smoke test:** production entry point starts successfully, `GET /health` returns `{"service":"QSPARK","status":"ok"}` with `APP_ENV=production` and a real `SECRET_KEY`; `SESSION_COOKIE_SECURE=1` without HTTPS causes the session cookie to be dropped (development-only observation).
 - **Seed passwords:** generated once by `seed.py` and printed; stored in secret manager immediately, never recoverable from the database (only PBKDF2 hashes are stored).
-- **Backup command:** `sqlite3 backup.db ".backup file"` or the PowerShell version in `markdown/deployment.md`; integrity check with `PRAGMA integrity_check`.
+- **Backup command:** `sqlite3 backup.db ".backup file"` or the PowerShell version in `docs/deployment.md`; integrity check with `PRAGMA integrity_check`.
 - **Restore procedure:** stop app, copy backup aside, `PRAGMA integrity_check`, replace database, start app, verify health page.
 
 **Classification:** Implemented and tested (smoke verified against waitress).
@@ -157,9 +157,9 @@ QSPARK is a Flask+Jinja2 smart parking slot booking and management system with t
 - `src/static/css/tailwind.input.css` (Tailwind @tailwind directives)
 - `src/static/css/tailwind.css` (compiled output, 9.5 KB minified)
 - `tools/tailwindcss.exe` (standalone binary, gitignored)
-- `markdown/deployment.md` (full deployment, backup, restore guide)
+- `docs/deployment.md` (full deployment, backup, restore guide)
 - `AGENTS.md` (updated with CSRF, financial, production config, testing commands)
-- `markdown/test_results.md` (full release-readiness report)
+- `docs/test_results.md` (full release-readiness report)
 - `tests/test_security.py` (13 CSRF/security tests)
 - `tests/test_financial.py` (9 financial integrity tests)
 - `tests/test_booking_safety.py` (9 allocation safety tests)
@@ -184,11 +184,11 @@ QSPARK is a Flask+Jinja2 smart parking slot booking and management system with t
 - `src/templates/profile.html` — `<dl>` groups with `dt`/`dd`, visible labels, visible wallet formatting.
 - `src/templates/super_admin_data.html` — `table-wrap` has `tabindex="0" role="region" aria-label="Database table rows"`.
 - `AGENTS.md` — CSRF, financial, production config, testing commands, Tailwind binary note.
-- `markdown/technical_spec.md` — CSRF implementation, session security, Tailwind build setup, financial transaction handling, concurrency controls, QR limitations, accessibility, deployment config; removed CDN description; added CSRF and session security sections.
-- `markdown/api.md` — CSRF requirements for all state-changing routes; login/logout CSRF details; updated report definitions; status codes include 413; removed `token` field from login response.
-- `markdown/frontend.md` — compiled Tailwind note, CSS build command, JS rules updated with CSRF, accessibility fixes documented, responsive note with `minmax(min(...), 1fr)`, QR behaviour documented, browser support clarified (WebKit ≠ Safari).
-- `markdown/open_questions.md` — Q1 CSRF resolved (Flask-WTF), Q2 Tailwind resolved (standalone binary), Q3 report definitions documented, Q7 camera path blocked noted, Q4 walk-in activation unchanged safe default.
-- `markdown/implementation_plan.md` — Phase 8b section added; every item from the release-readiness work tracked.
+- `docs/technical_spec.md` — CSRF implementation, session security, Tailwind build setup, financial transaction handling, concurrency controls, QR limitations, accessibility, deployment config; removed CDN description; added CSRF and session security sections.
+- `docs/api.md` — CSRF requirements for all state-changing routes; login/logout CSRF details; updated report definitions; status codes include 413; removed `token` field from login response.
+- `docs/frontend.md` — compiled Tailwind note, CSS build command, JS rules updated with CSRF, accessibility fixes documented, responsive note with `minmax(min(...), 1fr)`, QR behaviour documented, browser support clarified (WebKit ≠ Safari).
+- `docs/open_questions.md` — Q1 CSRF resolved (Flask-WTF), Q2 Tailwind resolved (standalone binary), Q3 report definitions documented, Q7 camera path blocked noted, Q4 walk-in activation unchanged safe default.
+- `docs/implementation_plan.md` — Phase 8b section added; every item from the release-readiness work tracked.
 - `schema.sql` → **not changed** (11-table schema preserved).
 - `seed.py` → **not changed** (safe seed, no hardcoded passwords).
 - `database/parking_local.db` → **not touched** (all browser tests use temp databases).
@@ -198,14 +198,14 @@ QSPARK is a Flask+Jinja2 smart parking slot booking and management system with t
 | Document | Changes |
 |---|---|
 | `AGENTS.md` | CSRF rules, production config, financial integrity, testing commands, Tailwind binary, security/financial/cookie sections |
-| `markdown/technical_spec.md` | CSRF section (§16), session security, Tailwind build setup (§17), financial and concurrency controls (§17b), QR limitations, accessibility, production deployment config, removed CDN reference |
-| `markdown/api.md` | CSRF requirements for all state-changing routes; login/logout details; updated report definitions; status codes now include 413 |
-| `markdown/frontend.md` | Compiled Tailwind note, CSS build command, JS rules updated with CSRF, accessibility fixes, responsive with `minmax(min(...), 1fr)`, QR behaviour, browser support (WebKit ≠ Safari) |
-| `markdown/db.md` | **No changes** — unchanged from previous; always derive from `schema.sql` |
-| `markdown/project_spec.md` | **No changes** — not in the active diff window |
-| `markdown/open_questions.md` | Q1 CSRF resolved, Q2 Tailwind resolved, Q3 report definitions documented, Q7 camera blocked noted |
-| `markdown/implementation_plan.md` | Phase 8b section added with all release-readiness items |
-| `markdown/test_results.md` | Full report with 118 passed/0 failed, all suite results, classification per item |
+| `docs/technical_spec.md` | CSRF section (§16), session security, Tailwind build setup (§17), financial and concurrency controls (§17b), QR limitations, accessibility, production deployment config, removed CDN reference |
+| `docs/api.md` | CSRF requirements for all state-changing routes; login/logout details; updated report definitions; status codes now include 413 |
+| `docs/frontend.md` | Compiled Tailwind note, CSS build command, JS rules updated with CSRF, accessibility fixes, responsive with `minmax(min(...), 1fr)`, QR behaviour, browser support (WebKit ≠ Safari) |
+| `docs/db.md` | **No changes** — unchanged from previous; always derive from `schema.sql` |
+| `docs/project_spec.md` | **No changes** — not in the active diff window |
+| `docs/open_questions.md` | Q1 CSRF resolved, Q2 Tailwind resolved, Q3 report definitions documented, Q7 camera blocked noted |
+| `docs/implementation_plan.md` | Phase 8b section added with all release-readiness items |
+| `docs/test_results.md` | Full report with 118 passed/0 failed, all suite results, classification per item |
 
 ## 14. Tests Executed and Passed
 
@@ -371,7 +371,7 @@ sqlite3 "$DATABASE_PATH" ".backup 'backups/parking_$(date +%Y%m%d_%H%M%S).db'"
 - Production deployment is documented; waitress smoke test passes; backup/restore procedure is in place.
 - Tailwind is compiled and no longer uses the CDN; the build is reproducible.
 
-**Conditional items requiring owner approval:** Q3 report definitions, Q4 walk-in activation, Q5 OFFLINE scope, Q6 overtime customer approval. These are documented in `markdown/open_questions.md` and have safe defaults already in the code; the product owner should review and confirm.
+**Conditional items requiring owner approval:** Q3 report definitions, Q4 walk-in activation, Q5 OFFLINE scope, Q6 overtime customer approval. These are documented in `docs/open_questions.md` and have safe defaults already in the code; the product owner should review and confirm.
 
 **Hardware-blocked items:** Physical camera QR scanning and Safari/real mobile verification cannot be confirmed in this environment; they must be reported honestly and tested on real devices before any claim of "fully verified on all platforms".
 

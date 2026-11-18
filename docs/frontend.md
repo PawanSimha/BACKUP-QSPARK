@@ -1,6 +1,6 @@
 # QSPARK — Frontend architecture
 
-Canonical frontend reference. Pages are Jinja2 shells; all data comes from the JSON APIs in `markdown/api.md`.
+Canonical frontend reference. Pages are Jinja2 shells; all data comes from the JSON APIs in `docs/api.md`.
 
 ## Stack
 
@@ -31,7 +31,7 @@ src/static/js/core/api.js          window.QS — fetch wrapper + X-CSRFToken
 src/static/js/core/ui.js           window.QSUI — esc, money, dateTime, debounce, toast, confirmDialog, setBusy, statusBadge, emptyRow
 ```
 
-Page-to-API mapping is documented per route in `markdown/api.md`.
+Page-to-API mapping is documented per route in `docs/api.md`.
 
 ## CSS build
 

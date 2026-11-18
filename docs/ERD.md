@@ -2,7 +2,7 @@
 
 **Source of truth:** `schema.sql` / the live database. This file is generated from the
 executable schema — the tables, columns, foreign keys, indexes and triggers below were
-read from `database/parking_local.db` and match `markdown/db.md`.
+read from `database/parking_local.db` and match `docs/db.md`.
 
 There are **11 tables**. There is no `payments` table (the wallet *is* the payment
 record), no `error_logs` table (errors are logged to the application log), and no
@@ -357,5 +357,5 @@ erDiagram
     WALLET_TRANSACTIONS ||--o| REVENUE_COLLECTIONS : "Super Admin leg"
 ```
 
-Column-level detail is in `markdown/db.md`; the Mermaid block above is a summary and
+Column-level detail is in `docs/db.md`; the Mermaid block above is a summary and
 the per-table tables in this file are the accurate reference.

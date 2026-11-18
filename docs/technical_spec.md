@@ -43,7 +43,7 @@ Keep business rules out of templates and avoid embedding SQL directly in route h
 
 ## 3. Database table inventory
 
-The intended core model has these 11 tables. The executable `schema.sql` and `markdown/db.md` must ultimately be checked against each other; if implementation reveals a necessary constraint or column adjustment, document and test it before changing the model.
+The intended core model has these 11 tables. The executable `schema.sql` and `docs/db.md` must ultimately be checked against each other; if implementation reveals a necessary constraint or column adjustment, document and test it before changing the model.
 
 | Table | Responsibility |
 |---|---|
@@ -169,7 +169,7 @@ Backend authorization is mandatory. Frontend visibility is not security.
 - Paginate list endpoints and table views.
 - Never expose password hashes, session secrets, environment secrets or unrestricted SQL.
 - For state-changing browser requests, protect against CSRF.
-- Generate `markdown/api.md` from the implemented route inventory and tested contracts; do not preserve stale endpoint lists as if they are live.
+- Generate `docs/api.md` from the implemented route inventory and tested contracts; do not preserve stale endpoint lists as if they are live.
 
 ## 10. Analytics and reports
 
@@ -203,10 +203,10 @@ When OFFLINE:
 ## 12. Documentation generated from implementation
 
 - `schema.sql` is the executable schema authority.
-- `markdown/db.md` must describe exactly the columns/constraints/indexes/triggers present in `schema.sql`.
-- `markdown/api.md` must describe actual registered routes and current request/response schemas.
-- `markdown/test_results.md` must contain actual executed test outcomes, not planned/predicted results.
-- `markdown/frontend.md` describes the implemented page/asset/JS architecture.
+- `docs/db.md` must describe exactly the columns/constraints/indexes/triggers present in `schema.sql`.
+- `docs/api.md` must describe actual registered routes and current request/response schemas.
+- `docs/test_results.md` must contain actual executed test outcomes, not planned/predicted results.
+- `docs/frontend.md` describes the implemented page/asset/JS architecture.
 
 ## 13. Implemented frontend architecture (12 Nov 2026)
 
@@ -231,14 +231,14 @@ Server-rendered Jinja2 shells, compiled Tailwind CSS (no CDN), `src/static/css/a
 | `tests/test_frontend.py` | Every page route renders for its role; anonymous requests redirect; wrong role gets 403; static assets; HTML 404; `PATCH /api/auth/me`; admin floors/types/slots contracts; live occupancy; Super Admin analytics, DB whitelist and `password_hash` masking, floor/slot CRUD, system toggle, CSV downloads |
 | `tests/test_e2e.py` | Playwright (Python package, Chromium headless shell) against a throwaway DB on `127.0.0.1:5099`: full customer booking→wallet→cancel, admin walk-in/slot/QR/analytics, Super Admin admin+wallet+floor+CSV+table+system flows, responsive overflow check. Console `pageerror` and `console.error` are asserted empty apart from the intentional 404 |
 
-Run commands are in `markdown/test_results.md`. No destructive browser test touches `database/parking_local.db`.
+Run commands are in `docs/test_results.md`. No destructive browser test touches `database/parking_local.db`.
 
 ## 15. Deviations actually in effect
 
 | Spec section | Deviation | Reason |
 |---|---|---|
 | §9 response envelope | Errors are `{"error": "...", "code": n}`; successes are bare resource objects (`{"items": [...]}` for lists) | Matches the existing API and every client; changing it now would break all callers |
-| §9 pagination | Paginated: `/api/bookings/my` is not, Super Admin `db-tables` is. List endpoints return complete sets | Data volumes in Phase 1 are small; documented in `markdown/api.md` |
+| §9 pagination | Paginated: `/api/bookings/my` is not, Super Admin `db-tables` is. List endpoints return complete sets | Data volumes in Phase 1 are small; documented in `docs/api.md` |
 | §9 CSRF | Implemented with Flask-WTF `CSRFProtect`; tokens are issued per session, exposed via `<meta name="csrf-token">`, and accepted as `X-CSRFToken` or `csrf_token` form field | See §16 |
 | §10 charts | CSS bars, not a charting library | No npm build; avoids shipping a vendored dependency |
 | §10 report definitions | Occupancy per floor and revenue per floor, as implemented | Pending confirmation (`open_questions.md` Q3) |
@@ -276,7 +276,7 @@ Run commands are in `markdown/test_results.md`. No destructive browser test touc
 - **Scanner log**: an optional `<details>` panel plus `console.log` mirror. `log()` is null-guarded and wrapped in `try/catch`, so logging can never interrupt camera initialization.
 - **Manual entry**: the manual reference form calls the same `/api/qr/scan` endpoint, so it inherits the same server-side validation but is **not** cryptographic proof of a printed QR — it only proves the operator knows the reference.
 - **DOM wiring**: every `getElementById()` target in a page's inline script must exist in the rendered page. `tests/test_frontend_wiring.py` parses the rendered HTML of all 18 authenticated pages and fails on any missing element id, which prevents a null-reference error from silently killing the page's listeners.
-- Physical camera scanning on real hardware is **not tested** (no camera device available in this environment); see `markdown/test_results.md`.
+- Physical camera scanning on real hardware is **not tested** (no camera device available in this environment); see `docs/test_results.md`.
 
 ---
 
