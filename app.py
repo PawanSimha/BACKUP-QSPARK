@@ -161,6 +161,11 @@ def create_app():
     def health():
         return {"status": "ok", "service": "QSPARK"}
 
+    @app.get("/favicon.ico")
+    def favicon():
+        """Browsers request this root path directly; the file lives under /static."""
+        return redirect("/static/images/favicon.ico")
+
     @app.get("/")
     def root():
         return redirect("/login" if not session.get("user_id") else "/dashboard")

@@ -300,7 +300,7 @@ Every page route below requires a signed-in session. Unknown roles receive `erro
 | `/super-admin/data` | `super_admin_data.html` | SUPER_ADMIN |
 | `/super-admin/system` | `super_admin_system.html` | SUPER_ADMIN |
 
-`GET /health` is public; `GET /` redirects to `/login` when signed out and to `/dashboard` when signed in. There is no `/landing` route. HTML 404/500/400 render `error.html`; API paths receive JSON errors.
+`GET /health` is public; `GET /favicon.ico` redirects to `/static/images/favicon.ico`; `GET /` redirects to `/login` when signed out and to `/dashboard` when signed in. There is no `/landing` route. HTML 404/500/400 render `error.html`; API paths receive JSON errors.
 
 ## HTTP status codes used
 - 200 OK, 201 Created, 400 Bad Request (validation or CSRF), 401 Unauthenticated, 402 Payment Required,
