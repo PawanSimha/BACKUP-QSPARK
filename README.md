@@ -23,9 +23,7 @@ src/
   static/               compiled CSS, hand-written app.css, JS core, vendor JS, images
 
 scripts/
-  seed_init.py          seed through the HTTP API
-  seed_direct.py        seed through direct SQL
-  test_login.py         login smoke check
+  seed_direct.py        seed Super Admin + default admins (skips if users exist)
   start_qspark.bat      Windows launcher (starts server, opens browser)
 
 docs/
@@ -38,7 +36,6 @@ docs/
   deployment.md         production procedure, backup/restore, troubleshooting
   implementation_plan.md, open_questions.md, test_results.md
   diagrams/             architecture, ERD and process-flow images
-  reports/              release-readiness report
   srs/                  generated SRS (docx, diagram prompts, analysis, build scripts)
 
 database/               live SQLite file (gitignored)
@@ -51,7 +48,7 @@ database_backups/       dated snapshots (gitignored — contain real data)
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 Copy-Item .env.example .env      # set SECRET_KEY before any real use
-.\.venv\Scripts\python.exe scripts\seed_init.py
+.\.venv\Scripts\python.exe scripts\seed_direct.py
 ```
 
 ## Run

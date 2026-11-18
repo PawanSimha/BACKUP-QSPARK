@@ -14,7 +14,7 @@ Every `POST`, `PUT`, `PATCH` and `DELETE` requires a valid CSRF token; `GET`/`HE
 - Get it from the `csrf-token` meta tag on any rendered page (`<meta name="csrf-token" content="…">`). `QS` in `src/static/js/core/api.js` reads it automatically.
 - Tokens are bound to the session and do not expire on their own; the session cookie lifetime (`SESSION_TIMEOUT`, default 3600 s) does.
 - Rejection: HTTP 400, `{"error": "Your form session expired or the security token is missing. Reload the page and try again.", "code": 400, "csrf": true}`. No endpoint is exempt.
-- The exception is the test suite: the shared pytest fixture sets `WTF_CSRF_ENABLED = False`; `tests/test_security.py` exercises tokens with CSRF enabled.
+- When the pytest suite (not in the current tree) runs, the shared fixture sets `WTF_CSRF_ENABLED = False`; `tests/test_security.py` exercises tokens with CSRF enabled.
 
 ---
 

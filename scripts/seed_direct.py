@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.chdir(Path(__file__).resolve().parents[1])
 
-os.environ["QSPARK_SUPER_ADMIN_PASSWORD"] = "superadmin123"
+os.environ.setdefault("QSPARK_SUPER_ADMIN_PASSWORD", "superadmin123")
 
 from app import create_app
 from src.services.db import init_db, get_connection
@@ -16,9 +16,15 @@ init_db(app.config["DATABASE_PATH"])
 
 with app.app_context():
     db_path = app.config["DATABASE_PATH"]
-    pwd_hash = generate_password_hash("superadmin123")
-    
+    pwd_hash = generate_password_hash(os.environ.get("QSPARK_SUPER_ADMIN_PASSWORD", "superadmin123"))
+    admin_hash = generate_password_hash(os.environ.get("QSPARK_ADMIN_PASSWORD", "admin123"))
+
     conn = get_connection(db_path)
+
+    if conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]:
+        conn.close()
+        print("Database already seeded. Skipping.")
+        raise SystemExit
     
     # Insert Super Admin
     conn.execute(
@@ -35,7 +41,7 @@ with app.app_context():
            (admin_id, full_name, email, phone, username, password_hash, role, wallet_balance, account_status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         ("ADM001", "Default Admin", "admin1@qspark.com", "9999900001", "admin1",
-         generate_password_hash("admin123"), "ADMIN", 1000.00, "ACTIVE")
+         admin_hash, "ADMIN", 1000.00, "ACTIVE")
     )
     
     # Insert second default admin
@@ -44,7 +50,7 @@ with app.app_context():
            (admin_id, full_name, email, phone, username, password_hash, role, wallet_balance, account_status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         ("ADM002", "Default Admin", "admin2@qspark.com", "9999900002", "admin2",
-         generate_password_hash("admin123"), "ADMIN", 1000.00, "ACTIVE")
+         admin_hash, "ADMIN", 1000.00, "ACTIVE")
     )
     
     conn.commit()

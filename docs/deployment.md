@@ -48,15 +48,15 @@ SESSION_COOKIE_SECURE=1
 - Generate `SECRET_KEY`: `python -c "import secrets; print(secrets.token_hex(32))"`. `APP_ENV=production` without it raises `RuntimeError` at startup by design.
 - `DATABASE_PATH` must be an absolute path to a directory the service account can write. The parent directory is created automatically.
 - `SESSION_COOKIE_SECURE=1` only when the browser reaches the site over HTTPS. With plain HTTP local development, leave it at `0` or the session cookie will be dropped.
-- Set seed passwords (`QSPARK_ADMIN*_PASSWORD`, `QSPARK_SUPER_ADMIN_PASSWORD`) before seeding. The scripts in `scripts/` store PBKDF2 hashes only. Never reuse development passwords in production. There is no default admin password.
+- Set seed passwords (`QSPARK_ADMIN*_PASSWORD`, `QSPARK_SUPER_ADMIN_PASSWORD`) before seeding. The scripts in `scripts/` fall back to the development password `superadmin123` for the Super Admin when the variable is unset, so always set it explicitly outside local development. They store PBKDF2 hashes only.
 
 ## 4. Database initialisation and seeding
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\seed_init.py
+.\.venv\Scripts\python.exe scripts\seed_direct.py
 ```
 
-- `scripts/seed_init.py` calls `init_db()`, which runs `schema.sql` (the 11-table schema) against `DATABASE_PATH`. `scripts/seed_direct.py` is the direct-SQL alternative.
+- `scripts/seed_direct.py` calls `init_db()`, which runs `schema.sql` (the 11-table schema) against `DATABASE_PATH`, then inserts the Super Admin and two default admins.
 - If the file already contains an incompatible legacy schema, `init_db()` renames it to `<name>.legacy_<timestamp>.db` and creates a fresh schema. It never deletes the file.
 - Seeding is skipped when `users` already has rows (`Database already seeded. Skipping.`). Re-running is safe.
 - Store the printed seed passwords in your secret manager immediately; they are not recoverable from the database (only PBKDF2 hashes are stored).
@@ -127,7 +127,7 @@ Rules:
 3. Run `PRAGMA integrity_check;` on the backup you intend to restore.
 4. Replace `DATABASE_PATH` with the backup file (copy, do not move, so a second attempt is possible).
 5. Start the app and verify: `/health` returns `ok`, sign in as Super Admin, check `GET /api/super-admin/reports/revenue-summary` and the wallet ledger.
-6. Re-run `.\tools\...` nothing; the CSS is static. Re-run `scripts\seed_init.py` only if you intentionally restored an empty database.
+6. Re-run `.\tools\...` nothing; the CSS is static. Re-run `scripts\seed_direct.py` only if you intentionally restored an empty database.
 
 ## 10. Logging and operations
 

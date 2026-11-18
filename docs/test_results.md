@@ -1,6 +1,11 @@
 # QSPARK — Test results
 
-Only commands actually executed (Windows, `.\.venv\Scripts\python.exe`) are recorded here. Results are from 12 Nov 2026.
+Only commands actually executed (Windows, `.\.venv\Scripts\python.exe`) are recorded here.
+
+> **Current state (18 Nov 2026):** the `tests/` directory is not present in this repository.
+> The results below were executed on 12 Nov 2026 against a build that included it, so they are
+> historical and cannot be reproduced from the current tree. Nothing in this file has been
+> re-run since the 15 Nov refresh.
 
 ## Release-readiness run (current implementation)
 

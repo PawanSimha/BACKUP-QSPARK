@@ -223,7 +223,10 @@ Server-rendered Jinja2 shells, compiled Tailwind CSS (no CDN), `src/static/css/a
 - **Reports**: both buttons call `QS.download` against `/api/super-admin/reports/{occupancy,revenue}.csv` and save the streamed response as a blob.
 - **Accessibility/responsive**: skip link, single `<h1>`, labelled inputs, `aria-current`/`aria-pressed`, `aria-describedby` for hints and errors, `role="alert"` on errors and toasts, native dialog focus handling, `prefers-reduced-motion`. Layout verified at 320/768/1440 px with ≤1 px horizontal overflow (Playwright).
 
-## 14. Implemented testing architecture
+## 14. Testing architecture (12 Nov 2026 build)
+
+> The `tests/` directory is not present in the current tree. This table records the suite that
+> existed when the results in `docs/test_results.md` were produced; no test currently runs.
 
 | Suite | Scope |
 |---|---|

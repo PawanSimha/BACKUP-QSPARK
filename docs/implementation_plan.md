@@ -93,7 +93,10 @@ Legend: `[x]` implemented and verified by the command in `docs/test_results.md`;
 - [x] Security review: authorization, input validation, password exposure, table whitelist, XSS escaping.
 - [x] Documentation updated: `AGENTS.md`, `project_spec.md`, `technical_spec.md`, `api.md`, `db.md`, `test_results.md`, `frontend.md`, `open_questions.md`.
 
-## Phase 8b — Release readiness, security hardening and QA (12 Nov 2026)
+## Phase 8b - Release readiness, security hardening and QA (12 Nov 2026)
+
+> The `tests/` directory referenced throughout this phase is no longer in the repository; the
+> checks below record what was executed on 12 Nov 2026, not something that runs today.
 
 - [x] CSRF protection (Flask-WTF) for every state-changing route, HTML forms and fetch; no exemptions. Tests in `tests/test_security.py`.
 - [x] Compiled Tailwind CSS replaces the CDN; reproducible standalone build documented.

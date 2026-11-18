@@ -122,6 +122,9 @@ Manual entry is convenience, not proof of a physical QR.
 
 ## Frontend tests
 
+The `tests/` directory is not present in the current tree. The commands below ran against the
+12 Nov 2026 build and are kept as the reference procedure for when the suite is restored.
+
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/test_frontend.py -q          # render + endpoint contracts
 .\.venv\Scripts\python.exe -m pytest tests/test_frontend_wiring.py -q   # inline-script DOM wiring guard

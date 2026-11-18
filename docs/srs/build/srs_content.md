@@ -849,7 +849,7 @@ No load, soak or capacity test has been executed; no figures are asserted beyond
 - **NFR-SEC-011 (Must):** The system shall restrict database inspection to a whitelist and paginate results.
 - **NFR-SEC-012 (Should):** The system shall enforce HTTPS in production through a reverse proxy with `SESSION_COOKIE_SECURE=1`.
 
-Verified gaps: QR content is an unsigned reference; manual reference entry is not cryptographic proof; the seeded prototype password rule in `src/core/security.py` is predictable and should not be treated as a production credential policy; one seed script contains a hard-coded development password and must not be used in production.
+Verified gaps: QR content is an unsigned reference; manual reference entry is not cryptographic proof; the seeded prototype password rule in `src/core/security.py` is predictable and should not be treated as a production credential policy; one seed script defaults to a development Super Admin password unless `QSPARK_SUPER_ADMIN_PASSWORD` is set and must not be used in production.
 
 ## 5.3 Reliability and Availability
 
@@ -1215,7 +1215,7 @@ Python runtime and pinned requirements, a writable disk, a reverse proxy with TL
 
 Status values: **Implemented** means observable in current source. **Partially** means the behaviour exists with a known limitation. **Unverified** means documentation or reports assert it but no runnable test artifact exists in the repository. **Planned** means future phase only.
 
-The `tests/` directory referenced by project documentation is absent from this repository. `test_results.txt` records `ERROR: file or directory not found: tests/`. Consequently, no requirement is marked verified by an executable test suite; historical pytest results in `docs/test_results.md` are treated as claims.
+The `tests/` directory referenced by project documentation is absent from this repository, and the historical `test_results.txt` recorded `ERROR: file or directory not found: tests/`. Consequently, no requirement is marked verified by an executable test suite; historical pytest results in `docs/test_results.md` are treated as claims.
 
 [[TABLE:Requirement traceability matrix]]
 

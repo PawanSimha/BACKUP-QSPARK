@@ -17,10 +17,9 @@
 | `src/static/js/**`, `src/static/css/app.css` | Client conventions, design tokens, request wrapper |
 | `requirements.txt` | Runtime and test dependencies |
 | `docs/project_spec.md`, `technical_spec.md`, `api.md`, `db.md`, `open_questions.md`, `deployment.md`, `frontend.md`, `test_results.md` | Stated requirements, decisions, known gaps and historical test claims |
-| `AI TESTING/00_*` through `07_*` | Architecture evaluation and QA reports |
-| `docs/*.png`, `docs/*.excalidraw` | Existing architecture, ERD and process-flow diagrams |
-| `seed_init.py`, `seed_direct.py` | Seeding behaviour |
-| `test_login.py` | Available test artefact |
+| `docs/srs/SRS_Analysis_Report.md` | Stated requirements, decisions, known gaps and historical test claims |
+| `docs/diagrams/*.png`, `docs/diagrams/*.excalidraw` | Existing architecture, ERD and process-flow diagrams |
+| `scripts/seed_direct.py` | Seeding behaviour |
 | `database/parking_local.db` | Presence and configured data volume (schema not modified) |
 
 Not inspected line by line: every line of every template and JavaScript file and the binary backups. These do not affect the requirement statements made.
@@ -44,7 +43,7 @@ Authentication and session control; profile self-service; public floor, vehicle-
 
 | Item | Classification | Note |
 |---|---|---|
-| Automated test suite | Absent | `tests/` does not exist; `test_results.txt` records the failure to find it |
+| Automated test suite | Absent | `tests/` does not exist; the historical `test_results.txt` recorded the failure to find it |
 | Landing page | Absent | `docs/api.md` and `project_spec.md` claim `/landing`; no route or template exists |
 | Walk-in customer login | Partial | Accounts are created PENDING with no password; no activation flow |
 | QR decoding across browsers | Partial | Depends on `BarcodeDetector`; manual entry is the fallback |
@@ -56,15 +55,15 @@ Authentication and session control; profile self-service; public floor, vehicle-
 
 ## 5. Conflicts Discovered
 
-1. **Test evidence.** `AGENTS.md`, `docs/api.md` and `docs/test_results.md` describe 109+ pytest tests, Playwright suites and axe runs. The `tests/` directory is absent and `test_results.txt` shows the suite could not be found. All test-based claims are therefore marked Unverified.
+1. **Test evidence.** `AGENTS.md`, `docs/api.md` and `docs/test_results.md` describe 109+ pytest tests, Playwright suites and axe runs. The `tests/` directory is absent and the historical `test_results.txt` showed the suite could not be found. All test-based claims are therefore marked Unverified.
 2. **Landing page.** Documentation describes `GET /landing` and `landing.html`. The code has neither; `/` redirects to `/login` or `/dashboard`.
 3. **Revenue report.** `docs/api.md` still says revenue is filtered to COMPLETED bookings and dates on `bookings.booked_from`. `reports.py` reads `revenue_collections` and filters on `rc.created_at`. The code is authoritative.
 4. **Overtime granularity.** `docs/project_spec.md` says overtime is charged per started hour. `pricing.py` and `qr.py` round up to 30-minute units. Recorded as TBD-06.
 5. **Admin cancellation.** The product notes imply Admin can cancel; the customer endpoint allows only the owner, and cross-user cancellation is a Super Admin endpoint. Documented as implemented.
-6. **Seeding command.** `docs/deployment.md` instructs `python seed.py`. No `seed.py` exists; `seed_init.py` and `seed_direct.py` are present.
+6. **Seeding command.** `docs/deployment.md` previously instructed `python seed.py`, which never existed. The working command is `python scripts\seed_direct.py`, which skips when `users` already has rows.
 7. **Environment file.** `.env.example` is referenced in documentation but was not among the visible root files.
 8. **Session timeout wording.** `SESSION_TIMEOUT` sets the Flask cookie lifetime, while application code enforces a 20-minute absolute limit and a configurable idle limit. The document describes the effective behaviour, not the variable name alone.
-9. **Hard-coded seed credential.** `seed_init.py` sets a Super Admin password in source. The value is not reproduced in the SRS. It must not be used in any deployed environment and should be rotated or removed.
+9. **Seed credential.** `scripts/seed_direct.py` uses `QSPARK_SUPER_ADMIN_PASSWORD` and `QSPARK_ADMIN_PASSWORD`, falling back to the development values `superadmin123` and `admin123`. Those fallbacks must never be used in a deployed environment.
 10. **Predictable password rule.** `src/core/security.py` contains a prototype rule that derives a password from the first name and phone suffix. It is documented as a prototype, not a security control.
 
 ## 6. Unverified Assumptions

@@ -108,6 +108,9 @@ Stack in use: Jinja2 templates, compiled Tailwind CSS (standalone binary; no CDN
 
 ## Testing
 
+> The `tests/` directory is not present in this repository. The commands below are the reference
+> procedure and apply once the suite is restored.
+
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q                       # full suite
 .\.venv\Scripts\python.exe -m pytest tests/test_security.py -q    # CSRF, headers, prod secret guard
