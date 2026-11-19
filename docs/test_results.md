@@ -18,8 +18,8 @@ so it was not used.
 | `cmd /c scripts\start_qspark.bat` | **OK** — server bound on `0.0.0.0:8000`, browser opened |
 | `Invoke-WebRequest http://localhost:8000/login` | **HTTP 200**, 8125 bytes |
 | `GET /static/css/tailwind.css`, `/static/js/core/api.js`, `/api/system/status` | **200** (login page shell loads its assets and status call) |
-| `python docs\srs\build\build_srs.py` | **OK** — `docs/srs/SRS_Document.docx` written |
-| `python docs\srs\build\validate.py` | **PASS** — 786 paragraphs, 40 tables, 190 headings, 12 diagram specs, ERD attributes equal to `schema.sql`, no unconsumed markers |
+| `Qspark SRS.txt` | **Created** — Comprehensive SRS text file replacing the Word-document-based SRS |
+| N/A (old build_srs.py removed) | SRS generation now uses the standalone `Qspark SRS.txt` document |
 | SRS figure check | 12 figure captions, 0 `Image unavailable` runs |
 | Route inventory check (`app.url_map` vs `docs/api.md`) | 62 `/api` paths and 23 page routes; appendix added, no route missing |
 | Column coverage check (`schema.sql` → `docs/db.md`, `docs/erd.md`) | 11 tables, every column named, no gaps |

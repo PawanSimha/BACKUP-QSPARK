@@ -1,0 +1,456 @@
+QSPARK - Software Requirements Specification
+============================================
+
+Version: 1.0
+Date: 18 November 2026
+Source: Reverse-engineered from existing implementation
+
+========================================================================
+1. INTRODUCTION
+========================================================================
+
+1.1 Purpose
+-----------
+This document specifies the requirements of QSPARK, a web-based smart parking slot booking and management system. It records what the implemented system does, how it is structured, which data it persists and which constraints apply. It is intended to support maintenance, testing, audit, handover and academic assessment of the existing product.
+
+The specification was produced by reverse-engineering the running implementation, the executable database schema and the verified project documentation. It does not propose new features except where a gap is explicitly labelled TBD or Planned.
+
+1.2 Document Conventions
+------------------------
+- Requirement identifiers use the form FR-<MODULE>-<nnn> for functional requirements and NFR-<CLASS>-<nnn> for non-functional requirements.
+- Priorities: Must (required for product operation), Should (required for complete deployment), May (optional/cosmetic).
+- Status values: AS-IS (implemented and observable), TO-BE (approved future work), TBD (unconfirmed).
+- "shall" denotes a binding requirement; "may" denotes a permitted option.
+
+1.3 Intended Audience and Reading Suggestions
+---------------------------------------------
+- Project stakeholders and academic reviewers: Sections 1, 2, 3, 6 and 12
+- Software developers and architects: Sections 2, 3, 7, 8 and 9
+- QA and test engineers: Sections 3, 6, 8, 9 and 11
+- Database administrators: Sections 7 and 8
+- Operations and deployment staff: Sections 10 and 5
+- Project managers: Sections 1, 2, 11 and Appendix C
+
+1.4 Product Scope
+------------------
+QSPARK allows a registered customer to reserve a parking slot in advance, pay from an internal wallet, receive a QR-coded booking reference and use that reference at the gate. Staff scan or key the reference to register vehicle entry and exit. Administrators manage customers, slots, bookings, refund rules and day-to-day operations. A Super Admin manages administrators, infrastructure, revenue, system-wide online/offline state and read-only database inspection.
+
+The system solves three operational problems:
+- Advance slot allocation with overlap prevention
+- Cashless internal settlement with an auditable ledger
+- Gate-level entry/exit tracking tied to the reservation
+
+In scope: role-based web application, booking lifecycle, wallet and revenue settlement, cancellation and refund rules, QR entry/exit, overtime settlement, floor and slot management, analytics and CSV reports, system state control, audit logging and a whitelisted read-only data browser.
+
+Out of scope: real payment gateway integration, native mobile applications, SMS or email notification providers, external identity providers, hardware gate controllers, multi-tenant operation and any deployment beyond a single Flask process.
+
+1.5 References
+--------------
+- ISO/IEC/IEEE 29148:2018 — Requirements engineering
+- IEEE 830-1998 — Recommended practice for SRS
+- RFC 6265 — HTTP State Management Mechanism
+- OWASP Application Security Verification Standard 4.0
+- WCAG 2.2 Level AA
+- Flask 3.x, Werkzeug 3.x, Flask-WTF 1.x documentation
+- SQLite 3 documentation
+- Tailwind CSS 3.4 documentation
+- Project files: schema.sql, docs/project_spec.md, docs/technical_spec.md, docs/api.md, docs/db.md, docs/test_results.md, docs/open_questions.md
+- Repository source under app.py and src/
+
+No claim of formal certification or standards compliance is made.
+
+========================================================================
+2. OVERALL DESCRIPTION
+========================================================================
+
+2.1 Product Perspective
+------------------------
+QSPARK is a self-contained, server-rendered web application. A single Python process serves HTML shells and JSON APIs; a single SQLite file holds all business data. There is no separate frontend build server, message broker, cache or payment provider. The browser renders pages from Jinja2 templates, then loads data from the JSON APIs with vanilla JavaScript.
+
+The system is not an extension of another product. Its only external runtime dependency is the browser's media stack for the optional camera scanner and the operating system's file system for the database and logs. The delivered system is SQLite-only.
+
+2.2 Product Functions
+----------------------
+Authentication and session control
+Profile self-service
+Availability discovery
+Booking lifecycle
+Wallet and revenue
+Cancellation and refund
+QR entry and exit
+Admin customer management
+Admin parking operations
+Super Admin management
+Analytics and reports
+System control
+Audit and data inspection
+
+2.3 User Classes and Characteristics
+--------------------------------------
+| Role        | Responsibilities and permissions                              | Access restrictions                              | Assumed proficiency |
+|-------------|-------------------------------------------------------------|--------------------------------------------------|--------------------|
+| CUSTOMER    | Books parking, pays from wallet, views own bookings and ledger, edits own profile, presents QR | Cannot access admin or Super Admin pages          | Basic browser use  |
+| ADMIN       | Registers and maintains customers, adjusts customer wallets, controls slot states, views bookings, scans QR, views analytics and read-only rates | Cannot manage other admins; cannot change system state | Operational staff, moderate proficiency |
+| SUPER_ADMIN | Full administrative authority: admins, any wallet, floors, slots, cancellations, analytics, reports, system-wide online/offline state and read-only database views | No restrictions inside the application            | Technical administrator |
+| Anonymous visitor | Login page, health endpoint, public availability queries | No session, no booking                          | Basic browser use  |
+
+All three roles share one account table and one login mechanism. Admin and Super Admin accounts also have a customer-facing booking interface. Initial counts (three Admins, one Super Admin) are seed defaults, not hard limits.
+
+2.4 Operating Environment
+--------------------------
+| Layer              | Verified environment                                    |
+|--------------------|--------------------------------------------------------|
+| Server language    | Python 3.14.10 (project states Python 3.11 or newer as minimum) |
+| Web framework      | Flask 3.1.3 application factory, Waitress 3.0.2 for production |
+| Database           | SQLite 3 single file, created from schema.sql          |
+| Templates          | Jinja2, server-rendered HTML5                          |
+| Styling            | Tailwind CSS 3.4.17 compiled by a standalone binary, plus app.css |
+| Client script      | Vanilla JavaScript, QS and QSUI globals, no framework   |
+| QR                 | qrcode[pil] 8.2 server-side, BarcodeDetector browser API for decoding |
+| Server OS          | Windows 10/11 or Linux with Python 3.11+             |
+| Client             | Current Chromium, Firefox or WebKit-based browser; camera optional |
+| Hosting            | One application process behind a TLS-terminating reverse proxy |
+
+2.5 Design and Implementation Constraints
+-------------------------------------------
+- Single-writer database: SQLite serialises writes; the design assumes one application process. Horizontal scaling is not supported.
+- Session authentication only: No bearer tokens, OAuth or external identity provider; every state-changing request also requires a CSRF token.
+- Server authority: Financial results, availability and booking state are computed server-side; the browser only displays the response.
+- Append-only financial history: Corrections use reversal entries, never in-place edits.
+- No Node toolchain: Tailwind is pre-compiled; the runtime image needs no Node or npm.
+- Camera decoding depends on BarcodeDetector. Where the API is absent, operators must use manual reference entry.
+- One currency and one locale: Amounts are INR rounded to two decimals; timestamps are stored as SQLite datetime text.
+- No background scheduler: Hold expiry is applied lazily at confirmation time rather than by a timer.
+
+2.6 Assumptions and Dependencies
+---------------------------------
+- The server clock is authoritative for booking, expiry and overtime calculations.
+- The database file is on a writable local volume and is backed up independently.
+- Exactly one Super Admin account exists; several flows select LIMIT 1 when locating the revenue wallet.
+- The operator has physical access control at the gate; QR scanning is advisory software evidence, not cryptographic proof of presence.
+- Camera scanning requires HTTPS or localhost.
+- Seeded floor, slot and rate values are configuration defaults, not invariants.
+
+2.7 System Architecture Overview
+---------------------------------
+The implementation is a four-layer monolith. The presentation layer renders Jinja2 shells; the route layer exposes page routes and JSON blueprints; the domain layer contains security guards, pricing and booking/wallet logic inside the API modules; the data layer wraps SQLite connections and transactions. app.py owns configuration, security headers, session validation and error handlers.
+
+Eight blueprints are registered: auth (/api/auth), slots (/api/slots), bookings (/api/bookings), qr (/api/qr), admin (/api/admin), reports (/api/admin/reports), super_admin (/api/super-admin) and system (/api/system). Page routes live directly on the application object.
+
+========================================================================
+3. SYSTEM FEATURES AND FUNCTIONAL REQUIREMENTS
+========================================================================
+
+3.1 Authentication and Session Management
+------------------------------------------
+
+3.1.1 Description
+-----------------
+Authenticates a user by username or email against an ACTIVE account, verifies a PBKDF2-SHA256 hash and stores identity in a signed Flask session. All protected APIs resolve the role from the server-side session and re-read the account on every page request.
+
+3.1.2 Actors
+------------
+Anonymous visitor, CUSTOMER, ADMIN, SUPER_ADMIN.
+
+3.1.3 Preconditions
+-------------------
+The account exists, is ACTIVE and has a password hash. The request carries a valid CSRF token for state-changing calls.
+
+3.1.4 Stimulus and Response Sequence
+-------------------------------------
+1. The visitor requests /login and receives the sign-in form with a CSRF token in the page meta tag.
+2. The visitor submits credentials to POST /api/auth/login.
+3. The system matches username or email case-insensitively, rejects non-ACTIVE accounts, verifies the password hash and clears any previous session.
+4. The system stores user identity, role, wallet balance and session timestamps, and returns the user object.
+5. On each subsequent page request the system checks the absolute session age and the configured idle timeout, then re-reads the account and clears the session if it is missing or inactive.
+
+3.1.5 Functional Requirements
+------------------------------
+FR-AUTH-001 (Must): The system shall authenticate a user with a username or email and a password, matching the identifier case-insensitively.
+FR-AUTH-002 (Must): The system shall reject authentication for accounts whose status is not ACTIVE.
+FR-AUTH-003 (Must): The system shall store passwords only as salted PBKDF2-SHA256 hashes and shall never return the hash in any API response.
+FR-AUTH-004 (Must): The system shall issue a signed session cookie marked HttpOnly and SameSite=Lax, adding Secure when configured for HTTPS.
+FR-AUTH-005 (Must): The system shall clear the session after 20 minutes of absolute age and after the configured idle period, evaluated server-side.
+FR-AUTH-006 (Must): The system shall require a valid CSRF token on every POST, PUT, PATCH and DELETE request.
+FR-AUTH-007 (Must): The system shall clear the session on logout and redirect HTML form posts to /login.
+FR-AUTH-008 (Must): The system shall redirect unauthenticated page requests to /login?error=login_required.
+FR-AUTH-009 (Must): The system shall return HTTP 401 for unauthenticated API requests and HTTP 403 for authenticated requests with an insufficient role.
+FR-AUTH-010 (Should): The system shall provide a one-time bootstrap endpoint that creates the Super Admin and default admins only when no privileged account exists.
+FR-AUTH-011 (May): The system shall remember the selected language preference across sessions.
+
+3.1.6 Business Rules
+---------------------
+- Login accepts either username or email; at least one must be non-null for an account to exist.
+- An ACTIVE account must have a password hash (database CHECK constraint).
+- Failed logins are logged with the attempted username and remote address, never the password.
+- Sessions are non-permanent; SESSION_TIMEOUT sets the Flask lifetime, while application-level checks enforce the 20-minute absolute limit and the configurable idle limit.
+- Idle timeout is selectable only from 5, 10, 15 or 20 minutes by the Super Admin.
+
+3.1.7 Alternate and Exception Flows
+------------------------------------
+- Missing credentials: HTTP 400.
+- Unknown user, inactive account or wrong password: HTTP 401 with a generic message.
+- Missing or invalid CSRF token: HTTP 400 with csrf: true.
+- Expired or inactive session: the session is cleared and the next request behaves as unauthenticated.
+- Production start without SECRET_KEY: the application raises at startup.
+
+3.1.8 Acceptance Criteria
+--------------------------
+1. Valid credentials return 200 and a session cookie. Invalid credentials return 401 and set no session.
+2. A BLOCKED or DELETED account cannot log in.
+3. A request without X-CSRFToken to any POST returns 400.
+4. A session older than 20 minutes is rejected on the next request.
+5. No response body contains password_hash.
+
+========================================================================
+4. EXTERNAL INTERFACE REQUIREMENTS
+========================================================================
+
+4.1 User Interface Requirements
+--------------------------------
+The interface is a responsive server-rendered web application. Every page extends base.html, which owns the sidebar, top bar, mobile navigation, toast region and confirmation dialog. Page-specific data is loaded by inline scripts through the QS HTTP helper, and all interpolated values pass through QSUI.esc.
+
+Verified pages: /login, /dashboard, /booking, /bookings/my, /wallet, /profile, /confirm/{ref}, /admin/dashboard, /admin/bookings, /admin/customers, /admin/slots, /admin/analytics, /admin/master, /admin/qr-scan, /super-admin/dashboard, /super-admin/admins, /super-admin/infrastructure, /super-admin/analytics, /super-admin/data, /super-admin/system, and error.html for 400/403/404/413/500.
+
+The booking wizard is a five-step flow: vehicle type, plate format and number, floor and slot grid, schedule and duration, review and confirm. Data tables use server-side filtering with pagination, skeleton loading states, empty states and inline error messages. Slot states use a consistent colour system. Destructive actions use a confirmation dialog and surface a toast on completion.
+
+Accessibility expectations: semantic landmarks, visible focus, form labels, keyboard-operable dialogs, tabindex="0" on scrollable table regions, and a contrast-compliant muted colour.
+
+4.2 Hardware Interface Requirements
+------------------------------------
+No dedicated hardware interface is implemented. The only optional physical interaction is the client device camera through navigator.mediaDevices.getUserMedia for QR scanning. No barcode scanner, printer, gate controller, sensor or embedded device integration exists. Printed QR display depends on the browser print function, which the application does not control.
+
+4.3 Software Interface Requirements
+--------------------------------------
+| Interface              | Direction | Protocol/Format      | Purpose                                              |
+|------------------------|-----------|----------------------|------------------------------------------------------|
+| SQLite database file   | Internal  | File system + SQL    | All persistent business data                         |
+| Browser runtime        | Inbound   | HTTP/HTTPS           | Pages and JSON APIs                                  |
+| qrcode and Pillow      | Internal  | Python library       | QR PNG generation                                    |
+| BarcodeDetector        | Browser API | JavaScript API      | Optional QR decoding                                 |
+| Flask-WTF CSRF         | Internal  | Python library + header/meta tag | Request forgery protection                      |
+| Waitress               | Internal  | WSGI                 | Production HTTP serving                              |
+| Reverse proxy          | External  | HTTP                 | TLS termination and forwarding                       |
+| CSV consumer           | Outbound  | text/csv             | Report downloads                                     |
+
+There is no payment gateway, SMS gateway, email provider, message broker or third-party authentication service.
+
+4.4 Communication Interface Requirements
+------------------------------------------
+- HTTP/1.1 over TLS in production; the application itself listens on plain HTTP behind the proxy.
+- JSON request and response bodies with application/json; HTML form posts for login and logout.
+- Session cookie authentication, plus X-CSRFToken on state-changing requests.
+- Error bodies use {"error": "...", "code": <status>}.
+- CSV responses use Content-Disposition: attachment with text/csv.
+- Recommended response headers: X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy: same-origin, Permissions-Policy: camera=(self), geolocation=(), microphone=().
+- Request bodies are capped at 1 MiB by default (HTTP 413 above the limit).
+- No WebSocket, server-sent events or long polling is used.
+
+========================================================================
+5. NON-FUNCTIONAL REQUIREMENTS
+========================================================================
+
+5.1 Performance Requirements
+-------------------------------
+NFR-PERF-001 (Should): The system shall return cached-free JSON responses for dashboard and listing endpoints within 2 seconds at the seeded data volume (64 slots per floor, four floors), measured on the deployment host. Target TBD; no benchmark artifact exists.
+NFR-PERF-002 (Should): The system shall render an authenticated page shell without waiting for data queries, because data loads asynchronously.
+NFR-PERF-003 (Should): The system shall keep client payloads paginated, with 25 rows per page in the data browser.
+NFR-PERF-004 (May): The system shall support concurrent gate scans without duplicate postings, relying on write serialisation. Throughput target TBD.
+
+No load, soak or capacity test has been executed; no figures are asserted beyond these design intents.
+
+5.2 Security Requirements
+--------------------------
+NFR-SEC-001 (Must): The system shall enforce authentication and role authorisation on the server for every protected route and API.
+NFR-SEC-002 (Must): The system shall validate a CSRF token on every state-changing request.
+NFR-SEC-003 (Must): The system shall hash passwords with a salted adaptive algorithm (PBKDF2-SHA256) and never expose hashes.
+NFR-SEC-004 (Must): The system shall parameterise all SQL statements.
+NFR-SEC-005 (Must): The system shall set HttpOnly and SameSite=Lax on the session cookie and Secure when HTTPS is configured.
+NFR-SEC-006 (Must): The system shall refuse production startup when SECRET_KEY is absent.
+NFR-SEC-007 (Must): The system shall apply the documented security response headers.
+NFR-SEC-008 (Must): The system shall cap request bodies and return HTTP 413 above the limit.
+NFR-SEC-009 (Must): The system shall exclude password hashes and secret configuration from logs and API payloads.
+NFR-SEC-010 (Must): The system shall record security-relevant actions in audit_logs.
+NFR-SEC-011 (Must): The system shall restrict database inspection to a whitelist and paginate results.
+NFR-SEC-012 (Should): The system shall enforce HTTPS in production through a reverse proxy with SESSION_COOKIE_SECURE=1.
+
+Verified gaps: QR content is an unsigned reference; manual reference entry is not cryptographic proof; the seeded prototype password rule in src/core/security.py is predictable and should not be treated as a production credential policy; one seed script defaults to a development Super Admin password unless QSPARK_SUPER_ADMIN_PASSWORD is set and must not be used in production.
+
+5.3 Reliability and Availability
+---------------------------------
+NFR-REL-001 (Must): The system shall keep every money movement atomic and roll back the whole unit on failure.
+NFR-REL-002 (Must): The system shall enable SQLite foreign-key enforcement on every connection.
+NFR-REL-003 (Must): The system shall never physically delete users, bookings, ledger rows, events or collections that carry history.
+NFR-REL-004 (Must): The system shall allow a consistent hot backup of the SQLite file.
+NFR-REL-005 (Should): The system shall recover from a restart without manual data repair because all state is persisted.
+
+5.4 Usability Requirements
+---------------------------
+- The interface shall be responsive, supporting viewports from 320px to 1440px.
+- Forms shall have labelled inputs, clear error messages and inline validation.
+- Navigation shall be keyboard-operable with visible focus indicators.
+- Contrast ratio shall meet WCAG 2.2 Level AA for normal text.
+
+5.5 Maintainability Requirements
+---------------------------------
+- All source code shall be commented with rationale, not restatement of behavior.
+- Database schema changes shall be tracked in schema.sql with migration notes.
+- API endpoints shall include version identifiers for forward compatibility.
+- Documentation shall be kept in sync with the implemented code; drift is flagged in open_questions.md.
+
+========================================================================
+6. TRACEABILITY MATRIX
+========================================================================
+
+| Identifier       | Type         | Description                              | Status | Source |
+|------------------|--------------|------------------------------------------|--------|--------|
+| FR-AUTH-001      | Functional   | Authenticate user with username/email     | AS-IS  | app.py |
+| FR-AUTH-002      | Functional   | Reject non-ACTIVE accounts              | AS-IS  | app.py |
+| FR-AUTH-003      | Functional   | Store passwords as PBKDF2-SHA256 hashes  | AS-IS  | app.py |
+| FR-AUTH-004      | Functional   | Issue session cookie HttpOnly/SameSite/Lax | AS-IS  | app.py |
+| FR-AUTH-005      | Functional   | Clear session after 20 min absolute age  | AS-IS  | app.py |
+| FR-AUTH-006      | Functional   | Require valid CSRF token on state-changing requests | AS-IS  | app.py |
+| FR-AUTH-007      | Functional   | Clear session on logout                 | AS-IS  | app.py |
+| FR-AUTH-008      | Functional   | Redirect unauthenticated to /login        | AS-IS  | app.py |
+| FR-AUTH-009      | Functional   | Return 401/403 for role insufficient     | AS-IS  | app.py |
+| FR-SLOT-001      | Functional   | List open floors with available slot counts | AS-IS  | slots.py |
+| FR-SLOT-002      | Functional   | List vehicle types with rates             | AS-IS  | slots.py |
+| FR-SLOT-003      | Functional   | Return live status per slot (AVAILABLE/RESERVED/OCCUPIED/MAINTENANCE/INACTIVE) | AS-IS  | slots.py |
+| FR-BOOK-001      | Functional   | Create HELD booking with 30-min hold expiry | AS-IS  | bookings.py |
+| FR-BOOK-002      | Functional   | Reject slot not ACTIVE or floor not OPEN  | AS-IS  | bookings.py |
+| FR-BOOK-003      | Functional   | Reject overlapping HELD/CONFIRMED bookings | AS-IS  | bookings.py |
+| FR-BOOK-004      | Functional   | Reject vehicle number with existing booking | AS-IS  | bookings.py |
+| FR-BOOK-005      | Functional   | Validate plate against four accepted Indian formats | AS-IS  | bookings.py |
+| FR-BOOK-006      | Functional   | Permit bookings only 05:00-23:00 window    | AS-IS  | bookings.py |
+| FR-BOOK-007      | Functional   | Reject durations of zero, negative or >18 hours | AS-IS  | bookings.py |
+| FR-BOOK-008      | Functional   | Compute estimated amount = duration * hourly rate, rounded to 2 decimals | AS-IS  | bookings.py |
+| FR-BOOK-009      | Functional   | Confirm only HELD bookings, revalidate inside transaction | AS-IS  | bookings.py |
+| FR-BOOK-010      | Functional   | Reject confirmation when wallet balance below estimated amount (HTTP 402) | AS-IS  | bookings.py |
+| FR-WALL-001      | Functional   | Update wallet_balance and write wallet_transactions row in same transaction | AS-IS  | services/db.py |
+| FR-WALL-002      | Functional   | Prevent negative wallet balance           | AS-IS  | services/db.py |
+| FR-WALL-003      | Functional   | Record every movement with unique transaction_reference | AS-IS  | services/db.py |
+| FR-WALL-004      | Functional   | Create one revenue_collections row per booking/overtime charge, linked to both ledger legs | AS-IS  | bookings.py |
+| FR-WALL-005      | Functional   | Credit Super Admin wallet by same amount debited from customer | AS-IS  | bookings.py |
+| FR-CANC-001      | Functional   | Permit cancellation only by booking owner through customer endpoint | AS-IS  | bookings.py |
+| FR-CANC-002      | Functional   | Permit cancellation only for HELD or CONFIRMED bookings | AS-IS  | bookings.py |
+| FR-CANC-003      | Functional   | Refuse cancellation when ENTRY event exists without matching EXIT | AS-IS  | bookings.py |
+| FR-CANC-004      | Functional   | Select cancellation rule whose notice window contains hours remaining before booking start | AS-IS  | bookings.py |
+| FR-CANC-005      | Functional   | Compute refund = paid amount * rule's refund percentage; penalty = paid amount * penalty percentage | AS-IS  | bookings.py |
+| FR-CANC-006      | Functional   | Move net amount between customer and Super Admin wallets atomically, record REFUND_REVERSAL collection | AS-IS  | bookings.py |
+| FR-CANC-007      | Functional   | Store applied rule id on booking, append audit record | AS-IS  | bookings.py |
+| FR-CANC-008      | Functional   | Allow SUPER_ADMIN to cancel another user's eligible booking | AS-IS  | bookings.py |
+| FR-QR-001        | Functional   | Return PNG QR image encoding booking reference for CONFIRMED booking | AS-IS  | qr.py |
+| FR-QR-002        | Functional   | Authorise QR generation for booking owner, Admin or Super Admin | AS-IS  | qr.py |
+| FR-QR-003        | Functional   | Record first scan as ENTRY, second as EXIT, each at most once per booking | AS-IS  | qr.py |
+| FR-QR-004        | Functional   | Record scan method as QR or MANUAL        | AS-IS  | qr.py |
+| FR-QR-005        | Functional   | Reject ENTRY for booking that is not CONFIRMED | AS-IS  | qr.py |
+| FR-QR-006        | Functional   | Compute overtime from planned end to actual exit, rounded up to next 30-min unit | AS-IS  | qr.py |
+| FR-QR-007        | Functional   | Settle overtime atomically with Super Admin credit and OVERTIME_CHARGE collection | AS-IS  | qr.py |
+| FR-QR-008        | Functional   | Block exit with HTTP 409 and no charge when customer cannot cover overtime | AS-IS  | qr.py |
+| FR-QR-009        | Functional   | Reject a third scan with HTTP 409         | AS-IS  | qr.py |
+| FR-QR-010        | Functional   | Set booking COMPLETED and release slot after successful exit | AS-IS  | qr.py |
+| FR-ACUST-001     | Functional   | Register walk-in customer with name, phone, gender, company, email, username | AS-IS  | admin.py |
+| FR-ACUST-002     | Functional   | Create walk-in customers with status PENDING and no password | AS-IS  | admin.py |
+| FR-ACUST-003     | Functional   | Reject duplicate phone, email or username values | AS-IS  | admin.py |
+| FR-ACUST-004     | Functional   | List and search customers without exposing password hashes | AS-IS  | admin.py |
+| FR-ACUST-005     | Functional   | Allow staff to update customer profile fields and status | AS-IS  | admin.py |
+| FR-ACUST-006     | Functional   | Perform logical deletion by setting status DELETED | AS-IS  | admin.py |
+| FR-ACUST-007     | Functional   | Prevent ADMIN from modifying another ADMIN or SUPER_ADMIN | AS-IS  | admin.py |
+| FR-ACUST-008     | Functional   | Record audit entry for creation, update, deletion, wallet adjustment and slot-state change | AS-IS  | admin.py |
+| FR-AOPS-001      | Functional   | Return slot totals by live state and total revenue for dashboard | AS-IS  | admin.py |
+| FR-AOPS-002      | Functional   | List floors with total, available and occupied slot counts | AS-IS  | admin.py |
+| FR-AOPS-003      | Functional   | Return occupant details for reserved and occupied slots | AS-IS  | admin.py |
+| FR-AOPS-004      | Functional   | Allow staff to change slot control status among ACTIVE, ADMIN_RESERVED, MAINTENANCE | AS-IS  | admin.py |
+| FR-AOPS-005      | Functional   | Reject control-status change for slot with active booking or occupant | AS-IS  | admin.py |
+| FR-AOPS-006      | Functional   | List all bookings with date, status, floor, vehicle-type and customer filters | AS-IS  | admin.py |
+| FR-AOPS-007      | Functional   | Expose vehicle rates read-only to Admin    | AS-IS  | admin.py |
+| FR-SADM-001      | Functional   | Create ADMIN accounts with unique admin identifier and hashed password | AS-IS  | super_admin.py |
+| FR-SADM-002      | Functional   | List, read, update and logically delete administrator accounts | AS-IS  | super_admin.py |
+| FR-SADM-003      | Functional   | Allow blocking and unblocking an administrator | AS-IS  | super_admin.py |
+| FR-SADM-004      | Functional   | Allow Super Admin to adjust wallet of any account | AS-IS  | super_admin.py |
+| FR-SADM-005      | Functional   | Allow creation of a floor with a unique code | AS-IS  | super_admin.py |
+| FR-SADM-006      | Functional   | Allow floor status change to OPEN, CLOSED, MAINTENANCE or INACTIVE | AS-IS  | super_admin.py |
+| FR-SADM-007      | Functional   | Refuse floor deactivation when active bookings or occupants exist | AS-IS  | super_admin.py |
+| FR-SADM-008      | Functional   | Allow adding a slot with a unique number per floor and a vehicle type | AS-IS  | super_admin.py |
+| FR-SADM-009      | Functional   | Allow updating a slot number or control status, refusing changes that orphan active bookings | AS-IS  | super_admin.py |
+| FR-SADM-010      | Functional   | Deactivate rather than physically delete slots and floors with history | AS-IS  | super_admin.py |
+| FR-SADM-011      | Functional   | Allow Super Admin to cancel any eligible booking | AS-IS  | super_admin.py |
+| FR-REP-001       | Functional   | Report per-floor total and occupied slots with occupancy percentage rounded to 2 decimals | AS-IS  | reports.py |
+| FR-REP-002       | Functional   | Report per-floor total revenue, net revenue and distinct booking count | AS-IS  | reports.py |
+| FR-REP-003       | Functional   | Filter reports by optional inclusive date range | AS-IS  | reports.py |
+| FR-REP-004       | Functional   | Derive revenue from revenue_collections, not from booking status | AS-IS  | reports.py |
+| FR-REP-005       | Functional   | Subtract REFUND_REVERSAL collections from net revenue | AS-IS  | reports.py |
+| FR-REP-006       | Functional   | Provide occupancy and revenue CSV downloads | AS-IS  | reports.py |
+| FR-REP-007       | Functional   | Provide Super Admin revenue summary by collection type | AS-IS  | reports.py |
+| FR-REP-008       | Functional   | Provide Super Admin overtime analytics and revenue grouped by floor, vehicle type and day | AS-IS  | reports.py |
+| FR-SYS-001       | Functional   | Store global state in system_settings under SYSTEM_STATUS | AS-IS  | system.py |
+| FR-SYS-002       | Functional   | Return current state publicly            | AS-IS  | system.py |
+| FR-SYS-003       | Functional   | Block customer holds and confirmations while OFFLINE, return HTTP 503 | AS-IS  | system.py |
+| FR-SYS-004       | Functional   | Keep Super Admin access to restore ONLINE  | AS-IS  | system.py |
+| FR-SYS-005       | Functional   | Allow Super Admin to set idle timeout to 5, 10, 15 or 20 minutes | AS-IS  | system.py |
+| FR-SYS-006       | Functional   | Append an audit row for each system-state and timeout change | AS-IS  | system.py |
+| FR-SYS-007       | Functional   | Expose read-only, paginated table views for whitelist only | AS-IS  | system.py |
+| FR-SYS-008       | Functional   | Exclude password_hash from user table view | AS-IS  | system.py |
+| FR-SYS-009       | Functional   | Refuse any table not on the whitelist with HTTP 403 | AS-IS  | system.py |
+| FR-SYS-010       | Functional   | Return HTTP 404 for unknown tables        | AS-IS  | system.py |
+
+========================================================================
+7. DATA DICTIONARY SUMMARY
+========================================================================
+
+Core Tables and Key Columns:
+- users: user_id (PK), admin_id, full_name, email, phone, gender, company_name, username, password_hash, role, wallet_balance, account_status, created_by, created_at, updated_by, updated_at, reserved1, reserved2
+- floors: floor_id (PK), floor_code (UNIQUE), floor_status, created_by, created_at, updated_by, updated_at, reserved1, reserved2
+- vehicle_types: vehicle_type_id (PK), type_name, hourly_rate, overstay_rate, is_active, created_by, created_at, updated_by, updated_at, reserved1, reserved2
+- parking_slots: slot_id (PK), slot_number (UNIQUE per floor), floor_id (FK), vehicle_type_id (FK), control_status, is_active, created_by, created_at, updated_by, updated_at, reserved1, reserved2
+- bookings: booking_id (PK), booking_reference, user_id (FK), slot_id (FK), vehicle_format, vehicle_number, booked_from, booked_until, hold_expires_at, hourly_rate_applied, overstay_rate_applied, estimated_amount, booking_status, applied_cancellation_rule_id, rule_id, rule_code, rule_name, created_by, created_at, updated_by, updated_at, reserved1, reserved2
+- cancellation_rules: rule_id (PK), rule_code, rule_name, min_hours_before, max_hours_before, is_no_show, refund_percent, penalty_percent, description, created_by, created_at, updated_by, updated_at, reserved1, reserved2
+- wallet_transactions: transaction_id (PK), transaction_reference (UNIQUE), user_id (FK), super_admin_user_id (FK), transaction_type, direction, amount, balance_after, created_by, created_at, reserved1, reserved2
+- booking_events: event_id (PK), booking_id (FK), user_id (FK), event_type (ENTRY/EXIT), scan_method, event_note, created_by, created_at, reserved1, reserved2
+- audit_logs: audit_log_id (PK), action_type, entity_type, entity_id, old_values, new_values, created_by, created_at, reserved1, reserved2
+- revenue_collections: collection_id (PK), source_user_id (FK), super_admin_user_id (FK), customer_wallet_transaction_id (FK), super_admin_wallet_transaction_id (FK), collection_type, amount, transaction_reference, created_by, created_at, reserved1, reserved2
+- system_settings: setting_id (PK), setting_key (UNIQUE), setting_value, created_by, created_at, updated_by, updated_at, reserved1, reserved2
+
+All tables end with: created_by, created_at, updated_by, updated_at, reserved1, reserved2 (in this exact order).
+
+========================================================================
+8. APPENDIX A - CANCELLATION RULES
+========================================================================
+
+Cancellation rules are ordered by descending min_hours_before; lower bounds are inclusive and upper bounds exclusive. No matching rule yields zero refund and zero penalty. HELD bookings have paid amount zero, so refund and penalty are zero.
+
+========================================================================
+9. APPENDIX B - VEHICLE REGISTRATION FORMATS
+========================================================================
+
+Four plate formats are retained as the current proposed validation choices:
+
+| Code | Pattern                                   | Example        |
+|------|-------------------------------------------|----------------|
+| std1 | ^[A-Z]{2} [0-9]{2} [A-Z]{1} [0-9]{4}$  | KA 04 A 2256   |
+| std2 | ^[A-Z]{2} [0-9]{2} [A-Z]{2} [0-9]{4}$  | DL 03 CA 1234  |
+| std3 | ^[A-Z]{2} [0-9]{2} [A-Z]{3} [0-9]{4}$  | ML 04 ASD 5256 |
+| bhr  | ^[0-9]{2} BH [0-9]{4} [A-Z]{2}$        | 26 BH 9876 AB  |
+
+Validate both client-side for usability and server-side for correctness. Normalize registration numbers consistently before duplicate checks.
+
+========================================================================
+10. APPENDIX C - UNCONFIRMED / TBD ITEMS
+========================================================================
+
+The following items are recorded as TBD (unconfirmed) and should be verified before treating as immutable production policy:
+
+1. Overtime granularity: docs/project_spec.md says per started hour; pricing.py and qr.py round up to 30-minute units.
+2. Admin cancellation: product notes imply Admin can cancel; customer endpoint allows only the owner; cross-user cancellation is a Super Admin endpoint.
+3. Seed credential: scripts/seed_direct.py uses QSPARK_SUPER_ADMIN_PASSWORD and QSPARK_ADMIN_PASSWORD, falling back to development values superadmin123 and admin123.
+4. Predictable password rule: src/core/security.py contains a prototype rule that derives a password from first name and phone suffix.
+5. Physical camera scanning: No device available in this environment.
+6. Bundled JS QR decoder: Recommended follow-up, not implemented.
+7. Report definitions: Implemented shapes differ from earlier wording; recorded as TBD.
+8. Automated test suite: tests/ directory is absent; historical test results could not be found.
+9. Landing page: /landing route and landing.html do not exist; now marked as planned.
+10. Revenue report filtering: docs/api.md says filtered to COMPLETED bookings and dates on bookings.booked_from; reports.py reads revenue_collections and filters on rc.created_at.
+
+========================================================================
+END OF SRS DOCUMENT
+========================================================================
